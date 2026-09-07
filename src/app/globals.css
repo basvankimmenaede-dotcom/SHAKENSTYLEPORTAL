@@ -279,3 +279,63 @@ tr:last-child td { border-bottom: 0; }
   .itemImage { width: 104px; height: 132px; }
   .detailImagePanel, .detailImagePanel img { height: 280px; max-height: 280px; }
 }
+
+/* v8.5 logo crop + cleaner fixed product thumbnails */
+.brandLogoLink {
+  max-width: none;
+  overflow: visible;
+  line-height: 0;
+}
+.brandLogoImage {
+  width: auto;
+  height: 24px;
+  max-width: 210px;
+  object-fit: contain;
+  object-position: left center;
+}
+.loginBrand {
+  display: flex;
+  justify-content: center;
+}
+.loginBrand .brandLogoImage {
+  width: auto;
+  height: 38px;
+  max-width: min(320px, 86vw);
+  object-fit: contain;
+  object-position: center;
+}
+
+.itemCard {
+  grid-template-columns: 112px 1fr;
+  min-height: 142px;
+}
+.itemImage {
+  width: 112px;
+  height: 142px;
+  padding: 12px;
+  background: #f7f6f3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.itemImage img {
+  width: auto;
+  height: auto;
+  max-width: 78px;
+  max-height: 112px;
+  object-fit: contain;
+  object-position: center;
+  padding: 0;
+  background: transparent;
+  display: block;
+}
+
+@media (max-width: 720px) {
+  .brandLogoImage { height: 21px; max-width: 180px; }
+  .loginBrand .brandLogoImage { height: 34px; max-width: min(280px, 84vw); }
+}
+@media (max-width: 620px) {
+  .itemCard { grid-template-columns: 96px 1fr; min-height: 126px; }
+  .itemImage { width: 96px; height: 126px; padding: 10px; }
+  .itemImage img { max-width: 66px; max-height: 98px; }
+}
