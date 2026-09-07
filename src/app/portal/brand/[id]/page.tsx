@@ -12,6 +12,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
 
   const baseQuery = supabase
     .from('brands')
+    .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active')
     .eq('id', brandId)
     .eq('portal_enabled', true)
     .eq('is_brand', true)
@@ -20,9 +21,14 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
   if (profile.role !== 'admin' && !profile.distributor_id) notFound();
 
   const { data: brand } = profile.role === 'admin'
-    ? await baseQuery.select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active').single()
-    : await baseQuery
+    ? await baseQuery.single()
+    : await supabase
+        .from('brands')
         .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active,distributor_brands!inner(distributor_id)')
+        .eq('id', brandId)
+        .eq('portal_enabled', true)
+        .eq('is_brand', true)
+        .eq('rentman_active', true)
         .eq('distributor_brands.distributor_id', profile.distributor_id as number)
         .single();
   if (!brand?.rentman_folder_id) notFound();

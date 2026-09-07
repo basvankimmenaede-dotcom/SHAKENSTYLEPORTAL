@@ -18,18 +18,22 @@ export default async function PortalPage() {
     );
   }
 
-  const baseQuery = supabase
-    .from('brands')
-    .eq('portal_enabled', true)
-    .eq('is_brand', true)
-    .eq('rentman_active', true)
-    .order('name');
-
   const { data: brands } = profile.role === 'admin'
-    ? await baseQuery.select('id,name,rentman_folder_id,rentman_path')
-    : await baseQuery
+    ? await supabase
+        .from('brands')
+        .select('id,name,rentman_folder_id,rentman_path')
+        .eq('portal_enabled', true)
+        .eq('is_brand', true)
+        .eq('rentman_active', true)
+        .order('name')
+    : await supabase
+        .from('brands')
         .select('id,name,rentman_folder_id,rentman_path,distributor_brands!inner(distributor_id)')
-        .eq('distributor_brands.distributor_id', profile.distributor_id as number);
+        .eq('portal_enabled', true)
+        .eq('is_brand', true)
+        .eq('rentman_active', true)
+        .eq('distributor_brands.distributor_id', profile.distributor_id as number)
+        .order('name');
 
   return (
     <main className="container">
