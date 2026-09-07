@@ -52,7 +52,7 @@ export default async function PortalPage() {
                 <h2>{brand.name}</h2>
                 <p className="muted">{brand.rentman_path ?? 'Opgeslagen materialen'}</p>
               </div>
-              <strong>Bekijk voorraad -></strong>
+              <strong>Bekijk voorraad &rarr;</strong>
             </Link>
           ))}
         </section>
