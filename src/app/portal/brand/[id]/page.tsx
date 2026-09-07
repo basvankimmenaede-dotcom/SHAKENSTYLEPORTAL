@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { getVisibleEquipmentForFolder } from '@/lib/rentman';
@@ -9,20 +10,21 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
 
   const { supabase, profile } = await requireUser();
 
-  let query = supabase
+  const baseQuery = supabase
     .from('brands')
-    .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active,distributor_brands!inner(distributor_id)')
     .eq('id', brandId)
     .eq('portal_enabled', true)
     .eq('is_brand', true)
     .eq('rentman_active', true);
 
-  if (profile.role !== 'admin') {
-    if (!profile.distributor_id) notFound();
-    query = query.eq('distributor_brands.distributor_id', profile.distributor_id);
-  }
+  if (profile.role !== 'admin' && !profile.distributor_id) notFound();
 
-  const { data: brand } = await query.single();
+  const { data: brand } = profile.role === 'admin'
+    ? await baseQuery.select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active').single()
+    : await baseQuery
+        .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active,distributor_brands!inner(distributor_id)')
+        .eq('distributor_brands.distributor_id', profile.distributor_id as number)
+        .single();
   if (!brand?.rentman_folder_id) notFound();
 
   let equipment: Awaited<ReturnType<typeof getVisibleEquipmentForFolder>> = { items: [], configured: false };
@@ -37,8 +39,9 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
     <main className="container">
       <section className="hero">
         <div>
+          <Link className="eyebrowLink" href="/portal">← Mijn merken</Link>
           <h1>{brand.name}</h1>
-          <p>Materialen uit Rentman die expliciet voor het klantportaal zichtbaar zijn gemaakt.</p>
+          <p>Bekijk de materialen die SHAKENSTYLE voor dit merk beheert.</p>
         </div>
       </section>
 
@@ -46,24 +49,24 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
       {!equipment.configured ? (
         <div className="notice">De Rentman custom-field key is nog niet geconfigureerd in de website. Tot die tijd worden uit veiligheid geen items getoond.</div>
       ) : null}
-
       {equipment.configured && equipment.items.length === 0 ? (
         <div className="notice">Voor dit merk zijn nog geen zichtbare items gevonden.</div>
       ) : null}
 
       <section className="itemGrid">
         {equipment.items.map((item) => (
-          <article className="itemCard" key={item.id}>
+          <Link className="itemCard" key={item.id} href={`/portal/brand/${brand.id}/item/${item.id}`}>
             <div className="itemImage">
               {item.image ? <img src={item.image} alt={item.name} /> : <span>Geen afbeelding</span>}
             </div>
             <div className="itemBody">
-              <span className="badge green">{item.code || `#${item.id}`}</span>
+              <span className="badge">{item.code || `#${item.id}`}</span>
               <h3>{item.name}</h3>
               <div className="metric">{item.current_quantity ?? '-'}</div>
               <div className="muted">Opgeslagen voorraad</div>
+              <div className="itemMore">Bekijk details →</div>
             </div>
-          </article>
+          </Link>
         ))}
       </section>
     </main>

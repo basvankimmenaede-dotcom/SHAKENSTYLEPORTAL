@@ -150,3 +150,12 @@ In Supabase -> Authentication -> URL Configuration use:
 - Optional wildcard: `https://shakenstyle-portal.vercel.app/**`
 
 The password-reset email template should use Supabase's default `{{ .ConfirmationURL }}` link. If a custom email template is used, restore that variable instead of manually concatenating SiteURL and RedirectTo.
+
+## v8 additions
+- SHAKENSTYLE black/white/orange base styling and Montserrat typography
+- Admin 'Gebruikersweergave' preview link
+- Customer cards no longer show Rentman folder numbering
+- Equipment cards open a detail page
+- Detail page shows last Rentman usage date and dimensions
+- Rentman image file references are resolved to actual image URLs
+- Favicon points to the live SHAKENSTYLE website favicon

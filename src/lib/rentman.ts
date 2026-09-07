@@ -11,6 +11,10 @@ type RentmanListResponse<T> = {
   next_page_url?: string | null;
 };
 
+type RentmanSingleResponse<T> = {
+  data?: T;
+};
+
 async function rentmanFetch<T>(pathOrUrl: string): Promise<T> {
   const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${API_BASE}${pathOrUrl}`;
   const response = await fetch(url, {
@@ -39,7 +43,6 @@ async function rentmanFetchAll<T>(path: string): Promise<T[]> {
     nextUrl = result.next_page_url ?? null;
     pageCount += 1;
 
-    // Safety guard against a broken/looping pagination response.
     if (pageCount > 100) {
       throw new Error('Rentman pagination exceeded the safety limit.');
     }
@@ -72,14 +75,10 @@ function getDescendantFolderIds(rootFolderId: number, folders: RentmanFolder[]) 
   const included = new Set<number>([rootFolderId]);
   let changed = true;
 
-  // Keep adding children of folders already included until no new folders are found.
-  // This supports any nesting depth: Brand > POS > Displays > Small, etc.
   while (changed) {
     changed = false;
-
     for (const folder of folders) {
       if (included.has(folder.id) || !folder.parent) continue;
-
       const parentId = Number(folder.parent.split('/').pop());
       if (Number.isFinite(parentId) && included.has(parentId)) {
         included.add(folder.id);
@@ -100,6 +99,24 @@ export type RentmanEquipment = {
   current_quantity?: number;
   external_remark?: string;
   custom?: Record<string, unknown>;
+  height?: number;
+  width?: number;
+  length?: number;
+  weight?: number;
+};
+
+type RentmanFile = {
+  id: number;
+  url?: string | null;
+  proxy_url?: string | null;
+  public?: boolean;
+};
+
+type ProjectEquipmentUsage = {
+  id: number;
+  equipment?: string | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
 };
 
 function truthyPortalValue(value: unknown) {
@@ -110,6 +127,36 @@ function truthyPortalValue(value: unknown) {
   return false;
 }
 
+function fileIdFromReference(reference?: string | null) {
+  if (!reference?.startsWith('/files/')) return null;
+  const id = Number(reference.split('/').pop());
+  return Number.isFinite(id) ? id : null;
+}
+
+async function resolveEquipmentImage(reference?: string | null) {
+  if (!reference) return null;
+  if (reference.startsWith('http')) return reference;
+
+  const fileId = fileIdFromReference(reference);
+  if (!fileId) return null;
+
+  try {
+    const result = await rentmanFetch<RentmanSingleResponse<RentmanFile>>(`/files/${fileId}`);
+    return result.data?.url ?? result.data?.proxy_url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function addResolvedImages(items: RentmanEquipment[]) {
+  return Promise.all(
+    items.map(async (item) => ({
+      ...item,
+      image: await resolveEquipmentImage(item.image),
+    })),
+  );
+}
+
 export async function getVisibleEquipmentForFolder(folderId: number) {
   const customFieldKey = process.env.RENTMAN_PORTAL_CUSTOM_FIELD_KEY;
   if (!customFieldKey) return { items: [] as RentmanEquipment[], configured: false };
@@ -117,21 +164,68 @@ export async function getVisibleEquipmentForFolder(folderId: number) {
   const [folders, allEquipment] = await Promise.all([
     getAllEquipmentFolders(),
     rentmanFetchAll<RentmanEquipment>(
-      '/equipment?fields=id,name,code,folder,image,current_quantity,external_remark,custom&limit=1500',
+      '/equipment?fields=id,name,code,folder,image,current_quantity,external_remark,custom,height,width,length,weight&limit=1500',
     ),
   ]);
 
   const descendantFolderIds = getDescendantFolderIds(folderId, folders);
-
-  const items = allEquipment.filter((item) => {
+  const visibleItems = allEquipment.filter((item) => {
     if (!item.folder) return false;
-
     const itemFolderId = Number(item.folder.split('/').pop());
     const inBrandTree = Number.isFinite(itemFolderId) && descendantFolderIds.has(itemFolderId);
     const visible = truthyPortalValue(item.custom?.[customFieldKey]);
-
     return inBrandTree && visible;
   });
 
-  return { items, configured: true };
+  return { items: await addResolvedImages(visibleItems), configured: true };
+}
+
+export async function getVisibleEquipmentItemForFolder(folderId: number, equipmentId: number) {
+  const customFieldKey = process.env.RENTMAN_PORTAL_CUSTOM_FIELD_KEY;
+  if (!customFieldKey) return null;
+
+  const [folders, equipmentResult] = await Promise.all([
+    getAllEquipmentFolders(),
+    rentmanFetch<RentmanSingleResponse<RentmanEquipment>>(`/equipment/${equipmentId}`),
+  ]);
+
+  const item = equipmentResult.data;
+  if (!item?.folder) return null;
+
+  const descendantFolderIds = getDescendantFolderIds(folderId, folders);
+  const itemFolderId = Number(item.folder.split('/').pop());
+  const isInTree = Number.isFinite(itemFolderId) && descendantFolderIds.has(itemFolderId);
+  const isVisible = truthyPortalValue(item.custom?.[customFieldKey]);
+  if (!isInTree || !isVisible) return null;
+
+  return {
+    ...item,
+    image: await resolveEquipmentImage(item.image),
+  };
+}
+
+export async function getLastEquipmentUsageDate(equipmentId: number) {
+  const params = new URLSearchParams({
+    fields: 'id,equipment,usageperiod_start,usageperiod_end',
+    equipment: `/equipment/${equipmentId}`,
+    limit: '1500',
+  });
+
+  const usages = await rentmanFetchAll<ProjectEquipmentUsage>(`/projectequipment?${params.toString()}`);
+  const now = Date.now();
+
+  const completed = usages
+    .filter((usage) => usage.usageperiod_start)
+    .filter((usage) => {
+      if (!usage.usageperiod_end) return true;
+      const end = new Date(usage.usageperiod_end).getTime();
+      return Number.isFinite(end) && end <= now;
+    })
+    .sort((a, b) => {
+      const aDate = new Date(a.usageperiod_start ?? 0).getTime();
+      const bDate = new Date(b.usageperiod_start ?? 0).getTime();
+      return bDate - aDate;
+    });
+
+  return completed[0]?.usageperiod_start ?? null;
 }

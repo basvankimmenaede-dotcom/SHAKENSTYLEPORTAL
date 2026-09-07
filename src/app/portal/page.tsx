@@ -18,19 +18,18 @@ export default async function PortalPage() {
     );
   }
 
-  let query = supabase
+  const baseQuery = supabase
     .from('brands')
-    .select('id,name,rentman_folder_id,rentman_path,distributor_brands!inner(distributor_id)')
     .eq('portal_enabled', true)
     .eq('is_brand', true)
     .eq('rentman_active', true)
     .order('name');
 
-  if (profile.role !== 'admin') {
-    query = query.eq('distributor_brands.distributor_id', profile.distributor_id as number);
-  }
-
-  const { data: brands } = await query;
+  const { data: brands } = profile.role === 'admin'
+    ? await baseQuery.select('id,name,rentman_folder_id,rentman_path')
+    : await baseQuery
+        .select('id,name,rentman_folder_id,rentman_path,distributor_brands!inner(distributor_id)')
+        .eq('distributor_brands.distributor_id', profile.distributor_id as number);
 
   return (
     <main className="container">
@@ -48,9 +47,8 @@ export default async function PortalPage() {
           {(brands ?? []).map((brand) => (
             <Link href={`/portal/brand/${brand.id}`} className="brandCard" key={brand.id}>
               <div>
-                <span className="badge green">Rentman #{brand.rentman_folder_id}</span>
                 <h2>{brand.name}</h2>
-                <p className="muted">{brand.rentman_path ?? 'Opgeslagen materialen'}</p>
+                <p className="muted">Opgeslagen materialen</p>
               </div>
               <strong>Bekijk voorraad &rarr;</strong>
             </Link>
