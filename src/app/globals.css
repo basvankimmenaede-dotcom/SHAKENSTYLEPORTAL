@@ -443,3 +443,41 @@ tr:last-child td { border-bottom: 0; }
   .brandLogoImageCompact { width: 68px; height: 68px; }
   .loginBrand .brandLogoImage { width: 150px; height: 150px; max-width: 52vw; }
 }
+
+/* v8.8.5: preserve the original wide SHAKENSTYLE logo aspect ratio everywhere. */
+.brandLogoLink {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: none;
+  overflow: visible;
+  line-height: 0;
+}
+.brandLogoImage {
+  display: block;
+  width: 300px;
+  height: auto;
+  max-width: 34vw;
+  object-fit: contain;
+  object-position: left center;
+}
+.brandLogoImageCompact {
+  width: 250px;
+  height: auto;
+}
+.loginBrand .brandLogoImage {
+  width: min(520px, 86vw);
+  height: auto;
+  max-width: min(520px, 86vw);
+  object-fit: contain;
+  object-position: center;
+}
+@media (max-width: 900px) {
+  .brandLogoImage { width: 250px; max-width: 42vw; }
+  .brandLogoImageCompact { width: 210px; }
+}
+@media (max-width: 720px) {
+  .brandLogoImage { width: 190px; max-width: 46vw; height: auto; }
+  .brandLogoImageCompact { width: 165px; height: auto; }
+  .loginBrand .brandLogoImage { width: min(390px, 84vw); height: auto; max-width: min(390px, 84vw); }
+}

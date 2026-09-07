@@ -174,3 +174,5 @@ The password-reset email template should use Supabase's default `{{ .Confirmatio
 Itemdetail toont alle gekoppelde bestanden rechtstreeks uit beheer; geen uploadfunctie in het portaal.
 
 - v8.8.4: official logo replaced with the supplied SNS logo site PDF artwork; same rendered source is used for header and favicon references.
+
+- v8.8.6: favicon/apple icon use the exact original wide logo, proportionally scaled and centered on a square canvas; artwork unchanged.
