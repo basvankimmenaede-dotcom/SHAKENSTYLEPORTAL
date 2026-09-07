@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
-import { getVisibleEquipmentForFolder } from '@/lib/rentman';
+import { getRootEquipmentFolderMap, getVisibleEquipmentForFolder } from '@/lib/rentman';
 import EquipmentSearch from '@/components/EquipmentSearch';
 
 export default async function BrandPage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,8 +36,14 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
 
   let equipment: Awaited<ReturnType<typeof getVisibleEquipmentForFolder>> = { items: [], configured: false };
   let beheerError = '';
+  let displayBrandName = brand.name;
   try {
-    equipment = await getVisibleEquipmentForFolder(brand.rentman_folder_id);
+    const [equipmentResult, folderMap] = await Promise.all([
+      getVisibleEquipmentForFolder(brand.rentman_folder_id),
+      getRootEquipmentFolderMap(),
+    ]);
+    equipment = equipmentResult;
+    displayBrandName = folderMap.get(brand.rentman_folder_id)?.name ?? brand.name;
   } catch (error) {
     beheerError = error instanceof Error ? error.message : 'De beheergegevens konden niet worden geladen.';
   }
@@ -47,7 +53,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
       <section className="hero">
         <div>
           <Link className="eyebrowLink" href="/portal">← Terug</Link>
-          <h1>{brand.name}</h1>
+          <h1>{displayBrandName}</h1>
           <p>Bekijk de materialen die SHAKENSTYLE voor dit merk beheert.</p>
         </div>
       </section>
@@ -56,11 +62,11 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
       {!equipment.configured ? (
         <div className="notice">De zichtbaarheid voor materialen is nog niet geconfigureerd. Tot die tijd worden uit veiligheid geen items getoond.</div>
       ) : null}
-      {equipment.configured && equipment.items.length === 0 ? (
-        <div className="notice">Voor dit merk zijn nog geen zichtbare items gevonden.</div>
+      {equipment.configured && !beheerError && equipment.items.length === 0 ? (
+        <div className="notice">Voor {displayBrandName} zijn op dit moment nog geen materialen zichtbaar in het portaal.</div>
       ) : null}
 
-      <EquipmentSearch brandId={brand.id} items={equipment.items} />
+      {equipment.items.length > 0 ? <EquipmentSearch brandId={brand.id} items={equipment.items} /> : null}
     </main>
   );
 }

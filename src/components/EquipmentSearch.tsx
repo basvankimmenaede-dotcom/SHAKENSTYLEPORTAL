@@ -19,6 +19,8 @@ export default function EquipmentSearch({ brandId, items }: { brandId: number; i
     return items.filter((item) => `${item.name} ${item.code ?? ''}`.toLowerCase().includes(q));
   }, [items, query]);
 
+  if (items.length === 0) return null;
+
   return (
     <>
       <div className="searchBar">
@@ -33,7 +35,9 @@ export default function EquipmentSearch({ brandId, items }: { brandId: number; i
         <span className="searchCount">{filtered.length} van {items.length}</span>
       </div>
 
-      {filtered.length === 0 ? <div className="notice">Geen materialen gevonden voor “{query}”.</div> : null}
+      {query.trim() && filtered.length === 0 ? (
+        <div className="notice">Geen resultaten gevonden voor “{query.trim()}”.</div>
+      ) : null}
 
       <section className="itemGrid">
         {filtered.map((item) => (

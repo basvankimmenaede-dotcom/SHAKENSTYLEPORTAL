@@ -65,6 +65,11 @@ export async function getRootEquipmentFolders() {
   return folders.filter((folder) => folder.parent === null);
 }
 
+export async function getRootEquipmentFolderMap() {
+  const folders = await getRootEquipmentFolders();
+  return new Map(folders.map((folder) => [folder.id, folder]));
+}
+
 async function getAllEquipmentFolders() {
   return rentmanFetchAll<RentmanFolder>(
     '/folders?itemtype=equipment&fields=id,name,parent,path&limit=1500',

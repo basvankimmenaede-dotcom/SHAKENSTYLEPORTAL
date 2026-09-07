@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
+import { getRootEquipmentFolderMap } from '@/lib/rentman';
 
 export default async function PortalPage() {
   const { supabase, profile } = await requireUser();
@@ -41,6 +42,22 @@ export default async function PortalPage() {
         .eq('distributor_brands.distributor_id', profile.distributor_id as number)
         .order('name');
 
+
+  let liveFolders = new Map<number, { id: number; name: string; parent: string | null; path?: string }>();
+  try {
+    liveFolders = await getRootEquipmentFolderMap();
+  } catch {
+    // Supabase blijft de veilige fallback als de beheerverbinding tijdelijk niet beschikbaar is.
+  }
+
+  const displayBrands = (brands ?? []).map((brand) => {
+    const folder = brand.rentman_folder_id ? liveFolders.get(brand.rentman_folder_id) : undefined;
+    return {
+      ...brand,
+      displayName: folder?.name ?? brand.name,
+    };
+  }).sort((a, b) => a.displayName.localeCompare(b.displayName, 'nl'));
+
   return (
     <main className="container">
       <section className="hero">
@@ -50,14 +67,14 @@ export default async function PortalPage() {
         </div>
       </section>
 
-      {(brands ?? []).length === 0 ? (
+      {displayBrands.length === 0 ? (
         <div className="notice">Er zijn nog geen merken aan jouw account toegewezen.</div>
       ) : (
         <section className="brandGrid">
-          {(brands ?? []).map((brand) => (
+          {displayBrands.map((brand) => (
             <Link href={`/portal/brand/${brand.id}`} className="brandCard" key={brand.id}>
               <div>
-                <h2>{brand.name}</h2>
+                <h2>{brand.displayName}</h2>
                 <p className="muted">Opgeslagen materialen</p>
               </div>
               <strong>Bekijk voorraad &rarr;</strong>

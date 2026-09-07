@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getRootEquipmentFolders } from '@/lib/rentman';
@@ -21,6 +22,7 @@ export async function POST() {
         await admin
           .from('brands')
           .update({
+            name: folder.name,
             rentman_name: folder.name,
             rentman_path: folder.path ?? folder.name,
             rentman_parent_id: null,
@@ -50,6 +52,10 @@ export async function POST() {
         await admin.from('brands').update({ rentman_active: false, last_synced_at: new Date().toISOString() }).eq('id', row.id);
       }
     }
+
+    revalidatePath('/admin/brands');
+    revalidatePath('/portal');
+    revalidatePath('/portal', 'layout');
 
     return NextResponse.json({ success: true, folders_synced: folders.length });
   } catch (error) {

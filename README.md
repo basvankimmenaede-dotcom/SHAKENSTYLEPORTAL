@@ -176,3 +176,9 @@ Itemdetail toont alle gekoppelde bestanden rechtstreeks uit beheer; geen uploadf
 - v8.8.4: official logo replaced with the supplied SNS logo site PDF artwork; same rendered source is used for header and favicon references.
 
 - v8.8.6: favicon/apple icon use the exact original wide logo, proportionally scaled and centered on a square canvas; artwork unchanged.
+
+## v8.8.7
+- Merknaam in klantportaal wordt live uit de gekoppelde beheer-map gelezen; folder-ID blijft de vaste sleutel.
+- Handmatige synchronisatie werkt nu ook de zichtbare `name` in Supabase bij.
+- Lege materiaalpagina toont nog maar een melding; zoekbalk en 0-van-0 teller verdwijnen als er geen items zijn.
+- Bij een zoekopdracht zonder resultaat verschijnt alleen een gerichte zoekmelding.
