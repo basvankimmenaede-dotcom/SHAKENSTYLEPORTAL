@@ -105,8 +105,14 @@ export type RentmanEquipment = {
   weight?: number;
 };
 
-type RentmanFile = {
+export type RentmanFile = {
   id: number;
+  displayname?: string | null;
+  readable_name?: string | null;
+  description?: string | null;
+  image?: boolean;
+  type?: string | null;
+  extension?: string | null;
   url?: string | null;
   proxy_url?: string | null;
   public?: boolean;
@@ -202,6 +208,21 @@ export async function getVisibleEquipmentItemForFolder(folderId: number, equipme
     ...item,
     image: await resolveEquipmentImage(item.image),
   };
+}
+
+
+export async function getEquipmentFiles(equipmentId: number) {
+  const files = await rentmanFetchAll<RentmanFile>(
+    `/equipment/${equipmentId}/files?fields=id,displayname,readable_name,description,image,type,extension,url,proxy_url,public&limit=1500`,
+  );
+
+  return files
+    .map((file) => ({
+      ...file,
+      href: file.url ?? file.proxy_url ?? null,
+      name: file.readable_name ?? file.displayname ?? `Bestand ${file.id}`,
+    }))
+    .filter((file) => Boolean(file.href));
 }
 
 export async function getLastEquipmentUsageDate(equipmentId: number) {

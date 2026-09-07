@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
-import { getLastEquipmentUsageDate, getVisibleEquipmentItemForFolder } from '@/lib/rentman';
+import { getEquipmentFiles, getLastEquipmentUsageDate, getVisibleEquipmentItemForFolder } from '@/lib/rentman';
 
 function formatDate(value: string | null) {
   if (!value) return 'Nog geen inzet gevonden';
@@ -53,9 +53,10 @@ export default async function EquipmentDetailPage({
         .single();
   if (!brand?.rentman_folder_id) notFound();
 
-  const [item, lastUsage] = await Promise.all([
+  const [item, lastUsage, files] = await Promise.all([
     getVisibleEquipmentItemForFolder(brand.rentman_folder_id, rentmanEquipmentId),
     getLastEquipmentUsageDate(rentmanEquipmentId).catch(() => null),
+    getEquipmentFiles(rentmanEquipmentId).catch(() => []),
   ]);
 
   if (!item) notFound();
@@ -107,6 +108,42 @@ export default async function EquipmentDetailPage({
             <section className="detailSection">
               <h2>Omschrijving</h2>
               <p>{item.external_remark}</p>
+            </section>
+          ) : null}
+
+          {files.length > 0 ? (
+            <section className="detailSection">
+              <h2>Documenten & afbeeldingen</h2>
+              <div className="attachmentGrid">
+                {files.map((file) => {
+                  const href = file.href as string;
+                  const isImage = Boolean(file.image) || file.type?.startsWith('image/');
+                  const extension = (file.extension ?? file.type?.split('/').pop() ?? 'bestand').toUpperCase();
+
+                  return (
+                    <a
+                      key={file.id}
+                      className={isImage ? 'attachmentCard attachmentImageCard' : 'attachmentCard'}
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {isImage ? (
+                        <div className="attachmentThumb">
+                          <img src={href} alt={file.name} />
+                        </div>
+                      ) : (
+                        <div className="attachmentFileIcon" aria-hidden="true">{extension}</div>
+                      )}
+                      <div className="attachmentMeta">
+                        <strong>{file.name}</strong>
+                        <span>{isImage ? 'Afbeelding' : extension} · Open bestand ↗</span>
+                        {file.description ? <small>{file.description}</small> : null}
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
             </section>
           ) : null}
         </div>

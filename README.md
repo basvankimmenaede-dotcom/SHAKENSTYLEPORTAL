@@ -168,3 +168,7 @@ The password-reset email template should use Supabase's default `{{ .Confirmatio
 - SHAKENSTYLE-logo in header/login
 - Gebruikersinterface gebruikt “in beheer” in plaats van leveranciersnaam
 - Klantportaal toont distributeursnaam als portaalnaam
+
+
+## v8.6
+Itemdetail toont alle gekoppelde bestanden rechtstreeks uit beheer; geen uploadfunctie in het portaal.

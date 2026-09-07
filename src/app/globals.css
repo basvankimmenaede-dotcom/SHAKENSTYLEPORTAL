@@ -339,3 +339,71 @@ tr:last-child td { border-bottom: 0; }
   .itemImage { width: 96px; height: 126px; padding: 10px; }
   .itemImage img { max-width: 66px; max-height: 98px; }
 }
+
+/* v8.6 equipment attachments from beheer */
+.attachmentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.attachmentCard {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: .18s ease;
+}
+.attachmentCard:hover {
+  border-color: #c8c2b9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+.attachmentThumb,
+.attachmentFileIcon {
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+  background: #f7f6f3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.attachmentThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 5px;
+}
+.attachmentFileIcon {
+  color: var(--orange-dark);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+.attachmentMeta {
+  min-width: 0;
+}
+.attachmentMeta strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.attachmentMeta span,
+.attachmentMeta small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.attachmentMeta small {
+  white-space: normal;
+}
+@media (max-width: 620px) {
+  .attachmentGrid { grid-template-columns: 1fr; }
+}
