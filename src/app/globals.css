@@ -29,7 +29,7 @@ button, input, select { font: inherit; }
 
 .shell { min-height: 100vh; }
 .topbar {
-  min-height: 72px;
+  min-height: 104px;
   padding: 0 28px;
   display: flex;
   align-items: center;
@@ -364,8 +364,8 @@ tr:last-child td { border-bottom: 0; }
 }
 .attachmentThumb,
 .attachmentFileIcon {
-  width: 58px;
-  height: 58px;
+  width: 88px;
+  height: 88px;
   border-radius: 10px;
   background: #f7f6f3;
   display: grid;
@@ -423,8 +423,8 @@ tr:last-child td { border-bottom: 0; }
 /* v8.8.2: use the untouched original SHAKENSTYLE logo everywhere. */
 .brandLogoImage {
   display: block;
-  width: 72px;
-  height: 72px;
+  width: 108px;
+  height: 108px;
   max-width: none;
   object-fit: contain;
   object-position: center;
@@ -439,7 +439,7 @@ tr:last-child td { border-bottom: 0; }
   max-width: min(180px, 55vw);
 }
 @media (max-width: 720px) {
-  .brandLogoImage { width: 58px; height: 58px; }
-  .brandLogoImageCompact { width: 50px; height: 50px; }
+  .brandLogoImage { width: 76px; height: 76px; }
+  .brandLogoImageCompact { width: 68px; height: 68px; }
   .loginBrand .brandLogoImage { width: 150px; height: 150px; max-width: 52vw; }
 }

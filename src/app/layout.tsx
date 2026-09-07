@@ -5,9 +5,9 @@ export const metadata: Metadata = {
   title: 'SHAKENSTYLE Portal',
   description: 'Klantportaal voor opgeslagen materialen van SHAKENSTYLE.',
   icons: {
-    icon: '/shakenstyle-logo-dbe.png',
-    shortcut: '/shakenstyle-logo-dbe.png',
-    apple: '/shakenstyle-logo-dbe.png',
+    icon: '/shakenstyle-logo-site.png',
+    shortcut: '/shakenstyle-logo-site.png',
+    apple: '/shakenstyle-logo-site.png',
   },
 };
 
