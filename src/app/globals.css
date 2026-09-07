@@ -419,4 +419,27 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 760px) {
   .itemGrid { grid-template-columns: 1fr; }
 }
-\n\n/* v8.8 header logo contrast + favicon alignment */\n.brandLogoImage {\n  height: 26px;\n  width: auto;\n  max-width: 330px;\n  object-fit: contain;\n  object-position: left center;\n  filter: none;\n}\n.loginBrand .brandLogoImage {\n  height: 34px;\n  width: auto;\n  max-width: min(520px, 88vw);\n}\n@media (max-width: 720px) {\n  .brandLogoImage { height: 22px; max-width: 235px; }\n  .loginBrand .brandLogoImage { height: 30px; max-width: min(390px, 86vw); }\n}\n
+
+/* v8.8.2: use the untouched original SHAKENSTYLE logo everywhere. */
+.brandLogoImage {
+  display: block;
+  width: 72px;
+  height: 72px;
+  max-width: none;
+  object-fit: contain;
+  object-position: center;
+}
+.brandLogoImageCompact {
+  width: 58px;
+  height: 58px;
+}
+.loginBrand .brandLogoImage {
+  width: 180px;
+  height: 180px;
+  max-width: min(180px, 55vw);
+}
+@media (max-width: 720px) {
+  .brandLogoImage { width: 58px; height: 58px; }
+  .brandLogoImageCompact { width: 50px; height: 50px; }
+  .loginBrand .brandLogoImage { width: 150px; height: 150px; max-width: 52vw; }
+}
