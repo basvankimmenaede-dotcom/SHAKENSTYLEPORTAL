@@ -77,15 +77,15 @@ export default async function EquipmentDetailPage({
         <div className="detailContent">
           <span className="badge">{item.code || `#${item.id}`}</span>
           <h1>{item.name}</h1>
-          <p className="detailIntro">Actuele itemgegevens uit beheer.</p>
+          <p className="detailIntro">Details en beschikbaarheid van dit item.</p>
 
           <div className="detailStatGrid">
             <div className="detailStat">
-              <span className="detailLabel">Opgeslagen voorraad</span>
+              <span className="detailLabel">Bij SHAKENSTYLE opgeslagen</span>
               <strong>{item.current_quantity ?? '-'}</strong>
             </div>
             <div className="detailStat">
-              <span className="detailLabel">Laatste inzet</span>
+              <span className="detailLabel">Laatst gebruikt</span>
               <strong className="detailTextValue">{formatDate(lastUsage)}</strong>
             </div>
           </div>
@@ -99,7 +99,7 @@ export default async function EquipmentDetailPage({
                 <div><span>Hoogte</span><strong>{height ?? '-'}</strong></div>
               </div>
             ) : (
-              <p className="muted">Voor dit item zijn nog geen afmetingen ingevuld in beheer.</p>
+              <p className="muted">Afmetingen zijn nog niet beschikbaar.</p>
             )}
           </section>
 

@@ -1,12 +1,12 @@
 import Image from 'next/image';
 
-export default function BrandLogo({ dark = false, compact = false }: { dark?: boolean; compact?: boolean }) {
+export default function BrandLogo({ compact = false }: { dark?: boolean; compact?: boolean }) {
   return (
     <Image
-      src={dark ? '/shakenstyle-logo-dark.svg' : '/shakenstyle-logo-light.svg'}
-      alt="SHAKENSTYLE"
-      width={compact ? 148 : 176}
-      height={36}
+      src="/shakenstyle-logo-dbe.png"
+      alt="SHAKENSTYLE - Design, Build & Execute"
+      width={compact ? 250 : 320}
+      height={compact ? 70 : 90}
       className="brandLogoImage"
       priority
     />
