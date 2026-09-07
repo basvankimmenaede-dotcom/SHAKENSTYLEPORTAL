@@ -5,8 +5,8 @@ export default function BrandLogo({ compact = false }: { dark?: boolean; compact
     <Image
       src="/shakenstyle-logo-dbe.png"
       alt="SHAKENSTYLE - Design, Build & Execute"
-      width={compact ? 250 : 320}
-      height={compact ? 70 : 90}
+      width={compact ? 330 : 520}
+      height={compact ? 54 : 86}
       className="brandLogoImage"
       priority
     />

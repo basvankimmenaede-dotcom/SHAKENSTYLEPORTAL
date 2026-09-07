@@ -419,3 +419,4 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 760px) {
   .itemGrid { grid-template-columns: 1fr; }
 }
+\n\n/* v8.8 header logo contrast + favicon alignment */\n.brandLogoImage {\n  height: 26px;\n  width: auto;\n  max-width: 330px;\n  object-fit: contain;\n  object-position: left center;\n  filter: none;\n}\n.loginBrand .brandLogoImage {\n  height: 34px;\n  width: auto;\n  max-width: min(520px, 88vw);\n}\n@media (max-width: 720px) {\n  .brandLogoImage { height: 22px; max-width: 235px; }\n  .loginBrand .brandLogoImage { height: 30px; max-width: min(390px, 86vw); }\n}\n
