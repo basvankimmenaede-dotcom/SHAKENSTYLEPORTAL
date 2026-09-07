@@ -25,7 +25,7 @@ export default function SyncRentmanButton() {
   return (
     <div className="inline">
       <button className="button orange" onClick={sync} disabled={loading}>
-        {loading ? 'Synchroniseren...' : 'Synchroniseer Rentman'}
+        {loading ? 'Synchroniseren...' : 'Synchroniseer beheer'}
       </button>
       {message ? <span className="muted">{message}</span> : null}
     </div>

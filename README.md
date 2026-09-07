@@ -159,3 +159,12 @@ The password-reset email template should use Supabase's default `{{ .Confirmatio
 - Detail page shows last Rentman usage date and dimensions
 - Rentman image file references are resolved to actual image URLs
 - Favicon points to the live SHAKENSTYLE website favicon
+
+
+## v8.3 wijzigingen
+- Los wachtwoord-vergeten scherm met eigen e-mailveld
+- Zoekfunctie op materiaalnaam en itemcode
+- Compacte vaste itemafbeeldingen
+- SHAKENSTYLE-logo in header/login
+- Gebruikersinterface gebruikt “in beheer” in plaats van leveranciersnaam
+- Klantportaal toont distributeursnaam als portaalnaam

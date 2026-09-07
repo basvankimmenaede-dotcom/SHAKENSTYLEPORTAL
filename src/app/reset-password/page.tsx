@@ -3,6 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import BrandLogo from '@/components/BrandLogo';
 
 function ResetPasswordForm() {
   const [password, setPassword] = useState('');
@@ -86,7 +87,7 @@ function ResetPasswordForm() {
   return (
     <main className="loginPage">
       <section className="loginCard">
-        <div className="loginLogo">SHAKEN<span>STYLE</span></div>
+        <div className="loginBrand"><BrandLogo dark /></div>
         <h1>Nieuw wachtwoord</h1>
         <p className="muted">Kies een nieuw wachtwoord voor je Storage Portal-account.</p>
         {error ? <div className="error">{error}</div> : null}
@@ -109,8 +110,8 @@ function ResetPasswordForm() {
         ) : null}
 
         {!checkingLink && error ? (
-          <button type="button" className="textButton" onClick={() => router.replace('/login')}>
-            Terug naar inloggen
+          <button type="button" className="textButton" onClick={() => router.replace('/forgot-password')}>
+            Nieuwe resetlink aanvragen
           </button>
         ) : null}
       </section>

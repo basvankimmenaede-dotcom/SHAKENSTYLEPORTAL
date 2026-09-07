@@ -77,7 +77,7 @@ export default async function EquipmentDetailPage({
         <div className="detailContent">
           <span className="badge">{item.code || `#${item.id}`}</span>
           <h1>{item.name}</h1>
-          <p className="detailIntro">Actuele itemgegevens uit Rentman.</p>
+          <p className="detailIntro">Actuele itemgegevens uit beheer.</p>
 
           <div className="detailStatGrid">
             <div className="detailStat">
@@ -99,7 +99,7 @@ export default async function EquipmentDetailPage({
                 <div><span>Hoogte</span><strong>{height ?? '-'}</strong></div>
               </div>
             ) : (
-              <p className="muted">Voor dit item zijn nog geen afmetingen ingevuld in Rentman.</p>
+              <p className="muted">Voor dit item zijn nog geen afmetingen ingevuld in beheer.</p>
             )}
           </section>
 

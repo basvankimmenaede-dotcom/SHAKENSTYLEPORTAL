@@ -18,6 +18,12 @@ export default async function PortalPage() {
     );
   }
 
+  let distributorName = profile.role === 'admin' ? 'Alle merken' : 'Portaal';
+  if (profile.role !== 'admin' && profile.distributor_id) {
+    const { data: distributor } = await supabase.from('distributors').select('name').eq('id', profile.distributor_id).single();
+    if (distributor?.name) distributorName = distributor.name;
+  }
+
   const { data: brands } = profile.role === 'admin'
     ? await supabase
         .from('brands')
@@ -39,7 +45,7 @@ export default async function PortalPage() {
     <main className="container">
       <section className="hero">
         <div>
-          <h1>Mijn merken</h1>
+          <h1>{distributorName}</h1>
           <p>Bekijk de opgeslagen materialen die SHAKENSTYLE voor jouw organisatie beheert.</p>
         </div>
       </section>

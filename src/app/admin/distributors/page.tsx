@@ -34,7 +34,7 @@ export default async function DistributorsPage() {
         </div>
         <div className="card">
           <h2>Werking</h2>
-          <p className="muted">Alleen merken die onder Merken & Rentman op actief staan, kunnen effectief in het klantportaal verschijnen. Een koppeling hier alleen is dus niet genoeg.</p>
+          <p className="muted">Alleen merken die onder Merken in beheer op actief staan, kunnen effectief in het klantportaal verschijnen. Een koppeling hier alleen is dus niet genoeg.</p>
         </div>
       </section>
 
@@ -49,14 +49,14 @@ export default async function DistributorsPage() {
             </div>
             <div className="tableWrap" style={{ marginTop: 16 }}>
               <table>
-                <thead><tr><th>Merk</th><th>Rentman ID</th><th>Portaal actief</th><th>Toegang</th></tr></thead>
+                <thead><tr><th>Merk</th><th>Portaal actief</th><th>Toegang</th></tr></thead>
                 <tbody>
                   {(brands ?? []).map((brand) => {
                     const checked = assigned.has(`${distributor.id}:${brand.id}`);
                     return (
                       <tr key={brand.id}>
                         <td><strong>{brand.name}</strong></td>
-                        <td>{brand.rentman_folder_id ?? '-'}</td>
+                        
                         <td>{brand.portal_enabled ? <span className="badge green">Actief</span> : <span className="badge">Uit</span>}</td>
                         <td>
                           <form action={setDistributorBrand}>

@@ -13,8 +13,8 @@ export default async function BrandsPage() {
     <main className="container">
       <section className="hero">
         <div>
-          <h1>Merken & Rentman</h1>
-          <p>Rentman is de bron. Nieuwe hoofdmappen worden na sync zichtbaar voor admins, maar nooit automatisch voor klanten.</p>
+          <h1>Merken in beheer</h1>
+          <p>De beheeromgeving is de bron. Nieuwe hoofdmappen worden na synchronisatie zichtbaar voor admins, maar nooit automatisch voor klanten.</p>
         </div>
         <SyncRentmanButton />
       </section>
@@ -23,7 +23,7 @@ export default async function BrandsPage() {
 
       <div className="tableWrap" style={{ marginTop: 18 }}>
         <table>
-          <thead><tr><th>Rentman map</th><th>ID</th><th>Status</th><th>Instellingen</th></tr></thead>
+          <thead><tr><th>Map</th><th>Status</th><th>Instellingen</th></tr></thead>
           <tbody>
             {(brands ?? []).map((brand) => (
               <tr key={brand.id}>
@@ -31,8 +31,8 @@ export default async function BrandsPage() {
                   <strong>{brand.rentman_name ?? brand.name}</strong><br />
                   <span className="muted">{brand.rentman_path ?? ''}</span>
                 </td>
-                <td>{brand.rentman_folder_id ?? '-'}</td>
-                <td>{brand.rentman_active ? <span className="badge green">Rentman actief</span> : <span className="badge">Niet meer gevonden</span>}</td>
+                
+                <td>{brand.rentman_active ? <span className="badge green">In beheer</span> : <span className="badge">Niet meer gevonden</span>}</td>
                 <td>
                   <form className="inline" action={updateBrandSettings}>
                     <input type="hidden" name="brand_id" value={brand.id} />

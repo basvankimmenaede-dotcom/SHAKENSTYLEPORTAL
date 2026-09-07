@@ -26,7 +26,7 @@ async function rentmanFetch<T>(pathOrUrl: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Rentman request failed (${response.status}).`);
+    throw new Error(`Beheerverbinding mislukt (${response.status}).`);
   }
 
   return response.json();
@@ -44,7 +44,7 @@ async function rentmanFetchAll<T>(path: string): Promise<T[]> {
     pageCount += 1;
 
     if (pageCount > 100) {
-      throw new Error('Rentman pagination exceeded the safety limit.');
+      throw new Error('De beheergegevens zijn te groot om veilig te laden.');
     }
   }
 

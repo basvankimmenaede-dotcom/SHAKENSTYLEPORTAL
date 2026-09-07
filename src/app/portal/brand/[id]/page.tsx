@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { getVisibleEquipmentForFolder } from '@/lib/rentman';
+import EquipmentSearch from '@/components/EquipmentSearch';
 
 export default async function BrandPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,47 +35,32 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
   if (!brand?.rentman_folder_id) notFound();
 
   let equipment: Awaited<ReturnType<typeof getVisibleEquipmentForFolder>> = { items: [], configured: false };
-  let rentmanError = '';
+  let beheerError = '';
   try {
     equipment = await getVisibleEquipmentForFolder(brand.rentman_folder_id);
   } catch (error) {
-    rentmanError = error instanceof Error ? error.message : 'Rentman kon niet worden geladen.';
+    beheerError = error instanceof Error ? error.message : 'De beheergegevens konden niet worden geladen.';
   }
 
   return (
     <main className="container">
       <section className="hero">
         <div>
-          <Link className="eyebrowLink" href="/portal">← Mijn merken</Link>
+          <Link className="eyebrowLink" href="/portal">← Terug</Link>
           <h1>{brand.name}</h1>
           <p>Bekijk de materialen die SHAKENSTYLE voor dit merk beheert.</p>
         </div>
       </section>
 
-      {rentmanError ? <div className="error">{rentmanError}</div> : null}
+      {beheerError ? <div className="error">{beheerError}</div> : null}
       {!equipment.configured ? (
-        <div className="notice">De Rentman custom-field key is nog niet geconfigureerd in de website. Tot die tijd worden uit veiligheid geen items getoond.</div>
+        <div className="notice">De zichtbaarheid voor materialen is nog niet geconfigureerd. Tot die tijd worden uit veiligheid geen items getoond.</div>
       ) : null}
       {equipment.configured && equipment.items.length === 0 ? (
         <div className="notice">Voor dit merk zijn nog geen zichtbare items gevonden.</div>
       ) : null}
 
-      <section className="itemGrid">
-        {equipment.items.map((item) => (
-          <Link className="itemCard" key={item.id} href={`/portal/brand/${brand.id}/item/${item.id}`}>
-            <div className="itemImage">
-              {item.image ? <img src={item.image} alt={item.name} /> : <span>Geen afbeelding</span>}
-            </div>
-            <div className="itemBody">
-              <span className="badge">{item.code || `#${item.id}`}</span>
-              <h3>{item.name}</h3>
-              <div className="metric">{item.current_quantity ?? '-'}</div>
-              <div className="muted">Opgeslagen voorraad</div>
-              <div className="itemMore">Bekijk details →</div>
-            </div>
-          </Link>
-        ))}
-      </section>
+      <EquipmentSearch brandId={brand.id} items={equipment.items} />
     </main>
   );
 }

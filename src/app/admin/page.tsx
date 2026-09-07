@@ -16,14 +16,14 @@ export default async function AdminDashboard() {
       <section className="hero">
         <div>
           <h1>Admin dashboard</h1>
-          <p>Welkom {profile.full_name ?? 'SHAKENSTYLE'}. Beheer distributeurs, Rentman-mappen en klanttoegang.</p>
+          <p>Welkom {profile.full_name ?? 'SHAKENSTYLE'}. Beheer distributeurs, mappen en klanttoegang.</p>
         </div>
         <SyncRentmanButton />
       </section>
 
       <section className="grid grid3">
         <div className="card"><div className="metric">{distributors ?? 0}</div><div className="muted">Distributeurs</div></div>
-        <div className="card"><div className="metric">{brands ?? 0}</div><div className="muted">Rentman-hoofdmappen</div></div>
+        <div className="card"><div className="metric">{brands ?? 0}</div><div className="muted">Mappen in beheer</div></div>
         <div className="card"><div className="metric">{activeBrands ?? 0}</div><div className="muted">Actief in portaal</div></div>
       </section>
 
@@ -33,8 +33,8 @@ export default async function AdminDashboard() {
           <p className="muted">Maak klanten aan en wijs zelf de merken toe die zij mogen zien.</p>
         </Link>
         <Link className="card" href="/admin/brands">
-          <h2>Merken & Rentman</h2>
-          <p className="muted">Nieuwe Rentman-hoofdmappen verschijnen na synchronisatie en staan standaard uit.</p>
+          <h2>Merken in beheer</h2>
+          <p className="muted">Nieuwe Mappen in beheer verschijnen na synchronisatie en staan standaard uit.</p>
         </Link>
         <Link className="card" href="/admin/users">
           <h2>Gebruikers</h2>
