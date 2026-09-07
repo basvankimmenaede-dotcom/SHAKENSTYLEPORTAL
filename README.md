@@ -138,3 +138,15 @@ De architectuur is voorbereid, maar deze onderdelen zijn bewust nog niet toegevo
 - automatische periodieke Rentman sync.
 
 Die kunnen op deze basis worden toegevoegd zonder de kernstructuur opnieuw te ontwerpen.
+
+## Password reset / production URL
+Set this Vercel environment variable as **Config**:
+
+`NEXT_PUBLIC_APP_URL=https://shakenstyle-portal.vercel.app`
+
+In Supabase -> Authentication -> URL Configuration use:
+- Site URL: `https://shakenstyle-portal.vercel.app`
+- Redirect URL: `https://shakenstyle-portal.vercel.app/reset-password`
+- Optional wildcard: `https://shakenstyle-portal.vercel.app/**`
+
+The password-reset email template should use Supabase's default `{{ .ConfirmationURL }}` link. If a custom email template is used, restore that variable instead of manually concatenating SiteURL and RedirectTo.
