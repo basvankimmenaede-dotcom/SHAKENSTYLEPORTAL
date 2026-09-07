@@ -3,35 +3,44 @@ import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { getRootEquipmentFolderMap, getVisibleEquipmentForFolder } from '@/lib/rentman';
 import EquipmentSearch from '@/components/EquipmentSearch';
+import { getAccessibleBrandIds, resolvePortalAccessContext, withPreview } from '@/lib/portal-access';
+import { createAdminClient } from '@/lib/supabase/admin';
 
-export default async function BrandPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BrandPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ as?: string }>;
+}) {
   const { id } = await params;
+  const query = searchParams ? await searchParams : {};
   const brandId = Number(id);
   if (!Number.isFinite(brandId)) notFound();
 
-  const { supabase, profile } = await requireUser();
+  const { user, profile } = await requireUser();
+  const admin = createAdminClient();
+  const access = await resolvePortalAccessContext({
+    currentProfile: profile,
+    currentUserId: user.id,
+    previewUserId: query.as ?? null,
+  });
+  const accessibleBrandIds = await getAccessibleBrandIds({
+    currentProfile: profile,
+    effectiveUserId: access.effectiveUserId,
+    previewing: access.previewing,
+  });
 
-  const baseQuery = supabase
+  if (accessibleBrandIds !== null && !accessibleBrandIds.includes(brandId)) notFound();
+
+  const { data: brand } = await admin
     .from('brands')
     .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active')
     .eq('id', brandId)
     .eq('portal_enabled', true)
     .eq('is_brand', true)
-    .eq('rentman_active', true);
-
-  if (profile.role !== 'admin' && !profile.distributor_id) notFound();
-
-  const { data: brand } = profile.role === 'admin'
-    ? await baseQuery.single()
-    : await supabase
-        .from('brands')
-        .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active,distributor_brands!inner(distributor_id)')
-        .eq('id', brandId)
-        .eq('portal_enabled', true)
-        .eq('is_brand', true)
-        .eq('rentman_active', true)
-        .eq('distributor_brands.distributor_id', profile.distributor_id as number)
-        .single();
+    .eq('rentman_active', true)
+    .single();
   if (!brand?.rentman_folder_id) notFound();
 
   let equipment: Awaited<ReturnType<typeof getVisibleEquipmentForFolder>> = { items: [], configured: false };
@@ -50,9 +59,12 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main className="container">
+      {access.previewing ? (
+        <div className="previewBanner pagePreviewBanner">Gebruikersweergave: {access.previewLabel}</div>
+      ) : null}
       <section className="hero">
         <div>
-          <Link className="eyebrowLink" href="/portal">← Terug</Link>
+          <Link className="eyebrowLink" href={withPreview('/portal', access.previewing ? access.effectiveUserId : null)}>← Terug</Link>
           <h1>{displayBrandName}</h1>
           <p>Bekijk de materialen die SHAKENSTYLE voor dit merk beheert.</p>
         </div>
@@ -66,7 +78,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
         <div className="notice">Voor {displayBrandName} zijn op dit moment nog geen materialen zichtbaar in het portaal.</div>
       ) : null}
 
-      {equipment.items.length > 0 ? <EquipmentSearch brandId={brand.id} items={equipment.items} /> : null}
+      {equipment.items.length > 0 ? <EquipmentSearch brandId={brand.id} items={equipment.items} previewUserId={access.previewing ? access.effectiveUserId : undefined} /> : null}
     </main>
   );
 }

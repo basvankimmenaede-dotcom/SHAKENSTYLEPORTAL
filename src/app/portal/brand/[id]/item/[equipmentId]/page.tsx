@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { getEquipmentFiles, getLastEquipmentUsageDate, getVisibleEquipmentItemForFolder } from '@/lib/rentman';
+import { getAccessibleBrandIds, resolvePortalAccessContext, withPreview } from '@/lib/portal-access';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 function formatDate(value: string | null) {
   if (!value) return 'Nog geen inzet gevonden';
@@ -20,37 +22,39 @@ function formatDimension(value?: number) {
 
 export default async function EquipmentDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; equipmentId: string }>;
+  searchParams?: Promise<{ as?: string }>;
 }) {
   const { id, equipmentId } = await params;
+  const query = searchParams ? await searchParams : {};
   const brandId = Number(id);
   const rentmanEquipmentId = Number(equipmentId);
   if (!Number.isFinite(brandId) || !Number.isFinite(rentmanEquipmentId)) notFound();
 
-  const { supabase, profile } = await requireUser();
+  const { user, profile } = await requireUser();
+  const admin = createAdminClient();
+  const access = await resolvePortalAccessContext({
+    currentProfile: profile,
+    currentUserId: user.id,
+    previewUserId: query.as ?? null,
+  });
+  const accessibleBrandIds = await getAccessibleBrandIds({
+    currentProfile: profile,
+    effectiveUserId: access.effectiveUserId,
+    previewing: access.previewing,
+  });
+  if (accessibleBrandIds !== null && !accessibleBrandIds.includes(brandId)) notFound();
 
-  const baseBrandQuery = supabase
+  const { data: brand } = await admin
     .from('brands')
     .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active')
     .eq('id', brandId)
     .eq('portal_enabled', true)
     .eq('is_brand', true)
-    .eq('rentman_active', true);
-
-  if (profile.role !== 'admin' && !profile.distributor_id) notFound();
-
-  const { data: brand } = profile.role === 'admin'
-    ? await baseBrandQuery.single()
-    : await supabase
-        .from('brands')
-        .select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active,distributor_brands!inner(distributor_id)')
-        .eq('id', brandId)
-        .eq('portal_enabled', true)
-        .eq('is_brand', true)
-        .eq('rentman_active', true)
-        .eq('distributor_brands.distributor_id', profile.distributor_id as number)
-        .single();
+    .eq('rentman_active', true)
+    .single();
   if (!brand?.rentman_folder_id) notFound();
 
   const [item, lastUsage, files] = await Promise.all([
@@ -69,7 +73,10 @@ export default async function EquipmentDetailPage({
 
   return (
     <main className="container itemDetailPage">
-      <Link className="eyebrowLink" href={`/portal/brand/${brand.id}`}>← Terug naar {brand.name}</Link>
+      {access.previewing ? (
+        <div className="previewBanner pagePreviewBanner">Gebruikersweergave: {access.previewLabel}</div>
+      ) : null}
+      <Link className="eyebrowLink" href={withPreview(`/portal/brand/${brand.id}`, access.previewing ? access.effectiveUserId : null)}>← Terug naar {brand.name}</Link>
 
       <section className="itemDetailGrid">
         <div className="detailImagePanel">
@@ -122,17 +129,9 @@ export default async function EquipmentDetailPage({
                   const extension = (file.extension ?? file.type?.split('/').pop() ?? 'bestand').toUpperCase();
 
                   return (
-                    <a
-                      key={file.id}
-                      className={isImage ? 'attachmentCard attachmentImageCard' : 'attachmentCard'}
-                      href={href}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a key={file.id} className={isImage ? 'attachmentCard attachmentImageCard' : 'attachmentCard'} href={href} target="_blank" rel="noreferrer">
                       {isImage ? (
-                        <div className="attachmentThumb">
-                          <img src={href} alt={file.name} />
-                        </div>
+                        <div className="attachmentThumb"><img src={href} alt={file.name} /></div>
                       ) : (
                         <div className="attachmentFileIcon" aria-hidden="true">{extension}</div>
                       )}

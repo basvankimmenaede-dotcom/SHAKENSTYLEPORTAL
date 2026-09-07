@@ -1,53 +1,78 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { getRootEquipmentFolderMap } from '@/lib/rentman';
+import { getAccessibleBrandIds, resolvePortalAccessContext, withPreview } from '@/lib/portal-access';
+import { createAdminClient } from '@/lib/supabase/admin';
 
-export default async function PortalPage() {
-  const { supabase, profile } = await requireUser();
+export default async function PortalPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ as?: string }>;
+}) {
+  const { user, profile } = await requireUser();
+  const admin = createAdminClient();
+  const query = searchParams ? await searchParams : {};
+  const previewUserId = query.as ?? null;
+  const access = await resolvePortalAccessContext({
+    currentProfile: profile,
+    currentUserId: user.id,
+    previewUserId,
+  });
 
-  if (!profile.distributor_id && profile.role !== 'admin') {
-    return (
-      <main className="container">
-        <section className="hero">
-          <div>
-            <h1>Welkom</h1>
-            <p>Je account is actief, maar SHAKENSTYLE heeft nog geen distributeur aan je profiel gekoppeld.</p>
-          </div>
-        </section>
-        <div className="notice">Neem contact op met SHAKENSTYLE om je klanttoegang te activeren.</div>
-      </main>
-    );
-  }
+  const effectiveProfile = access.effectiveProfile;
+  const accessibleBrandIds = await getAccessibleBrandIds({
+    currentProfile: profile,
+    effectiveUserId: access.effectiveUserId,
+    previewing: access.previewing,
+  });
 
-  let distributorName = profile.role === 'admin' ? 'Alle merken' : 'Portaal';
-  if (profile.role !== 'admin' && profile.distributor_id) {
-    const { data: distributor } = await supabase.from('distributors').select('name').eq('id', profile.distributor_id).single();
+  let distributorName = profile.role === 'admin' && !access.previewing ? 'Alle merken' : 'Portaal';
+  if (effectiveProfile.distributor_id) {
+    const { data: distributor } = await admin
+      .from('distributors')
+      .select('name')
+      .eq('id', effectiveProfile.distributor_id)
+      .single();
     if (distributor?.name) distributorName = distributor.name;
   }
 
-  const { data: brands } = profile.role === 'admin'
-    ? await supabase
-        .from('brands')
-        .select('id,name,rentman_folder_id,rentman_path')
-        .eq('portal_enabled', true)
-        .eq('is_brand', true)
-        .eq('rentman_active', true)
-        .order('name')
-    : await supabase
-        .from('brands')
-        .select('id,name,rentman_folder_id,rentman_path,distributor_brands!inner(distributor_id)')
-        .eq('portal_enabled', true)
-        .eq('is_brand', true)
-        .eq('rentman_active', true)
-        .eq('distributor_brands.distributor_id', profile.distributor_id as number)
-        .order('name');
+  let brandQuery = admin
+    .from('brands')
+    .select('id,name,rentman_folder_id,rentman_path')
+    .eq('portal_enabled', true)
+    .eq('is_brand', true)
+    .eq('rentman_active', true)
+    .order('name');
 
+  if (accessibleBrandIds !== null) {
+    if (accessibleBrandIds.length === 0) {
+      return (
+        <main className="container">
+          {access.previewing ? (
+            <div className="previewBanner pagePreviewBanner">
+              Gebruikersweergave: {access.previewLabel} · <Link href="/admin/users">Terug naar gebruikers</Link>
+            </div>
+          ) : null}
+          <section className="hero">
+            <div>
+              <h1>{distributorName}</h1>
+              <p>Bekijk de opgeslagen materialen die SHAKENSTYLE voor jouw organisatie beheert.</p>
+            </div>
+          </section>
+          <div className="notice">Er zijn nog geen merken aan dit account toegewezen.</div>
+        </main>
+      );
+    }
+    brandQuery = brandQuery.in('id', accessibleBrandIds);
+  }
+
+  const { data: brands } = await brandQuery;
 
   let liveFolders = new Map<number, { id: number; name: string; parent: string | null; path?: string }>();
   try {
     liveFolders = await getRootEquipmentFolderMap();
   } catch {
-    // Supabase blijft de veilige fallback als de beheerverbinding tijdelijk niet beschikbaar is.
+    // Supabase blijft fallback als de beheerverbinding tijdelijk niet beschikbaar is.
   }
 
   const displayBrands = (brands ?? []).map((brand) => {
@@ -60,6 +85,12 @@ export default async function PortalPage() {
 
   return (
     <main className="container">
+      {access.previewing ? (
+        <div className="previewBanner pagePreviewBanner">
+          Gebruikersweergave: {access.previewLabel} · <Link href="/admin/users">Terug naar gebruikers</Link>
+        </div>
+      ) : null}
+
       <section className="hero">
         <div>
           <h1>{distributorName}</h1>
@@ -68,11 +99,11 @@ export default async function PortalPage() {
       </section>
 
       {displayBrands.length === 0 ? (
-        <div className="notice">Er zijn nog geen merken aan jouw account toegewezen.</div>
+        <div className="notice">Er zijn nog geen merken aan dit account toegewezen.</div>
       ) : (
         <section className="brandGrid">
           {displayBrands.map((brand) => (
-            <Link href={`/portal/brand/${brand.id}`} className="brandCard" key={brand.id}>
+            <Link href={withPreview(`/portal/brand/${brand.id}`, access.previewing ? access.effectiveUserId : null)} className="brandCard" key={brand.id}>
               <div>
                 <h2>{brand.displayName}</h2>
                 <p className="muted">Opgeslagen materialen</p>

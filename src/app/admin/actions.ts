@@ -21,23 +21,7 @@ export async function updateBrandSettings(formData: FormData) {
 
   await supabase.from('brands').update({ portal_enabled: portalEnabled, is_brand: isBrand }).eq('id', brandId);
   revalidatePath('/admin/brands');
-  revalidatePath('/portal');
-}
-
-export async function setDistributorBrand(formData: FormData) {
-  const { supabase } = await requireAdmin();
-  const distributorId = Number(formData.get('distributor_id'));
-  const brandId = Number(formData.get('brand_id'));
-  const enabled = formData.get('enabled') === 'on';
-  if (!Number.isFinite(distributorId) || !Number.isFinite(brandId)) return;
-
-  if (enabled) {
-    await supabase.from('distributor_brands').upsert({ distributor_id: distributorId, brand_id: brandId });
-  } else {
-    await supabase.from('distributor_brands').delete().eq('distributor_id', distributorId).eq('brand_id', brandId);
-  }
-
-  revalidatePath('/admin/distributors');
+  revalidatePath('/admin/users');
   revalidatePath('/portal');
 }
 
@@ -61,6 +45,36 @@ export async function assignUserProfile(formData: FormData) {
     .eq('id', userId);
 
   revalidatePath('/admin/users');
+  revalidatePath('/portal');
+}
+
+export async function saveUserBrandAccess(formData: FormData) {
+  await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+
+  const userId = String(formData.get('user_id') ?? '').trim();
+  const selectedBrandIds = formData
+    .getAll('brand_ids')
+    .map((value) => Number(value))
+    .filter(Number.isFinite);
+
+  if (!userId) return;
+
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
+  if (!profile || profile.role === 'admin') return;
+
+  const { error: deleteError } = await admin.from('user_brand_access').delete().eq('user_id', userId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (selectedBrandIds.length > 0) {
+    const rows = selectedBrandIds.map((brandId) => ({ user_id: userId, brand_id: brandId }));
+    const { error: insertError } = await admin.from('user_brand_access').insert(rows);
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  revalidatePath('/admin/users');
+  revalidatePath('/portal');
 }
 
 export async function inviteCustomer(formData: FormData) {

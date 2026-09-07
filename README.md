@@ -182,3 +182,16 @@ Itemdetail toont alle gekoppelde bestanden rechtstreeks uit beheer; geen uploadf
 - Handmatige synchronisatie werkt nu ook de zichtbare `name` in Supabase bij.
 - Lege materiaalpagina toont nog maar een melding; zoekbalk en 0-van-0 teller verdwijnen als er geen items zijn.
 - Bij een zoekopdracht zonder resultaat verschijnt alleen een gerichte zoekmelding.
+
+## v8.9 - merktoegang per gebruiker
+
+De organisatie/distributeur blijft gekoppeld aan het profiel, maar bepaalt niet langer welke merken zichtbaar zijn.
+Merkrechten staan per gebruiker in `user_brand_access`.
+
+1. Voer eerst `supabase-user-brand-access.sql` uit in Supabase SQL Editor.
+2. De migratie kopieert bestaande `distributor_brands` rechten eenmalig naar alle bestaande customer users.
+3. Ga daarna naar **Admin -> Gebruikers** en beheer per gebruiker de merktoegang.
+4. Admins hebben automatisch toegang tot alle actieve portalmerken.
+5. **Bekijk als gebruiker** simuleert exact de merktoegang van die specifieke klantgebruiker.
+
+`distributor_brands` wordt niet meer gebruikt voor portal-autorisatie en kan voorlopig blijven bestaan als historie.

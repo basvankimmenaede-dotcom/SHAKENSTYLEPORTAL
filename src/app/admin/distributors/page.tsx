@@ -1,23 +1,20 @@
-import { createDistributor, setDistributorBrand } from '@/app/admin/actions';
+import { createDistributor } from '@/app/admin/actions';
 import { requireAdmin } from '@/lib/auth';
 
 export default async function DistributorsPage() {
   const { supabase } = await requireAdmin();
 
-  const [{ data: distributors }, { data: brands }, { data: assignments }] = await Promise.all([
+  const [{ data: distributors }, { data: profiles }] = await Promise.all([
     supabase.from('distributors').select('id,name').order('name'),
-    supabase.from('brands').select('id,name,rentman_folder_id,portal_enabled,is_brand,rentman_active').eq('is_brand', true).eq('rentman_active', true).order('name'),
-    supabase.from('distributor_brands').select('distributor_id,brand_id'),
+    supabase.from('profiles').select('id,distributor_id,role'),
   ]);
-
-  const assigned = new Set((assignments ?? []).map((row) => `${row.distributor_id}:${row.brand_id}`));
 
   return (
     <main className="container">
       <section className="hero">
         <div>
           <h1>Distributeurs</h1>
-          <p>Maak een distributeur aan en bepaal vervolgens zelf welke actieve merken deze klant mag zien.</p>
+          <p>Distributeurs zijn alleen de organisatie waartoe een gebruiker behoort. Merkrechten stel je voortaan per gebruiker in.</p>
         </div>
       </section>
 
@@ -33,52 +30,26 @@ export default async function DistributorsPage() {
           </form>
         </div>
         <div className="card">
-          <h2>Werking</h2>
-          <p className="muted">Alleen merken die onder Merken in beheer op actief staan, kunnen effectief in het klantportaal verschijnen. Een koppeling hier alleen is dus niet genoeg.</p>
+          <h2>Toegang</h2>
+          <p className="muted">Ga naar <strong>Gebruikers</strong> om per brandmanager of contactpersoon exact de juiste merken aan te vinken.</p>
         </div>
       </section>
 
-      <div className="stack" style={{ marginTop: 18 }}>
-        {(distributors ?? []).map((distributor) => (
-          <section className="card" key={distributor.id}>
-            <div className="split">
-              <div>
-                <h2 style={{ marginBottom: 4 }}>{distributor.name}</h2>
-                <span className="muted">Merken toewijzen</span>
-              </div>
-            </div>
-            <div className="tableWrap" style={{ marginTop: 16 }}>
-              <table>
-                <thead><tr><th>Merk</th><th>Portaal actief</th><th>Toegang</th></tr></thead>
-                <tbody>
-                  {(brands ?? []).map((brand) => {
-                    const checked = assigned.has(`${distributor.id}:${brand.id}`);
-                    return (
-                      <tr key={brand.id}>
-                        <td><strong>{brand.name}</strong></td>
-                        
-                        <td>{brand.portal_enabled ? <span className="badge green">Actief</span> : <span className="badge">Uit</span>}</td>
-                        <td>
-                          <form action={setDistributorBrand}>
-                            <input type="hidden" name="distributor_id" value={distributor.id} />
-                            <input type="hidden" name="brand_id" value={brand.id} />
-                            <div className="inline">
-                              <label className="checkRow">
-                                <input type="checkbox" name="enabled" defaultChecked={checked} />
-                                <span>{checked ? 'Toegewezen' : 'Niet toegewezen'}</span>
-                              </label>
-                              <button className="button secondary" type="submit">Opslaan</button>
-                            </div>
-                          </form>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ))}
+      <div className="tableWrap" style={{ marginTop: 18 }}>
+        <table>
+          <thead><tr><th>Distributeur</th><th>Gebruikers</th></tr></thead>
+          <tbody>
+            {(distributors ?? []).map((distributor) => {
+              const userCount = (profiles ?? []).filter((profile) => profile.role !== 'admin' && profile.distributor_id === distributor.id).length;
+              return (
+                <tr key={distributor.id}>
+                  <td><strong>{distributor.name}</strong></td>
+                  <td>{userCount}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </main>
   );

@@ -11,7 +11,15 @@ type Item = {
   current_quantity?: number;
 };
 
-export default function EquipmentSearch({ brandId, items }: { brandId: number; items: Item[] }) {
+export default function EquipmentSearch({
+  brandId,
+  items,
+  previewUserId,
+}: {
+  brandId: number;
+  items: Item[];
+  previewUserId?: string;
+}) {
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -40,20 +48,23 @@ export default function EquipmentSearch({ brandId, items }: { brandId: number; i
       ) : null}
 
       <section className="itemGrid">
-        {filtered.map((item) => (
-          <Link className="itemCard" key={item.id} href={`/portal/brand/${brandId}/item/${item.id}`}>
-            <div className="itemImage">
-              {item.image ? <img src={item.image} alt={item.name} /> : <span>Geen afbeelding</span>}
-            </div>
-            <div className="itemBody">
-              <span className="badge">{item.code || `#${item.id}`}</span>
-              <h3>{item.name}</h3>
-              <div className="metric">{item.current_quantity ?? '-'}</div>
-              <div className="muted">In beheer</div>
-              <div className="itemMore">Bekijk details →</div>
-            </div>
-          </Link>
-        ))}
+        {filtered.map((item) => {
+          const href = `/portal/brand/${brandId}/item/${item.id}${previewUserId ? `?as=${encodeURIComponent(previewUserId)}` : ''}`;
+          return (
+            <Link className="itemCard" key={item.id} href={href}>
+              <div className="itemImage">
+                {item.image ? <img src={item.image} alt={item.name} /> : <span>Geen afbeelding</span>}
+              </div>
+              <div className="itemBody">
+                <span className="badge">{item.code || `#${item.id}`}</span>
+                <h3>{item.name}</h3>
+                <div className="metric">{item.current_quantity ?? '-'}</div>
+                <div className="muted">In beheer</div>
+                <div className="itemMore">Bekijk details →</div>
+              </div>
+            </Link>
+          );
+        })}
       </section>
     </>
   );
