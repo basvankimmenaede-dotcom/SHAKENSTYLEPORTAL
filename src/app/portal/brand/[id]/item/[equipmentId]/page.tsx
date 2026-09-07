@@ -65,6 +65,7 @@ export default async function EquipmentDetailPage({
   const width = formatDimension(item.width);
   const height = formatDimension(item.height);
   const hasDimensions = Boolean(length || width || height);
+  const attachmentFiles = files.filter((file) => file.href !== item.image);
 
   return (
     <main className="container itemDetailPage">
@@ -111,11 +112,11 @@ export default async function EquipmentDetailPage({
             </section>
           ) : null}
 
-          {files.length > 0 ? (
+          {attachmentFiles.length > 0 ? (
             <section className="detailSection">
               <h2>Documenten & afbeeldingen</h2>
               <div className="attachmentGrid">
-                {files.map((file) => {
+                {attachmentFiles.map((file) => {
                   const href = file.href as string;
                   const isImage = Boolean(file.image) || file.type?.startsWith('image/');
                   const extension = (file.extension ?? file.type?.split('/').pop() ?? 'bestand').toUpperCase();

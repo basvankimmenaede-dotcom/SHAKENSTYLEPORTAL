@@ -407,3 +407,15 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 620px) {
   .attachmentGrid { grid-template-columns: 1fr; }
 }
+
+
+/* v8.7: three material cards on desktop + main image excluded from attachments */
+.itemGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 1120px) {
+  .itemGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .itemGrid { grid-template-columns: 1fr; }
+}
