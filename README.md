@@ -195,3 +195,10 @@ Merkrechten staan per gebruiker in `user_brand_access`.
 5. **Bekijk als gebruiker** simuleert exact de merktoegang van die specifieke klantgebruiker.
 
 `distributor_brands` wordt niet meer gebruikt voor portal-autorisatie en kan voorlopig blijven bestaan als historie.
+
+## v8.9.3
+- Materialen op merkpagina gegroepeerd per bovenliggende Rentman-map (bijv. Glaswerk, Dranken, POS).
+- Zoekfunctie zoekt ook in categorienaam.
+- Admin kan op de itemdetailpagina een `Notities klant`-veld invullen.
+- Klantnotitie is alleen zichtbaar voor gebruikers die toegang hebben tot het betreffende merk.
+- Voer `supabase-equipment-customer-notes.sql` eenmalig uit in Supabase SQL Editor.

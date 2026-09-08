@@ -9,6 +9,7 @@ type Item = {
   code?: string;
   image?: string | null;
   current_quantity?: number;
+  category?: string;
 };
 
 export default function EquipmentSearch({
@@ -24,8 +25,31 @@ export default function EquipmentSearch({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
-    return items.filter((item) => `${item.name} ${item.code ?? ''}`.toLowerCase().includes(q));
+    return items.filter((item) =>
+      `${item.name} ${item.code ?? ''} ${item.category ?? ''}`.toLowerCase().includes(q),
+    );
   }, [items, query]);
+
+  const grouped = useMemo(() => {
+    const groups = new Map<string, Item[]>();
+    for (const item of filtered) {
+      const category = item.category?.trim() || 'Overig';
+      const existing = groups.get(category) ?? [];
+      existing.push(item);
+      groups.set(category, existing);
+    }
+
+    return [...groups.entries()]
+      .sort(([a], [b]) => {
+        if (a === 'Overig') return 1;
+        if (b === 'Overig') return -1;
+        return a.localeCompare(b, 'nl', { sensitivity: 'base' });
+      })
+      .map(([category, categoryItems]) => ({
+        category,
+        items: categoryItems.sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' })),
+      }));
+  }, [filtered]);
 
   if (items.length === 0) return null;
 
@@ -35,7 +59,7 @@ export default function EquipmentSearch({
         <input
           className="input searchInput"
           type="search"
-          placeholder="Zoek op itemnaam of code..."
+          placeholder="Zoek op itemnaam, code of categorie..."
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           aria-label="Zoek in materialen"
@@ -47,25 +71,36 @@ export default function EquipmentSearch({
         <div className="notice">Geen resultaten gevonden voor “{query.trim()}”.</div>
       ) : null}
 
-      <section className="itemGrid">
-        {filtered.map((item) => {
-          const href = `/portal/brand/${brandId}/item/${item.id}${previewUserId ? `?as=${encodeURIComponent(previewUserId)}` : ''}`;
-          return (
-            <Link className="itemCard" key={item.id} href={href}>
-              <div className="itemImage">
-                {item.image ? <img src={item.image} alt={item.name} /> : <span>Geen afbeelding</span>}
-              </div>
-              <div className="itemBody">
-                <span className="badge">{item.code || `#${item.id}`}</span>
-                <h3>{item.name}</h3>
-                <div className="metric">{item.current_quantity ?? '-'}</div>
-                <div className="muted">In beheer</div>
-                <div className="itemMore">Bekijk details →</div>
-              </div>
-            </Link>
-          );
-        })}
-      </section>
+      <div className="equipmentCategoryList">
+        {grouped.map((group) => (
+          <section className="equipmentCategory" key={group.category}>
+            <div className="equipmentCategoryHeader">
+              <h2>{group.category}</h2>
+              <span>{group.items.length} {group.items.length === 1 ? 'item' : 'items'}</span>
+            </div>
+
+            <div className="itemGrid">
+              {group.items.map((item) => {
+                const href = `/portal/brand/${brandId}/item/${item.id}${previewUserId ? `?as=${encodeURIComponent(previewUserId)}` : ''}`;
+                return (
+                  <Link className="itemCard" key={item.id} href={href}>
+                    <div className="itemImage">
+                      {item.image ? <img src={item.image} alt={item.name} /> : <span>Geen afbeelding</span>}
+                    </div>
+                    <div className="itemBody">
+                      <span className="badge">{item.code || `#${item.id}`}</span>
+                      <h3>{item.name}</h3>
+                      <div className="metric">{item.current_quantity ?? '-'}</div>
+                      <div className="muted">In beheer</div>
+                      <div className="itemMore">Bekijk details →</div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
     </>
   );
 }

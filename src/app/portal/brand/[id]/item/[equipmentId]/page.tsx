@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth';
 import { getEquipmentFiles, getLastEquipmentUsageDate, getVisibleEquipmentItemForFolder } from '@/lib/rentman';
 import { getAccessibleBrandIds, resolvePortalAccessContext, withPreview } from '@/lib/portal-access';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { saveEquipmentCustomerNote } from '@/app/admin/actions';
 
 function formatDate(value: string | null) {
   if (!value) return 'Nog geen inzet gevonden';
@@ -57,13 +58,19 @@ export default async function EquipmentDetailPage({
     .single();
   if (!brand?.rentman_folder_id) notFound();
 
-  const [item, lastUsage, files] = await Promise.all([
+  const [item, lastUsage, files, customerNoteResult] = await Promise.all([
     getVisibleEquipmentItemForFolder(brand.rentman_folder_id, rentmanEquipmentId),
     getLastEquipmentUsageDate(rentmanEquipmentId).catch(() => null),
     getEquipmentFiles(rentmanEquipmentId).catch(() => []),
+    admin
+      .from('equipment_customer_notes')
+      .select('note')
+      .eq('equipment_id', rentmanEquipmentId)
+      .maybeSingle(),
   ]);
 
   if (!item) notFound();
+  const customerNote = customerNoteResult.data?.note?.trim() ?? '';
 
   const length = formatDimension(item.length);
   const width = formatDimension(item.width);
@@ -116,6 +123,31 @@ export default async function EquipmentDetailPage({
             <section className="detailSection">
               <h2>Omschrijving</h2>
               <p>{item.external_remark}</p>
+            </section>
+          ) : null}
+
+          {customerNote || (profile.role === 'admin' && !access.previewing) ? (
+            <section className="detailSection customerNoteSection">
+              <h2>Notities klant</h2>
+              {profile.role === 'admin' && !access.previewing ? (
+                <form action={saveEquipmentCustomerNote} className="customerNoteForm">
+                  <input type="hidden" name="brand_id" value={brand.id} />
+                  <input type="hidden" name="equipment_id" value={rentmanEquipmentId} />
+                  <textarea
+                    className="input customerNoteInput"
+                    name="customer_note"
+                    defaultValue={customerNote}
+                    placeholder="Bijv. 1 deksel ontbreekt, kras op linkerzijde, alleen compleet uitgeven..."
+                    rows={4}
+                  />
+                  <div className="customerNoteActions">
+                    <span className="muted">Deze notitie is zichtbaar voor klanten met toegang tot dit merk.</span>
+                    <button className="button secondary" type="submit">Notitie opslaan</button>
+                  </div>
+                </form>
+              ) : (
+                <div className="customerNoteDisplay">{customerNote}</div>
+              )}
             </section>
           ) : null}
 

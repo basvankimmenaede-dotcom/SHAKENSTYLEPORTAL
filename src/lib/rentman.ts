@@ -95,8 +95,30 @@ function getDescendantFolderIds(rootFolderId: number, folders: RentmanFolder[]) 
   return included;
 }
 
+function getTopLevelCategoryName(rootFolderId: number, itemFolderId: number, folders: RentmanFolder[]) {
+  if (itemFolderId === rootFolderId) return 'Overig';
+
+  const folderMap = new Map(folders.map((folder) => [folder.id, folder]));
+  let current = folderMap.get(itemFolderId);
+  const seen = new Set<number>();
+
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    if (!current.parent) return current.name || 'Overig';
+
+    const parentId = Number(current.parent.split('/').pop());
+    if (!Number.isFinite(parentId)) return current.name || 'Overig';
+    if (parentId === rootFolderId) return current.name || 'Overig';
+
+    current = folderMap.get(parentId);
+  }
+
+  return 'Overig';
+}
+
 export type RentmanEquipment = {
   id: number;
+  category?: string;
   name: string;
   code?: string;
   folder?: string | null;
@@ -180,13 +202,23 @@ export async function getVisibleEquipmentForFolder(folderId: number) {
   ]);
 
   const descendantFolderIds = getDescendantFolderIds(folderId, folders);
-  const visibleItems = allEquipment.filter((item) => {
-    if (!item.folder) return false;
-    const itemFolderId = Number(item.folder.split('/').pop());
-    const inBrandTree = Number.isFinite(itemFolderId) && descendantFolderIds.has(itemFolderId);
-    const visible = truthyPortalValue(item.custom?.[customFieldKey]);
-    return inBrandTree && visible;
-  });
+  const visibleItems = allEquipment
+    .filter((item) => {
+      if (!item.folder) return false;
+      const itemFolderId = Number(item.folder.split('/').pop());
+      const inBrandTree = Number.isFinite(itemFolderId) && descendantFolderIds.has(itemFolderId);
+      const visible = truthyPortalValue(item.custom?.[customFieldKey]);
+      return inBrandTree && visible;
+    })
+    .map((item) => {
+      const itemFolderId = item.folder ? Number(item.folder.split('/').pop()) : NaN;
+      return {
+        ...item,
+        category: Number.isFinite(itemFolderId)
+          ? getTopLevelCategoryName(folderId, itemFolderId, folders)
+          : 'Overig',
+      };
+    });
 
   return { items: await addResolvedImages(visibleItems), configured: true };
 }
