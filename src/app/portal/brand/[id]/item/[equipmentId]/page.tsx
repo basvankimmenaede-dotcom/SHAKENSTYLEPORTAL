@@ -113,10 +113,10 @@ export default async function EquipmentDetailPage({
             </section>
           ) : null}
 
-          {item.external_remark?.trim() ? (
+          {item.customer_note ? (
             <section className="detailSection customerNoteSection">
               <h2>Notities klant</h2>
-              <div className="customerNoteDisplay">{item.external_remark}</div>
+              <div className="customerNoteDisplay">{item.customer_note}</div>
             </section>
           ) : null}
 

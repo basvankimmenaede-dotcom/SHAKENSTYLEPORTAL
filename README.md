@@ -205,7 +205,7 @@ Merkrechten staan per gebruiker in `user_brand_access`.
 
 
 ## v8.9.4 itemdetails
-- Notities klant zijn read-only en komen direct uit Rentman (`external_remark`).
+- Notities klant zijn read-only en komen direct uit het Rentman custom field `Notities klant` (standaard `custom_108`; optioneel overschrijfbaar met `RENTMAN_CUSTOMER_NOTES_FIELD_KEY`).
 - Geen invoerveld of Supabase-tabel meer voor klantnotities.
 - Afmetingen-sectie wordt alleen getoond als ten minste een maat in Rentman is ingevuld.
 - Lege lengte/breedte/hoogte-velden worden niet getoond.

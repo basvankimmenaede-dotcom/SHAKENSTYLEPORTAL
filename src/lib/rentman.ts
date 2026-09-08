@@ -126,6 +126,7 @@ export type RentmanEquipment = {
   main_image_file_id?: number | null;
   current_quantity?: number;
   external_remark?: string;
+  customer_note?: string | null;
   custom?: Record<string, unknown>;
   height?: number;
   width?: number;
@@ -159,6 +160,15 @@ function truthyPortalValue(value: unknown) {
     return ['yes', 'ja', 'true', '1', 'show', 'visible'].includes(value.toLowerCase().trim());
   }
   return false;
+}
+
+
+function getCustomerNote(item: RentmanEquipment) {
+  const customerNotesFieldKey = process.env.RENTMAN_CUSTOMER_NOTES_FIELD_KEY || 'custom_108';
+  const value = item.custom?.[customerNotesFieldKey];
+  if (typeof value !== 'string') return null;
+  const note = value.trim();
+  return note.length > 0 ? note : null;
 }
 
 function fileIdFromReference(reference?: string | null) {
@@ -246,6 +256,7 @@ export async function getVisibleEquipmentItemForFolder(folderId: number, equipme
 
   return {
     ...item,
+    customer_note: getCustomerNote(item),
     main_image_file_id: mainImageFileId,
     image: await resolveEquipmentImage(item.image),
   };
