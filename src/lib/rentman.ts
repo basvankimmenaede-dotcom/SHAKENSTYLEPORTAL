@@ -123,6 +123,7 @@ export type RentmanEquipment = {
   code?: string;
   folder?: string | null;
   image?: string | null;
+  main_image_file_id?: number | null;
   current_quantity?: number;
   external_remark?: string;
   custom?: Record<string, unknown>;
@@ -241,8 +242,11 @@ export async function getVisibleEquipmentItemForFolder(folderId: number, equipme
   const isVisible = truthyPortalValue(item.custom?.[customFieldKey]);
   if (!isInTree || !isVisible) return null;
 
+  const mainImageFileId = fileIdFromReference(item.image);
+
   return {
     ...item,
+    main_image_file_id: mainImageFileId,
     image: await resolveEquipmentImage(item.image),
   };
 }

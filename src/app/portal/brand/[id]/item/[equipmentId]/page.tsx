@@ -4,7 +4,6 @@ import { requireUser } from '@/lib/auth';
 import { getEquipmentFiles, getLastEquipmentUsageDate, getVisibleEquipmentItemForFolder } from '@/lib/rentman';
 import { getAccessibleBrandIds, resolvePortalAccessContext, withPreview } from '@/lib/portal-access';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { saveEquipmentCustomerNote } from '@/app/admin/actions';
 
 function formatDate(value: string | null) {
   if (!value) return 'Nog geen inzet gevonden';
@@ -58,25 +57,22 @@ export default async function EquipmentDetailPage({
     .single();
   if (!brand?.rentman_folder_id) notFound();
 
-  const [item, lastUsage, files, customerNoteResult] = await Promise.all([
+  const [item, lastUsage, files] = await Promise.all([
     getVisibleEquipmentItemForFolder(brand.rentman_folder_id, rentmanEquipmentId),
     getLastEquipmentUsageDate(rentmanEquipmentId).catch(() => null),
     getEquipmentFiles(rentmanEquipmentId).catch(() => []),
-    admin
-      .from('equipment_customer_notes')
-      .select('note')
-      .eq('equipment_id', rentmanEquipmentId)
-      .maybeSingle(),
   ]);
 
   if (!item) notFound();
-  const customerNote = customerNoteResult.data?.note?.trim() ?? '';
-
   const length = formatDimension(item.length);
   const width = formatDimension(item.width);
   const height = formatDimension(item.height);
   const hasDimensions = Boolean(length || width || height);
-  const attachmentFiles = files.filter((file) => file.href !== item.image);
+  const attachmentFiles = files.filter((file) => {
+    if (item.main_image_file_id && file.id === item.main_image_file_id) return false;
+    if (item.image && file.href === item.image) return false;
+    return true;
+  });
 
   return (
     <main className="container itemDetailPage">
@@ -106,48 +102,21 @@ export default async function EquipmentDetailPage({
             </div>
           </div>
 
-          <section className="detailSection">
-            <h2>Afmetingen</h2>
-            {hasDimensions ? (
-              <div className="dimensionGrid">
-                <div><span>Lengte</span><strong>{length ?? '-'}</strong></div>
-                <div><span>Breedte</span><strong>{width ?? '-'}</strong></div>
-                <div><span>Hoogte</span><strong>{height ?? '-'}</strong></div>
-              </div>
-            ) : (
-              <p className="muted">Afmetingen zijn nog niet beschikbaar.</p>
-            )}
-          </section>
-
-          {item.external_remark ? (
+          {hasDimensions ? (
             <section className="detailSection">
-              <h2>Omschrijving</h2>
-              <p>{item.external_remark}</p>
+              <h2>Afmetingen</h2>
+              <div className="dimensionGrid">
+                {length ? <div><span>Lengte</span><strong>{length}</strong></div> : null}
+                {width ? <div><span>Breedte</span><strong>{width}</strong></div> : null}
+                {height ? <div><span>Hoogte</span><strong>{height}</strong></div> : null}
+              </div>
             </section>
           ) : null}
 
-          {customerNote || (profile.role === 'admin' && !access.previewing) ? (
+          {item.external_remark?.trim() ? (
             <section className="detailSection customerNoteSection">
               <h2>Notities klant</h2>
-              {profile.role === 'admin' && !access.previewing ? (
-                <form action={saveEquipmentCustomerNote} className="customerNoteForm">
-                  <input type="hidden" name="brand_id" value={brand.id} />
-                  <input type="hidden" name="equipment_id" value={rentmanEquipmentId} />
-                  <textarea
-                    className="input customerNoteInput"
-                    name="customer_note"
-                    defaultValue={customerNote}
-                    placeholder="Bijv. 1 deksel ontbreekt, kras op linkerzijde, alleen compleet uitgeven..."
-                    rows={4}
-                  />
-                  <div className="customerNoteActions">
-                    <span className="muted">Deze notitie is zichtbaar voor klanten met toegang tot dit merk.</span>
-                    <button className="button secondary" type="submit">Notitie opslaan</button>
-                  </div>
-                </form>
-              ) : (
-                <div className="customerNoteDisplay">{customerNote}</div>
-              )}
+              <div className="customerNoteDisplay">{item.external_remark}</div>
             </section>
           ) : null}
 

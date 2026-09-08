@@ -104,37 +104,3 @@ export async function inviteCustomer(formData: FormData) {
 
   revalidatePath('/admin/users');
 }
-
-
-export async function saveEquipmentCustomerNote(formData: FormData) {
-  const { user } = await requireAdmin();
-  const { createAdminClient } = await import('@/lib/supabase/admin');
-  const admin = createAdminClient();
-
-  const brandId = Number(formData.get('brand_id'));
-  const equipmentId = Number(formData.get('equipment_id'));
-  const note = String(formData.get('customer_note') ?? '').trim();
-
-  if (!Number.isFinite(brandId) || !Number.isFinite(equipmentId)) return;
-
-  if (!note) {
-    const { error } = await admin
-      .from('equipment_customer_notes')
-      .delete()
-      .eq('equipment_id', equipmentId);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await admin
-      .from('equipment_customer_notes')
-      .upsert({
-        equipment_id: equipmentId,
-        brand_id: brandId,
-        note,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'equipment_id' });
-    if (error) throw new Error(error.message);
-  }
-
-  revalidatePath(`/portal/brand/${brandId}/item/${equipmentId}`);
-}
