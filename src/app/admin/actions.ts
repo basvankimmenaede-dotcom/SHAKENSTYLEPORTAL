@@ -61,14 +61,21 @@ export async function saveUserBrandAccess(formData: FormData) {
 
   if (!userId) return;
 
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
-  if (!profile || profile.role === 'admin') return;
+  const { data: profile } = await admin.from('profiles').select('role,distributor_id').eq('id', userId).maybeSingle();
+  if (!profile || profile.role === 'admin' || !profile.distributor_id) return;
+
+  const { data: allowedRows } = await admin
+    .from('distributor_brands')
+    .select('brand_id')
+    .eq('distributor_id', profile.distributor_id);
+  const allowedBrandIds = new Set((allowedRows ?? []).map((row) => Number(row.brand_id)));
+  const validSelectedBrandIds = selectedBrandIds.filter((brandId) => allowedBrandIds.has(brandId));
 
   const { error: deleteError } = await admin.from('user_brand_access').delete().eq('user_id', userId);
   if (deleteError) throw new Error(deleteError.message);
 
-  if (selectedBrandIds.length > 0) {
-    const rows = selectedBrandIds.map((brandId) => ({ user_id: userId, brand_id: brandId }));
+  if (validSelectedBrandIds.length > 0) {
+    const rows = validSelectedBrandIds.map((brandId) => ({ user_id: userId, brand_id: brandId }));
     const { error: insertError } = await admin.from('user_brand_access').insert(rows);
     if (insertError) throw new Error(insertError.message);
   }
@@ -160,6 +167,64 @@ export async function deletePortalUser(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  revalidatePath('/admin/users');
+  revalidatePath('/portal');
+}
+
+export async function saveDistributorBrands(formData: FormData) {
+  await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+
+  const distributorId = Number(formData.get('distributor_id'));
+  const selectedBrandIds = formData
+    .getAll('brand_ids')
+    .map((value) => Number(value))
+    .filter(Number.isFinite);
+
+  if (!Number.isFinite(distributorId)) return;
+
+  const { error: deleteError } = await admin
+    .from('distributor_brands')
+    .delete()
+    .eq('distributor_id', distributorId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (selectedBrandIds.length > 0) {
+    const rows = selectedBrandIds.map((brandId) => ({
+      distributor_id: distributorId,
+      brand_id: brandId,
+    }));
+    const { error: insertError } = await admin.from('distributor_brands').insert(rows);
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  // Remove user-level access that no longer belongs to this distributor.
+  const { data: users } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('distributor_id', distributorId)
+    .neq('role', 'admin');
+
+  const userIds = (users ?? []).map((row) => row.id);
+  if (userIds.length > 0) {
+    const { data: accessRows } = await admin
+      .from('user_brand_access')
+      .select('user_id,brand_id')
+      .in('user_id', userIds);
+
+    const allowed = new Set(selectedBrandIds);
+    const stale = (accessRows ?? []).filter((row) => !allowed.has(Number(row.brand_id)));
+    for (const row of stale) {
+      await admin
+        .from('user_brand_access')
+        .delete()
+        .eq('user_id', row.user_id)
+        .eq('brand_id', row.brand_id);
+    }
+  }
+
+  revalidatePath('/admin/distributors');
   revalidatePath('/admin/users');
   revalidatePath('/portal');
 }

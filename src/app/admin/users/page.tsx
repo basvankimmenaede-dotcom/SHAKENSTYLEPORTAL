@@ -7,7 +7,7 @@ export default async function UsersPage() {
   const session = await requireAdmin();
   const admin = createAdminClient();
 
-  const [{ data: userList }, { data: profiles }, { data: distributors }, { data: brands }, { data: accessRows }] = await Promise.all([
+  const [{ data: userList }, { data: profiles }, { data: distributors }, { data: brands }, { data: accessRows }, { data: distributorBrandRows }] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 200 }),
     admin.from('profiles').select('id,full_name,role,distributor_id'),
     admin.from('distributors').select('id,name').order('name'),
@@ -19,11 +19,18 @@ export default async function UsersPage() {
       .eq('portal_enabled', true)
       .order('name'),
     admin.from('user_brand_access').select('user_id,brand_id'),
+    admin.from('distributor_brands').select('distributor_id,brand_id'),
   ]);
 
   const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
   const distributorById = new Map((distributors ?? []).map((d) => [d.id, d.name]));
   const accessByUser = new Map<string, Set<number>>();
+  const brandsByDistributor = new Map<number, Set<number>>();
+  for (const row of distributorBrandRows ?? []) {
+    const distributorId = Number(row.distributor_id);
+    if (!brandsByDistributor.has(distributorId)) brandsByDistributor.set(distributorId, new Set());
+    brandsByDistributor.get(distributorId)?.add(Number(row.brand_id));
+  }
   for (const row of accessRows ?? []) {
     if (!accessByUser.has(row.user_id)) accessByUser.set(row.user_id, new Set());
     accessByUser.get(row.user_id)?.add(row.brand_id);
@@ -64,6 +71,8 @@ export default async function UsersPage() {
           const assigned = accessByUser.get(user.id) ?? new Set<number>();
           const email = user.email ?? profile?.full_name ?? user.id;
           const distributorName = profile?.distributor_id ? distributorById.get(profile.distributor_id) : null;
+          const distributorBrandIds = profile?.distributor_id ? (brandsByDistributor.get(Number(profile.distributor_id)) ?? new Set<number>()) : new Set<number>();
+          const availableBrands = (brands ?? []).filter((brand) => distributorBrandIds.has(Number(brand.id)) || assigned.has(Number(brand.id)));
 
           return (
             <section className="card userAccessCard" key={user.id}>
@@ -139,7 +148,7 @@ export default async function UsersPage() {
                   <form action={saveUserBrandAccess}>
                     <input type="hidden" name="user_id" value={user.id} />
                     <div className="brandAccessGrid">
-                      {(brands ?? []).map((brand) => (
+                      {availableBrands.map((brand) => (
                         <label className="brandAccessOption" key={brand.id}>
                           <input type="checkbox" name="brand_ids" value={brand.id} defaultChecked={assigned.has(brand.id)} />
                           <span>
@@ -149,6 +158,9 @@ export default async function UsersPage() {
                         </label>
                       ))}
                     </div>
+                    {availableBrands.length === 0 ? (
+                      <p className="muted" style={{ marginTop: 12 }}>Er zijn nog geen merken aan deze distributeur gekoppeld. Koppel die eerst via <strong>Distributeurs</strong>.</p>
+                    ) : null}
                     <div style={{ marginTop: 16 }}>
                       <button className="button orange" type="submit">Merktoegang opslaan</button>
                     </div>

@@ -218,3 +218,8 @@ Merkrechten staan per gebruiker in `user_brand_access`.
 - Admins kunnen gebruikers verwijderen vanuit Admin > Gebruikers.
 - Verwijderen vereist het exacte e-mailadres ter bevestiging.
 - Het eigen ingelogde adminaccount kan niet via deze pagina worden verwijderd.
+
+## v8.9.9
+- Admin kan per distributeur de juiste merken koppelen via Distributeurs.
+- Gebruikers kunnen alleen merktoegang krijgen tot merken van hun eigen distributeur.
+- Als een merk bij een distributeur wordt verwijderd, wordt verouderde user-brand toegang voor gebruikers van die distributeur opgeschoond.
