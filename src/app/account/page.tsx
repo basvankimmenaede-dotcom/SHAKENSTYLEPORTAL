@@ -26,17 +26,21 @@ export default async function AccountPage() {
       adminPreview={false}
       portalLabel={portalLabel}
     >
-      <main className="page accountPage">
-        <div className="pageHeader">
+      <main className="accountPage">
+        <section className="hero accountHero">
           <div>
             <p className="eyebrow">Account</p>
             <h1>Accountgegevens</h1>
-            <p className="muted">Beheer je eigen inloggegevens voor het SHAKENSTYLE Portal.</p>
+            <p>Beheer je eigen inloggegevens voor het SHAKENSTYLE Portal.</p>
           </div>
-        </div>
+        </section>
 
+        <div className="accountContent">
         <section className="card accountDetailsCard">
-          <h2>Profiel</h2>
+          <div className="accountSectionHeader">
+            <h2>Profiel</h2>
+            <p className="muted">Je accountgegevens.</p>
+          </div>
           <div className="accountProfileGrid">
             <div>
               <span className="muted">Naam</span>
@@ -56,10 +60,13 @@ export default async function AccountPage() {
         </section>
 
         <section className="card accountDetailsCard">
-          <h2>Wachtwoord wijzigen</h2>
-          <p className="muted">Kies een nieuw wachtwoord van minimaal 8 tekens.</p>
+          <div className="accountSectionHeader">
+            <h2>Wachtwoord wijzigen</h2>
+            <p className="muted">Kies een nieuw wachtwoord van minimaal 8 tekens.</p>
+          </div>
           <PasswordChangeForm />
         </section>
+        </div>
       </main>
     </AppShell>
   );
