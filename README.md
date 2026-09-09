@@ -210,3 +210,11 @@ Merkrechten staan per gebruiker in `user_brand_access`.
 - Afmetingen-sectie wordt alleen getoond als ten minste een maat in Rentman is ingevuld.
 - Lege lengte/breedte/hoogte-velden worden niet getoond.
 - De hoofdafbeelding wordt op basis van het Rentman file-id uitgesloten van Documenten & afbeeldingen.
+
+## v8.9.6 - admin accountbeheer
+
+- Admins kunnen per gebruiker direct een nieuw wachtwoord instellen.
+- Wachtwoord moet minimaal 8 tekens bevatten en tweemaal gelijk worden ingevuld.
+- Admins kunnen gebruikers verwijderen vanuit Admin > Gebruikers.
+- Verwijderen vereist het exacte e-mailadres ter bevestiging.
+- Het eigen ingelogde adminaccount kan niet via deze pagina worden verwijderd.

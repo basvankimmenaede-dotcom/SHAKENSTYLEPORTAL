@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { assignUserProfile, inviteCustomer, saveUserBrandAccess } from '@/app/admin/actions';
+import { assignUserProfile, deletePortalUser, inviteCustomer, saveUserBrandAccess, setUserPassword } from '@/app/admin/actions';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export default async function UsersPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
   const admin = createAdminClient();
 
   const [{ data: userList }, { data: profiles }, { data: distributors }, { data: brands }, { data: accessRows }] = await Promise.all([
@@ -89,6 +89,49 @@ export default async function UsersPage() {
                 </select>
                 <button className="button secondary" type="submit">Profiel opslaan</button>
               </form>
+
+              <details className="brandAccessDetails accountAdminDetails">
+                <summary>Accountbeheer</summary>
+                <div className="accountAdminGrid">
+                  <form action={setUserPassword} className="accountAdminPanel">
+                    <input type="hidden" name="user_id" value={user.id} />
+                    <div>
+                      <strong>Wachtwoord wijzigen</strong>
+                      <p className="muted" style={{ marginTop: 4 }}>Stel direct een nieuw wachtwoord in. De gebruiker hoeft hiervoor geen resetmail te openen.</p>
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`password-${user.id}`}>Nieuw wachtwoord</label>
+                      <input id={`password-${user.id}`} name="password" className="input" type="password" minLength={8} autoComplete="new-password" required />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`password-confirm-${user.id}`}>Herhaal wachtwoord</label>
+                      <input id={`password-confirm-${user.id}`} name="password_confirm" className="input" type="password" minLength={8} autoComplete="new-password" required />
+                    </div>
+                    <div><button className="button orange" type="submit">Wachtwoord opslaan</button></div>
+                  </form>
+
+                  {user.id !== session.user.id ? (
+                    <form action={deletePortalUser} className="accountAdminPanel dangerPanel">
+                      <input type="hidden" name="user_id" value={user.id} />
+                      <input type="hidden" name="expected_email" value={email} />
+                      <div>
+                        <strong>Gebruiker verwijderen</strong>
+                        <p className="muted" style={{ marginTop: 4 }}>Verwijdert het account en de gekoppelde portalrechten definitief.</p>
+                      </div>
+                      <div className="field">
+                        <label htmlFor={`delete-${user.id}`}>Typ het e-mailadres ter bevestiging</label>
+                        <input id={`delete-${user.id}`} name="confirm_email" className="input" type="email" placeholder={email} required />
+                      </div>
+                      <div><button className="button dangerButton" type="submit">Gebruiker verwijderen</button></div>
+                    </form>
+                  ) : (
+                    <div className="accountAdminPanel dangerPanel">
+                      <strong>Eigen adminaccount</strong>
+                      <p className="muted" style={{ marginTop: 4 }}>Je eigen adminaccount kan hier niet worden verwijderd.</p>
+                    </div>
+                  )}
+                </div>
+              </details>
 
               {role !== 'admin' ? (
                 <details className="brandAccessDetails" open={assigned.size === 0}>

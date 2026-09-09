@@ -104,3 +104,62 @@ export async function inviteCustomer(formData: FormData) {
 
   revalidatePath('/admin/users');
 }
+
+
+export async function setUserPassword(formData: FormData) {
+  const session = await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+
+  const userId = String(formData.get('user_id') ?? '').trim();
+  const password = String(formData.get('password') ?? '');
+  const passwordConfirm = String(formData.get('password_confirm') ?? '');
+
+  if (!userId) throw new Error('Gebruiker ontbreekt.');
+  if (password.length < 8) throw new Error('Het wachtwoord moet minimaal 8 tekens bevatten.');
+  if (password !== passwordConfirm) throw new Error('De twee wachtwoorden zijn niet gelijk.');
+
+  const { error } = await admin.auth.admin.updateUserById(userId, { password });
+  if (error) throw new Error(error.message);
+
+  // If an admin changes their own password this remains a valid operation;
+  // existing sessions are intentionally not revoked here.
+  void session;
+  revalidatePath('/admin/users');
+}
+
+export async function deletePortalUser(formData: FormData) {
+  const session = await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+
+  const userId = String(formData.get('user_id') ?? '').trim();
+  const expectedEmail = String(formData.get('expected_email') ?? '').trim().toLowerCase();
+  const confirmation = String(formData.get('confirm_email') ?? '').trim().toLowerCase();
+
+  if (!userId) throw new Error('Gebruiker ontbreekt.');
+  if (userId === session.user.id) throw new Error('Je kunt je eigen adminaccount niet verwijderen.');
+  if (!expectedEmail || confirmation !== expectedEmail) {
+    throw new Error('Het ingevoerde e-mailadres komt niet overeen.');
+  }
+
+  // Remove brand access first. Then try to remove the Auth user.
+  // If the profiles foreign key is not configured with ON DELETE CASCADE,
+  // remove that profile and retry once.
+  await admin.from('user_brand_access').delete().eq('user_id', userId);
+
+  let { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    await admin.from('profiles').delete().eq('id', userId);
+    const retry = await admin.auth.admin.deleteUser(userId);
+    error = retry.error;
+  } else {
+    // Harmless no-op when the profile was already removed by cascade.
+    await admin.from('profiles').delete().eq('id', userId);
+  }
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/admin/users');
+  revalidatePath('/portal');
+}
