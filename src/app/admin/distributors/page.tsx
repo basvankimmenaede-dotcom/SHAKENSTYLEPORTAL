@@ -19,10 +19,13 @@ export default async function DistributorsPage() {
   ]);
 
   const brandsByDistributor = new Map<number, Set<number>>();
+  const distributorByBrand = new Map<number, number>();
   for (const row of distributorBrands ?? []) {
     const distributorId = Number(row.distributor_id);
+    const brandId = Number(row.brand_id);
     if (!brandsByDistributor.has(distributorId)) brandsByDistributor.set(distributorId, new Set());
-    brandsByDistributor.get(distributorId)?.add(Number(row.brand_id));
+    brandsByDistributor.get(distributorId)?.add(brandId);
+    distributorByBrand.set(brandId, distributorId);
   }
 
   return (
@@ -47,14 +50,19 @@ export default async function DistributorsPage() {
         </div>
         <div className="card">
           <h2>Hoe de rechten werken</h2>
-          <p className="muted">Een merk hoort bij een distributeur. Binnen die distributeur kun je vervolgens per gebruiker alleen de merken aanvinken die die persoon daadwerkelijk nodig heeft.</p>
+          <p className="muted">Een merk kan maar aan één distributeur gekoppeld zijn. Zodra een merk is toegewezen, verdwijnt het automatisch uit de keuzelijst van alle andere distributeurs. Binnen die distributeur bepaal je daarna per gebruiker welke merken die persoon mag zien.</p>
         </div>
       </section>
 
       <div className="stack" style={{ marginTop: 18 }}>
         {(distributors ?? []).map((distributor) => {
           const userCount = (profiles ?? []).filter((profile) => profile.role !== 'admin' && profile.distributor_id === distributor.id).length;
-          const assigned = brandsByDistributor.get(Number(distributor.id)) ?? new Set<number>();
+          const distributorId = Number(distributor.id);
+          const assigned = brandsByDistributor.get(distributorId) ?? new Set<number>();
+          const availableBrands = (brands ?? []).filter((brand) => {
+            const ownerDistributorId = distributorByBrand.get(Number(brand.id));
+            return ownerDistributorId == null || ownerDistributorId === distributorId;
+          });
 
           return (
             <section className="card distributorBrandCard" key={distributor.id}>
@@ -70,7 +78,7 @@ export default async function DistributorsPage() {
                 <form action={saveDistributorBrands}>
                   <input type="hidden" name="distributor_id" value={distributor.id} />
                   <div className="brandAccessGrid">
-                    {(brands ?? []).map((brand) => (
+                    {availableBrands.map((brand) => (
                       <label className="brandAccessOption" key={brand.id}>
                         <input
                           type="checkbox"
@@ -85,6 +93,9 @@ export default async function DistributorsPage() {
                       </label>
                     ))}
                   </div>
+                  {availableBrands.length === 0 ? (
+                    <p className="muted" style={{ marginTop: 12 }}>Alle actieve merken zijn al aan andere distributeurs gekoppeld.</p>
+                  ) : null}
                   <div style={{ marginTop: 16 }}>
                     <button className="button orange" type="submit">Merken opslaan</button>
                   </div>

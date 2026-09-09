@@ -184,14 +184,29 @@ export async function saveDistributorBrands(formData: FormData) {
 
   if (!Number.isFinite(distributorId)) return;
 
+  // A brand may belong to only one distributor. Ignore brand ids that are
+  // already assigned elsewhere, even if a crafted request submits them.
+  const { data: existingAssignments, error: assignmentError } = await admin
+    .from('distributor_brands')
+    .select('distributor_id,brand_id')
+    .in('brand_id', selectedBrandIds.length > 0 ? selectedBrandIds : [-1]);
+  if (assignmentError) throw new Error(assignmentError.message);
+
+  const blockedBrandIds = new Set(
+    (existingAssignments ?? [])
+      .filter((row) => Number(row.distributor_id) !== distributorId)
+      .map((row) => Number(row.brand_id)),
+  );
+  const validSelectedBrandIds = selectedBrandIds.filter((brandId) => !blockedBrandIds.has(brandId));
+
   const { error: deleteError } = await admin
     .from('distributor_brands')
     .delete()
     .eq('distributor_id', distributorId);
   if (deleteError) throw new Error(deleteError.message);
 
-  if (selectedBrandIds.length > 0) {
-    const rows = selectedBrandIds.map((brandId) => ({
+  if (validSelectedBrandIds.length > 0) {
+    const rows = validSelectedBrandIds.map((brandId) => ({
       distributor_id: distributorId,
       brand_id: brandId,
     }));
@@ -213,7 +228,7 @@ export async function saveDistributorBrands(formData: FormData) {
       .select('user_id,brand_id')
       .in('user_id', userIds);
 
-    const allowed = new Set(selectedBrandIds);
+    const allowed = new Set(validSelectedBrandIds);
     const stale = (accessRows ?? []).filter((row) => !allowed.has(Number(row.brand_id)));
     for (const row of stale) {
       await admin

@@ -223,3 +223,10 @@ Merkrechten staan per gebruiker in `user_brand_access`.
 - Admin kan per distributeur de juiste merken koppelen via Distributeurs.
 - Gebruikers kunnen alleen merktoegang krijgen tot merken van hun eigen distributeur.
 - Als een merk bij een distributeur wordt verwijderd, wordt verouderde user-brand toegang voor gebruikers van die distributeur opgeschoond.
+
+
+## v8.9.10 - exclusieve distributeur-merken
+- Een merk dat aan een distributeur is gekoppeld, wordt niet meer getoond bij andere distributeurs.
+- De huidige distributeur blijft zijn eigen gekoppelde merken zien zodat ze kunnen worden uitgevinkt.
+- Server-side controle blokkeert ook handmatig ingediende dubbele toewijzingen.
+- Gebruikers kunnen alleen merken krijgen die aan hun distributeur gekoppeld zijn.
