@@ -26,12 +26,14 @@ export default function AppShell({
               <Link href="/admin/distributors">Distributeurs</Link>
               <Link href="/admin/brands">Merken</Link>
               <Link href="/admin/users">Gebruikers</Link>
+              <Link href="/account" className="accountLink">Accountgegevens</Link>
               <Link href="/portal" className="previewLink">Gebruikersweergave</Link>
             </>
           ) : (
             <>
               {adminPreview ? <Link href="/admin" className="previewLink">Terug naar beheer</Link> : null}
               <Link href="/portal">{portalLabel || (adminPreview ? 'Alle merken' : 'Portaal')}</Link>
+              <Link href="/account" className="accountLink">Accountgegevens</Link>
             </>
           )}
           <LogoutButton />

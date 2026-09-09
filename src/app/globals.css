@@ -179,7 +179,7 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 720px) {
   .topbar { padding: 12px 16px; align-items: flex-start; min-height: 68px; }
   .topnav { gap: 6px; }
-  .topnav a:not(.previewLink) { display: none; }
+  .topnav a:not(.previewLink):not(.accountLink) { display: none; }
   .topnav a, .ghostButton { padding: 8px 10px; font-size: 12px; }
 }
 @media (max-width: 620px) {
@@ -685,5 +685,62 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 820px) {
   .accountAdminGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* v8.9.7 self-service account details */
+.accountPage {
+  max-width: 900px;
+}
+.accountDetailsCard {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.accountDetailsCard h2 {
+  margin: 0;
+}
+.accountProfileGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.accountProfileGrid > div {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.accountProfileGrid strong {
+  overflow-wrap: anywhere;
+}
+.accountPasswordForm {
+  display: grid;
+  gap: 14px;
+  max-width: 520px;
+}
+.accountPasswordForm .button {
+  width: fit-content;
+}
+.success {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #edf8ef;
+  border: 1px solid #b9ddbf;
+  color: #286334;
+  font-weight: 700;
+}
+@media (max-width: 760px) {
+  .accountProfileGrid {
+    grid-template-columns: 1fr;
+  }
+  .accountPasswordForm {
+    max-width: none;
+  }
+  .accountPasswordForm .button {
+    width: 100%;
   }
 }
