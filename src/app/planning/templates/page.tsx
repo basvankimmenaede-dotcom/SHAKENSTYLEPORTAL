@@ -6,6 +6,7 @@ import {
   updateChecklistTemplateItem,
 } from './actions';
 import { requireAdmin } from '@/lib/auth';
+import { getRentmanProjectTypes } from '@/lib/rentman';
 
 type TemplateItem = {
   id: number;
@@ -20,16 +21,21 @@ type Template = {
   name: string;
   description: string;
   is_active: boolean;
+  rentman_project_type_id: number | null;
+  rentman_project_type_name: string | null;
   checklist_template_items: TemplateItem[];
 };
 
 export default async function ChecklistTemplatesPage() {
   const { supabase } = await requireAdmin();
 
-  const { data, error } = await supabase
-    .from('checklist_templates')
-    .select('id,name,description,is_active,checklist_template_items(id,label,sort_order,is_required,deadline_offset_days)')
-    .order('name');
+  const [{ data, error }, projectTypes] = await Promise.all([
+    supabase
+      .from('checklist_templates')
+      .select('id,name,description,is_active,rentman_project_type_id,rentman_project_type_name,checklist_template_items(id,label,sort_order,is_required,deadline_offset_days)')
+      .order('name'),
+    getRentmanProjectTypes(),
+  ]);
 
   if (error) throw new Error(error.message);
 
@@ -55,11 +61,17 @@ export default async function ChecklistTemplatesPage() {
       <section className="card templateCreateCard">
         <div>
           <h2>Nieuwe template</h2>
-          <p className="muted">Maak bijvoorbeeld een aparte checklist voor een eventtype of dry hire.</p>
+          <p className="muted">Maak een checklist en koppel hem optioneel aan een Rentman-projecttype. Die template wordt dan alleen voorgeselecteerd, nooit automatisch aangemaakt.</p>
         </div>
         <form action={createChecklistTemplate} className="templateCreateForm">
           <input className="input" name="name" placeholder="Naam template" required />
           <input className="input" name="description" placeholder="Omschrijving (optioneel)" />
+          <select className="select" name="rentman_project_type_id" defaultValue="">
+            <option value="">Geen standaard projecttype</option>
+            {projectTypes.map((type) => (
+              <option key={type.id} value={type.id}>{type.name}</option>
+            ))}
+          </select>
           <button className="button orange" type="submit">Template toevoegen</button>
         </form>
       </section>
@@ -77,6 +89,16 @@ export default async function ChecklistTemplatesPage() {
                   defaultValue={template.description ?? ''}
                   placeholder="Omschrijving"
                 />
+                <select
+                  className="select templateProjectTypeSelect"
+                  name="rentman_project_type_id"
+                  defaultValue={template.rentman_project_type_id ?? ''}
+                >
+                  <option value="">Geen standaard projecttype</option>
+                  {projectTypes.map((type) => (
+                    <option key={type.id} value={type.id}>{type.name}</option>
+                  ))}
+                </select>
               </div>
               <label className="templateActiveToggle">
                 <input type="checkbox" name="is_active" defaultChecked={template.is_active} />
