@@ -4,13 +4,12 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 function isUserInteracting() {
-  if (document.querySelector('details[open]')) return true;
   if (document.querySelector('[aria-busy="true"]')) return true;
 
   const active = document.activeElement;
   if (!active || active === document.body) return false;
 
-  return active.matches('input, select, textarea, button, [contenteditable="true"]');
+  return active.matches('input, select, textarea, [contenteditable="true"]');
 }
 
 export default function PlanningAutoRefresh({
