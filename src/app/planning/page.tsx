@@ -492,7 +492,7 @@ export default async function PlanningPage() {
                         <strong>#{project.number ?? project.id} · {project.name}</strong>
                         <span>Einde project {shortDate(period.endDate)}</span>
                       </div>
-                      <b>open</b>
+                      <b>niet retour</b>
                     </div>
                   );
                 })}
