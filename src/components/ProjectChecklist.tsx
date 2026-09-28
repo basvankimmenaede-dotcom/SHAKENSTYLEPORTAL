@@ -24,6 +24,7 @@ export type PlanningChecklist = {
 export type ChecklistTemplate = {
   id: number;
   name: string;
+  rentman_project_type_id?: number | null;
 };
 
 export default function ProjectChecklist({
@@ -33,6 +34,7 @@ export default function ProjectChecklist({
   eventDate,
   checklist,
   templates,
+  preferredTemplateId,
 }: {
   projectId: number;
   projectNumber: string;
@@ -40,9 +42,14 @@ export default function ProjectChecklist({
   eventDate: string | null;
   checklist?: PlanningChecklist;
   templates: ChecklistTemplate[];
+  preferredTemplateId?: number | null;
 }) {
   const router = useRouter();
-  const [templateId, setTemplateId] = useState(String(templates[0]?.id ?? ''));
+  const defaultTemplateId = preferredTemplateId
+    && templates.some((template) => template.id === preferredTemplateId)
+    ? preferredTemplateId
+    : templates[0]?.id;
+  const [templateId, setTemplateId] = useState(String(defaultTemplateId ?? ''));
   const [creating, setCreating] = useState(false);
   const [pendingIds, setPendingIds] = useState<Set<number>>(() => new Set());
   const [error, setError] = useState('');
@@ -55,6 +62,16 @@ export default function ProjectChecklist({
       [...(checklist?.project_checklist_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
     );
   }, [checklist]);
+
+  useEffect(() => {
+    if (checklist) return;
+    const nextDefault = preferredTemplateId
+      && templates.some((template) => template.id === preferredTemplateId)
+      ? preferredTemplateId
+      : templates[0]?.id;
+    setTemplateId(String(nextDefault ?? ''));
+  }, [checklist, preferredTemplateId, templates]);
+
 
 
   async function createChecklist() {
