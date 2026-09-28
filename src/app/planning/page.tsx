@@ -322,6 +322,11 @@ export default async function PlanningPage() {
       return bEnd.localeCompare(aEnd);
     });
 
+  const weeklyCrewCount = weekDays.reduce(
+    (sum, dateKey) => sum + (crewByDay.get(dateKey)?.length ?? 0),
+    0,
+  );
+
   const totalChecklistItems = checklists.reduce(
     (sum, checklist) => sum + (checklist.project_checklist_items?.length ?? 0),
     0,
@@ -367,10 +372,9 @@ export default async function PlanningPage() {
                 <span>{shortDate(dateKey)}</span>
               </div>
               <div className="planningWeekCounts">
-                <b>{projects.length}</b><small>projecten</small>
-                <i />
-                <b>{tasks.length}</b><small>taken</small>
-                <span className="planningWeekCrew">{crew.length} crew</span>
+                <span className="planningWeekStat"><b>{projects.length}</b><small>projecten</small></span>
+                <span className="planningWeekStat"><b>{tasks.length}</b><small>taken</small></span>
+                <span className="planningWeekStat"><b>{crew.length}</b><small>crew</small></span>
               </div>
             </a>
           );
@@ -489,7 +493,7 @@ export default async function PlanningPage() {
           <section className="planningOpsCard planningCrewCard">
             <div className="planningOpsHeader">
               <span>Personeel (Rentman)</span>
-              <strong>{crewAssignments.length} gepland</strong>
+              <strong>{weeklyCrewCount} deze week</strong>
             </div>
 
             <div className="planningCrewDays">
