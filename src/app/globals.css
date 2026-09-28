@@ -1960,3 +1960,186 @@ tr:last-child td { border-bottom: 0; }
     width: 100%;
   }
 }
+
+
+/* Rentman personnel + expired slips */
+.planningWeekCrew {
+  grid-column: 1 / -1;
+  margin-top: 3px;
+  color: var(--orange-dark);
+  font-size: 9px;
+  font-weight: 800;
+}
+.planningCrewCard {
+  overflow: hidden;
+}
+.planningCrewDays {
+  display: grid;
+}
+.planningCrewDay {
+  border-bottom: 1px solid var(--line);
+}
+.planningCrewDay:last-child {
+  border-bottom: 0;
+}
+.planningCrewDayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #f7f6f3;
+  border-bottom: 1px solid #ece9e4;
+}
+.planningCrewDayHeader strong {
+  font-size: 10px;
+  text-transform: capitalize;
+}
+.planningCrewDayHeader span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.planningCrewList {
+  display: grid;
+}
+.planningCrewRow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, .8fr) minmax(0, 1.25fr);
+  gap: 8px;
+  align-items: center;
+  padding: 9px 11px;
+  border-bottom: 1px solid #efede8;
+}
+.planningCrewRow:last-child {
+  border-bottom: 0;
+}
+.planningCrewAvatar {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f5d7c6;
+  color: #8b3b12;
+  font-size: 9px;
+  font-weight: 900;
+}
+.planningCrewPerson,
+.planningCrewShift {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningCrewPerson strong,
+.planningCrewShift strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningCrewPerson strong {
+  font-size: 10px;
+}
+.planningCrewPerson span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+.planningCrewShift {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #fff0e6;
+}
+.planningCrewShift strong {
+  font-size: 10px;
+}
+.planningCrewShift span {
+  color: var(--muted);
+  font-size: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningExpiredCard {
+  border-color: #e8b0a6;
+  background: #fffafa;
+}
+.planningExpiredHeader {
+  background: #fff2ef;
+}
+.planningExpiredHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.planningExpiredHeader small {
+  color: #a25a4e;
+  font-size: 8px;
+  line-height: 1.35;
+}
+.planningExpiredHeader > strong {
+  min-width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #ffd9d3;
+  color: #b33d2d;
+  font-size: 18px;
+}
+.planningExpiredRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0d8d3;
+}
+.planningExpiredRow:last-child {
+  border-bottom: 0;
+}
+.planningExpiredRow > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningExpiredRow > div:first-child strong {
+  font-size: 10px;
+}
+.planningExpiredRow > div:first-child span {
+  color: var(--muted);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningExpiredMeta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+.planningExpiredMeta span {
+  color: var(--muted);
+  font-size: 8px;
+}
+.planningExpiredMeta b {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #ffdcd7;
+  color: #b33d2d;
+  font-size: 8px;
+  white-space: nowrap;
+}
+@media (max-width: 1180px) {
+  .planningCrewRow {
+    grid-template-columns: 30px minmax(0, .65fr) minmax(0, 1.35fr);
+  }
+}
+@media (max-width: 640px) {
+  .planningCrewRow {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+  .planningCrewShift {
+    grid-column: 2;
+  }
+}
