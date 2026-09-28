@@ -185,23 +185,22 @@ function ProjectCard({
 export default async function PlanningPage() {
   const { supabase } = await requirePlanningUser();
 
-  let planning: {
-    today: string;
-    tomorrow: string;
-    allProjects: RentmanPlanningProject[];
-    todayProjects: RentmanPlanningProject[];
-    tomorrowProjects: RentmanPlanningProject[];
-  };
   let rentmanError: string | null = null;
+  let todoistError: string | null = null;
 
-  try {
-    planning = await getPlanningProjects();
-  } catch (error) {
-    rentmanError = error instanceof Error ? error.message : 'Rentman kon niet worden geladen.';
-    planning = { today: '', tomorrow: '', allProjects: [], todayProjects: [], tomorrowProjects: [] };
-  }
-
-  const [{ data: checklistData }, { data: templateData }] = await Promise.all([
+  const [planningResult, todoistResult, checklistResult, templateResult] = await Promise.all([
+    getPlanningProjects()
+      .then((value) => ({ value, error: null as string | null }))
+      .catch((error) => ({
+        value: { today: '', tomorrow: '', allProjects: [], todayProjects: [], tomorrowProjects: [] },
+        error: error instanceof Error ? error.message : 'Rentman kon niet worden geladen.',
+      })),
+    getPlanningTodoistTasks()
+      .then((value) => ({ value, error: null as string | null }))
+      .catch((error) => ({
+        value: [] as TodoistTask[],
+        error: error instanceof Error ? error.message : 'Todoist kon niet worden geladen.',
+      })),
     supabase
       .from('project_checklists')
       .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order)'),
@@ -212,8 +211,13 @@ export default async function PlanningPage() {
       .order('name'),
   ]);
 
-  const checklists = (checklistData ?? []) as ChecklistRow[];
-  const templates = (templateData ?? []) as ChecklistTemplate[];
+  const planning = planningResult.value;
+  const todoistTasks = todoistResult.value;
+  rentmanError = planningResult.error;
+  todoistError = todoistResult.error;
+
+  const checklists = (checklistResult.data ?? []) as ChecklistRow[];
+  const templates = (templateResult.data ?? []) as ChecklistTemplate[];
   const checklistByNumber = new Map(
     checklists
       .filter((row) => row.rentman_project_number)
@@ -222,14 +226,6 @@ export default async function PlanningPage() {
   const checklistById = new Map(checklists.map((row) => [Number(row.rentman_project_id), row]));
   const getChecklist = (project: RentmanPlanningProject) =>
     checklistByNumber.get(String(project.number ?? '')) ?? checklistById.get(project.id);
-
-  let todoistTasks: TodoistTask[] = [];
-  let todoistError: string | null = null;
-  try {
-    todoistTasks = await getPlanningTodoistTasks();
-  } catch (error) {
-    todoistError = error instanceof Error ? error.message : 'Todoist kon niet worden geladen.';
-  }
 
   const knownProjectNumbers = new Set(
     planning.allProjects
