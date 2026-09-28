@@ -2546,3 +2546,27 @@ tr:last-child td { border-bottom: 0; }
     justify-self: start;
   }
 }
+
+
+/* Checklist template project-type preference */
+.templateCreateForm {
+  grid-template-columns: minmax(150px, .9fr) minmax(220px, 1.3fr) minmax(190px, 1fr) auto;
+}
+.templateHeaderFields {
+  grid-template-columns: minmax(190px, .8fr) minmax(260px, 1.2fr) minmax(190px, .9fr);
+}
+.templateProjectTypeSelect {
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .templateCreateForm,
+  .templateHeaderFields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 720px) {
+  .templateCreateForm,
+  .templateHeaderFields {
+    grid-template-columns: 1fr;
+  }
+}
