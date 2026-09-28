@@ -322,6 +322,17 @@ export default async function PlanningPage() {
     })
     .sort((a, b) => (taskDate(a) ?? '').localeCompare(taskDate(b) ?? ''));
 
+  const todayActionTasks = todoistTasks
+    .filter((task) => {
+      const date = effectiveTaskDate(task);
+      return Boolean(date && planning.today && date <= planning.today);
+    })
+    .sort((a, b) => {
+      const aDate = effectiveTaskDate(a) ?? '';
+      const bDate = effectiveTaskDate(b) ?? '';
+      return aDate.localeCompare(bDate);
+    });
+
   const noDateTasks = todoistTasks
     .filter((task) => !taskDate(task) && !taskProjectNumber.get(task.id))
     .slice(0, 20);
@@ -411,6 +422,21 @@ export default async function PlanningPage() {
         })}
       </section>
 
+      {todayActionTasks.length ? (
+        <a href="#todo-today" className="planningActionBanner">
+          <div className="planningActionIcon">!</div>
+          <div className="planningActionCopy">
+            <span>Actie voor vandaag</span>
+            <strong>{todayActionTasks.length} {todayActionTasks.length === 1 ? 'taak vraagt' : 'taken vragen'} vandaag aandacht</strong>
+            <small>
+              {todayActionTasks.slice(0, 3).map((task) => displayTaskContent(task, taskProjectNumber.get(task.id))).join(' · ')}
+              {todayActionTasks.length > 3 ? ` · +${todayActionTasks.length - 3} meer` : ''}
+            </small>
+          </div>
+          <div className="planningActionCta">Bekijk taken →</div>
+        </a>
+      ) : null}
+
       <section className="planningCompactGrid">
         <div className="planningCompactColumn">
           <div className="planningColumnHeader">
@@ -461,7 +487,7 @@ export default async function PlanningPage() {
 
           <div className="planningAgendaList">
             {overdueTasks.length ? (
-              <section className="planningAgendaDay planningOverdueDay">
+              <section className="planningAgendaDay planningOverdueDay" id="todo-today">
                 <div className="planningAgendaDayHeader">
                   <strong>Te laat</strong>
                   <span>{overdueTasks.length} taken</span>
