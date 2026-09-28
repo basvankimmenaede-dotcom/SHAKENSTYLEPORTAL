@@ -1,7 +1,7 @@
 import PlanningShell from '@/components/PlanningShell';
-import { requireAdmin } from '@/lib/auth';
+import { requirePlanningUser } from '@/lib/auth';
 
 export default async function PlanningLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
-  return <PlanningShell>{children}</PlanningShell>;
+  const { profile } = await requirePlanningUser();
+  return <PlanningShell role={profile.role as 'admin' | 'warehouse'}>{children}</PlanningShell>;
 }
