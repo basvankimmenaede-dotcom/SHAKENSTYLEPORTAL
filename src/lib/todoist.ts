@@ -89,3 +89,19 @@ export function findRentmanProjectNumber(
   const candidates = haystack.match(/\b\d{3,8}\b/g) ?? [];
   return candidates.find((candidate) => knownProjectNumbers.has(candidate)) ?? null;
 }
+
+
+export async function completePlanningTodoistTask(taskId: string) {
+  const response = await fetch(`${TODOIST_API_BASE}/tasks/${encodeURIComponent(taskId)}/close`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${todoistToken()}`,
+      Accept: 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Todoist-taak kon niet worden afgerond (${response.status}).`);
+  }
+}
