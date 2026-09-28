@@ -50,8 +50,14 @@ export async function addChecklistTemplateItem(formData: FormData) {
   const templateId = Number(formData.get('template_id'));
   const label = String(formData.get('label') ?? '').trim();
   const isRequired = formData.get('is_required') === 'on';
+  const deadlineRaw = String(formData.get('deadline_offset_days') ?? '').trim();
+  const deadlineOffsetDays = deadlineRaw === '' ? null : Number(deadlineRaw);
 
-  if (!Number.isFinite(templateId) || !label) return;
+  if (
+    !Number.isFinite(templateId)
+    || !label
+    || (deadlineOffsetDays !== null && !Number.isFinite(deadlineOffsetDays))
+  ) return;
 
   const { data: lastItem, error: orderError } = await supabase
     .from('checklist_template_items')
@@ -71,6 +77,7 @@ export async function addChecklistTemplateItem(formData: FormData) {
       label,
       is_required: isRequired,
       sort_order: nextOrder,
+      deadline_offset_days: deadlineOffsetDays,
     });
 
   if (error) throw new Error(error.message);
@@ -83,8 +90,15 @@ export async function updateChecklistTemplateItem(formData: FormData) {
   const label = String(formData.get('label') ?? '').trim();
   const sortOrder = Number(formData.get('sort_order'));
   const isRequired = formData.get('is_required') === 'on';
+  const deadlineRaw = String(formData.get('deadline_offset_days') ?? '').trim();
+  const deadlineOffsetDays = deadlineRaw === '' ? null : Number(deadlineRaw);
 
-  if (!Number.isFinite(itemId) || !label || !Number.isFinite(sortOrder)) return;
+  if (
+    !Number.isFinite(itemId)
+    || !label
+    || !Number.isFinite(sortOrder)
+    || (deadlineOffsetDays !== null && !Number.isFinite(deadlineOffsetDays))
+  ) return;
 
   const { error } = await supabase
     .from('checklist_template_items')
@@ -92,6 +106,7 @@ export async function updateChecklistTemplateItem(formData: FormData) {
       label,
       sort_order: sortOrder,
       is_required: isRequired,
+      deadline_offset_days: deadlineOffsetDays,
     })
     .eq('id', itemId);
 
