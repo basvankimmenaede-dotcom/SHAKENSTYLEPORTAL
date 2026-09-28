@@ -12,6 +12,7 @@ type TemplateItem = {
   label: string;
   sort_order: number;
   is_required: boolean;
+  deadline_offset_days: number | null;
 };
 
 type Template = {
@@ -27,7 +28,7 @@ export default async function ChecklistTemplatesPage() {
 
   const { data, error } = await supabase
     .from('checklist_templates')
-    .select('id,name,description,is_active,checklist_template_items(id,label,sort_order,is_required)')
+    .select('id,name,description,is_active,checklist_template_items(id,label,sort_order,is_required,deadline_offset_days)')
     .order('name');
 
   if (error) throw new Error(error.message);
@@ -85,7 +86,10 @@ export default async function ChecklistTemplatesPage() {
             </form>
 
             <div className="templateItemHeader">
-              <strong>Checklist-items</strong>
+              <div>
+                <strong>Checklist-items</strong>
+                <small>Deadline is in dagen t.o.v. showdag. -3 = drie dagen ervoor, 0 = showdag, +1 = dag erna. Met een deadline wordt automatisch een To Do-taak aangemaakt.</small>
+              </div>
               <span>{template.checklist_template_items.length} items</span>
             </div>
 
@@ -102,6 +106,17 @@ export default async function ChecklistTemplatesPage() {
                       title="Volgorde"
                     />
                     <input className="input" name="label" defaultValue={item.label} required />
+                    <label className="templateDeadlineField">
+                      <span>Deadline</span>
+                      <input
+                        className="input templateDeadlineInput"
+                        type="number"
+                        name="deadline_offset_days"
+                        defaultValue={item.deadline_offset_days ?? ''}
+                        placeholder="geen"
+                        title="Aantal dagen ten opzichte van showdag; negatief is vóór de showdag"
+                      />
+                    </label>
                     <label className="templateRequiredToggle">
                       <input type="checkbox" name="is_required" defaultChecked={item.is_required} />
                       <span>Verplicht</span>
@@ -121,6 +136,16 @@ export default async function ChecklistTemplatesPage() {
             <form action={addChecklistTemplateItem} className="templateAddItemForm">
               <input type="hidden" name="template_id" value={template.id} />
               <input className="input" name="label" placeholder="Nieuw checklist-item" required />
+              <label className="templateDeadlineField">
+                <span>Deadline</span>
+                <input
+                  className="input templateDeadlineInput"
+                  type="number"
+                  name="deadline_offset_days"
+                  placeholder="-3"
+                  title="Aantal dagen ten opzichte van showdag; negatief is vóór de showdag"
+                />
+              </label>
               <label className="templateRequiredToggle">
                 <input type="checkbox" name="is_required" defaultChecked />
                 <span>Verplicht</span>
