@@ -148,6 +148,9 @@ function CompactProjectRow({
   const end = formatTime(period.end);
   const number = String(project.number ?? project.id);
   const progress = checklistProgress(checklist);
+  const preferredTemplateId = project.project_type?.id
+    ? templates.find((template) => template.rentman_project_type_id === project.project_type?.id)?.id ?? null
+    : null;
 
   return (
     <article className="compactProjectRow">
@@ -179,6 +182,7 @@ function CompactProjectRow({
               eventDate={period.startDate}
               checklist={checklist}
               templates={templates}
+              preferredTemplateId={preferredTemplateId}
             />
           </div>
         </details>
@@ -217,7 +221,7 @@ export default async function PlanningPage() {
       .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order,deadline_offset_days,due_date,todoist_task_id)'),
     supabase
       .from('checklist_templates')
-      .select('id,name')
+      .select('id,name,rentman_project_type_id')
       .eq('is_active', true)
       .order('name'),
   ]);
