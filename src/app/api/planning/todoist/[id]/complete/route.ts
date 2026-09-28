@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePlanningUser } from '@/lib/auth';
 import { completePlanningTodoistTask } from '@/lib/todoist';
 
 export async function POST(
