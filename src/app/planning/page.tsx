@@ -18,6 +18,7 @@ import ProjectChecklist, {
   type PlanningChecklist,
 } from '@/components/ProjectChecklist';
 import TodoistTaskItem from '@/components/TodoistTaskItem';
+import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -419,7 +420,9 @@ export default async function PlanningPage() {
     : 0;
 
   return (
-    <main className="container planningPage planningCompactPage">
+    <>
+      <PlanningAutoRefresh intervalMs={60000} />
+      <main className="container planningPage planningCompactPage">
       <section className="planningCompactHeader">
         <div>
           <div className="eyebrowLink">Interne planning</div>
@@ -759,6 +762,7 @@ export default async function PlanningPage() {
           </section>
         </aside>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
