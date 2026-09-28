@@ -333,6 +333,23 @@ export default async function PlanningPage() {
       return aDate.localeCompare(bDate);
     });
 
+  const activeTodoistIds = new Set(todoistTasks.map((task) => task.id));
+  const checklistActionItems = checklists.flatMap((checklist) =>
+    (checklist.project_checklist_items ?? [])
+      .filter((item) =>
+        !item.completed
+        && Boolean(item.due_date)
+        && Boolean(planning.today)
+        && String(item.due_date) <= planning.today
+        && (!item.todoist_task_id || !activeTodoistIds.has(item.todoist_task_id))
+      )
+      .map((item) => ({
+        ...item,
+        projectNumber: checklist.rentman_project_number,
+      })),
+  );
+  const todayActionCount = todayActionTasks.length + checklistActionItems.length;
+
   const noDateTasks = todoistTasks
     .filter((task) => !taskDate(task) && !taskProjectNumber.get(task.id))
     .slice(0, 20);
@@ -422,18 +439,24 @@ export default async function PlanningPage() {
         })}
       </section>
 
-      {todayActionTasks.length ? (
-        <a href="#todo-today" className="planningActionBanner">
+      {todayActionCount ? (
+        <a
+          href={todayActionTasks.length ? '#todo-today' : `#planning-day-${planning.today}`}
+          className="planningActionBanner"
+        >
           <div className="planningActionIcon">!</div>
           <div className="planningActionCopy">
             <span>Actie voor vandaag</span>
-            <strong>{todayActionTasks.length} {todayActionTasks.length === 1 ? 'taak vraagt' : 'taken vragen'} vandaag aandacht</strong>
+            <strong>{todayActionCount} {todayActionCount === 1 ? 'actie vraagt' : 'acties vragen'} vandaag aandacht</strong>
             <small>
-              {todayActionTasks.slice(0, 3).map((task) => displayTaskContent(task, taskProjectNumber.get(task.id))).join(' · ')}
-              {todayActionTasks.length > 3 ? ` · +${todayActionTasks.length - 3} meer` : ''}
+              {[
+                ...todayActionTasks.map((task) => displayTaskContent(task, taskProjectNumber.get(task.id))),
+                ...checklistActionItems.map((item) => `#${item.projectNumber ?? '?'} ${item.label}`),
+              ].slice(0, 3).join(' · ')}
+              {todayActionCount > 3 ? ` · +${todayActionCount - 3} meer` : ''}
             </small>
           </div>
-          <div className="planningActionCta">Bekijk taken →</div>
+          <div className="planningActionCta">Bekijk acties →</div>
         </a>
       ) : null}
 
