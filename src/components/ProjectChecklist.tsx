@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export type PlanningChecklistItem = {
@@ -49,6 +49,13 @@ export default function ProjectChecklist({
   const [items, setItems] = useState<PlanningChecklistItem[]>(
     [...(checklist?.project_checklist_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   );
+
+  useEffect(() => {
+    setItems(
+      [...(checklist?.project_checklist_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+    );
+  }, [checklist]);
+
 
   async function createChecklist() {
     if (!templateId || creating) return;
