@@ -79,10 +79,12 @@ export default async function UsersPage() {
               <div className="userAccessHeader">
                 <div>
                   <h2 style={{ marginBottom: 4 }}>{email}</h2>
-                  <span className="muted">{role === 'admin' ? 'Admin · toegang tot alles' : `${distributorName ?? 'Geen organisatie'} · ${assigned.size} merk${assigned.size === 1 ? '' : 'en'}`}</span>
+                  <span className="muted">{role === 'admin' ? 'Admin · toegang tot alles' : role === 'warehouse' ? 'Magazijn · toegang tot planning' : `${distributorName ?? 'Geen organisatie'} · ${assigned.size} merk${assigned.size === 1 ? '' : 'en'}`}</span>
                 </div>
-                {role !== 'admin' ? (
+                {role === 'customer' ? (
                   <Link className="button secondary" href={`/portal?as=${encodeURIComponent(user.id)}`}>Bekijk als gebruiker</Link>
+                ) : role === 'warehouse' ? (
+                  <Link className="button secondary" href="/planning">Open planning</Link>
                 ) : null}
               </div>
 
@@ -90,6 +92,7 @@ export default async function UsersPage() {
                 <input type="hidden" name="user_id" value={user.id} />
                 <select name="role" className="select" defaultValue={role} style={{ width: 140 }}>
                   <option value="customer">Customer</option>
+                  <option value="warehouse">Magazijn</option>
                   <option value="admin">Admin</option>
                 </select>
                 <select name="distributor_id" className="select" defaultValue={profile?.distributor_id ?? ''} style={{ width: 220 }}>
@@ -142,7 +145,7 @@ export default async function UsersPage() {
                 </div>
               </details>
 
-              {role !== 'admin' ? (
+              {role === 'customer' ? (
                 <details className="brandAccessDetails" open={assigned.size === 0}>
                   <summary>Merken beheren</summary>
                   <form action={saveUserBrandAccess}>
