@@ -376,6 +376,7 @@ export async function getPlanningProjects() {
   return {
     today,
     tomorrow,
+    allProjects: projects,
     todayProjects: projects.filter((project) => overlapsDate(project, today)).sort(byStart),
     tomorrowProjects: projects.filter((project) => overlapsDate(project, tomorrow)).sort(byStart),
   };
