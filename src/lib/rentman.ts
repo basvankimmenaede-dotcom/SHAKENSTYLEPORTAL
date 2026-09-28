@@ -441,3 +441,41 @@ export function getOverdueReturnProjects(projects: RentmanPlanningProject[], tod
       }),
   };
 }
+
+
+export type RentmanPlanningCrewAssignment = {
+  id: number;
+  function?: {
+    id: number;
+    displayname?: string;
+    name?: string;
+    project?: string | null;
+    planperiod_start?: string | null;
+    planperiod_end?: string | null;
+    usageperiod_start?: string | null;
+    usageperiod_end?: string | null;
+  } | null;
+  crewmember?: {
+    id: number;
+    displayname?: string;
+    firstname?: string;
+    middle_name?: string;
+    lastname?: string;
+    active?: boolean;
+  } | null;
+};
+
+export async function getPlanningCrewAssignments() {
+  const params = new URLSearchParams({
+    fields: 'id,function,crewmember',
+    expand: 'function,crewmember',
+    sort: '-id',
+    limit: '1500',
+  });
+
+  const result = await rentmanFetch<RentmanListResponse<RentmanPlanningCrewAssignment>>(
+    `/projectcrew?${params.toString()}`,
+  );
+
+  return result.data ?? [];
+}
