@@ -1373,3 +1373,119 @@ tr:last-child td { border-bottom: 0; }
   .returnAlertCard { align-items: flex-start; flex-direction: column; }
   .returnStatus { max-width: none; text-align: left; }
 }
+
+
+/* Checklist template management */
+.planningTemplatesPage { max-width: 1180px; }
+.templateCreateCard {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr);
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 22px;
+}
+.templateCreateCard h2 { margin-bottom: 6px; }
+.templateCreateCard p { margin: 0; }
+.templateCreateForm {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.templateStack { display: grid; gap: 18px; }
+.templateCard {
+  display: grid;
+  gap: 18px;
+  box-shadow: none;
+}
+.templateInactive { opacity: .68; }
+.templateHeaderForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+}
+.templateHeaderFields {
+  display: grid;
+  grid-template-columns: minmax(220px, .7fr) minmax(280px, 1.3fr);
+  gap: 10px;
+}
+.templateNameInput { font-weight: 800; }
+.templateActiveToggle,
+.templateRequiredToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.templateActiveToggle input,
+.templateRequiredToggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--orange);
+}
+.templateItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.templateItemHeader span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.templateItemList { display: grid; gap: 8px; }
+.templateItemRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.templateItemEditForm {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.templateOrderInput { text-align: center; }
+.templateSaveItem { white-space: nowrap; }
+.templateDeleteButton {
+  border: 0;
+  background: transparent;
+  color: #a14132;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 9px 4px;
+}
+.templateDeleteButton:hover { text-decoration: underline; }
+.templateAddItemForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px dashed #d7d2ca;
+}
+@media (max-width: 900px) {
+  .templateCreateCard { grid-template-columns: 1fr; }
+  .templateCreateForm,
+  .templateHeaderFields { grid-template-columns: 1fr; }
+  .templateHeaderForm { grid-template-columns: 1fr; }
+  .templateHeaderForm .button { width: fit-content; }
+  .templateItemRow { grid-template-columns: 1fr; }
+  .templateItemEditForm { grid-template-columns: 70px minmax(0, 1fr); }
+  .templateItemEditForm .templateRequiredToggle,
+  .templateItemEditForm .templateSaveItem { grid-column: auto; }
+  .templateAddItemForm { grid-template-columns: 1fr; }
+  .templateAddItemForm .button { width: fit-content; }
+}
+@media (max-width: 560px) {
+  .templateItemEditForm { grid-template-columns: 1fr; }
+  .templateItemEditForm .templateOrderInput { width: 90px; }
+}
