@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requirePlanningUser } from '@/lib/auth';
+import { completePlanningTodoistTask } from '@/lib/todoist';
 
 export async function PATCH(
   request: Request,
@@ -12,6 +13,15 @@ export async function PATCH(
     const body = await request.json();
     const completed = Boolean(body.completed);
 
+    const itemId = Number(id);
+    const { data: existing, error: readError } = await supabase
+      .from('project_checklist_items')
+      .select('todoist_task_id')
+      .eq('id', itemId)
+      .single();
+
+    if (readError) throw readError;
+
     const { error } = await supabase
       .from('project_checklist_items')
       .update({
@@ -19,10 +29,22 @@ export async function PATCH(
         completed_at: completed ? new Date().toISOString() : null,
         completed_by: completed ? user.id : null,
       })
-      .eq('id', Number(id));
+      .eq('id', itemId);
 
     if (error) throw error;
-    return NextResponse.json({ ok: true });
+
+    let todoistWarning: string | null = null;
+    if (completed && existing?.todoist_task_id) {
+      try {
+        await completePlanningTodoistTask(existing.todoist_task_id);
+      } catch (todoistError) {
+        todoistWarning = todoistError instanceof Error
+          ? todoistError.message
+          : 'Gekoppelde To Do-taak kon niet worden afgerond.';
+      }
+    }
+
+    return NextResponse.json({ ok: true, todoistWarning });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Checklist kon niet worden bijgewerkt.';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
