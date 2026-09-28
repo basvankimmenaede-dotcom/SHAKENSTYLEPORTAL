@@ -101,6 +101,14 @@ function taskDate(task: TodoistTask) {
   return (dates.deadlineDate ?? dates.dueDate)?.slice(0, 10) ?? null;
 }
 
+function displayTaskContent(task: TodoistTask, projectNumber?: string | null) {
+  if (!projectNumber) return task.content;
+  return task.content.replace(
+    new RegExp(`^\\s*${projectNumber}\\s*[-–—:]?\\s*`, 'i'),
+    '',
+  ) || task.content;
+}
+
 function taskMeta(task: TodoistTask, today: string) {
   const dates = todoistTaskDate(task);
   const date = dates.deadlineDate ?? dates.dueDate;
@@ -240,6 +248,11 @@ export default async function PlanningPage() {
     : [];
 
   const projectById = new Map(planning.allProjects.map((project) => [project.id, project]));
+  const projectByNumber = new Map(
+    planning.allProjects
+      .filter((project) => project.number)
+      .map((project) => [String(project.number), project]),
+  );
 
   const crewByDay = new Map<string, RentmanPlanningCrewAssignment[]>();
   for (const dateKey of weekDays) {
@@ -275,12 +288,29 @@ export default async function PlanningPage() {
     );
   }
 
+  function effectiveTaskDate(task: TodoistTask) {
+    const explicitDate = taskDate(task);
+    if (explicitDate) return explicitDate;
+
+    const projectNumber = taskProjectNumber.get(task.id);
+    if (!projectNumber) return null;
+
+    const project = projectByNumber.get(projectNumber);
+    if (!project) return null;
+
+    const period = getPlanningProjectPeriod(project);
+    if (!period.startDate || !period.endDate) return null;
+
+    const firstVisibleProjectDay = weekDays.find((dateKey) => projectOverlapsDate(project, dateKey));
+    return firstVisibleProjectDay ?? period.startDate;
+  }
+
   const tasksByDay = new Map<string, TodoistTask[]>();
   for (const dateKey of weekDays) {
     tasksByDay.set(
       dateKey,
       todoistTasks
-        .filter((task) => taskDate(task) === dateKey)
+        .filter((task) => effectiveTaskDate(task) === dateKey)
         .sort((a, b) => taskMeta(a, planning.today).sort.localeCompare(taskMeta(b, planning.today).sort)),
     );
   }
@@ -293,8 +323,8 @@ export default async function PlanningPage() {
     .sort((a, b) => (taskDate(a) ?? '').localeCompare(taskDate(b) ?? ''));
 
   const noDateTasks = todoistTasks
-    .filter((task) => !taskDate(task))
-    .slice(0, 8);
+    .filter((task) => !taskDate(task) && !taskProjectNumber.get(task.id))
+    .slice(0, 20);
 
   const laterTasks = todoistTasks
     .filter((task) => {
@@ -444,7 +474,7 @@ export default async function PlanningPage() {
                       <TodoistTaskItem
                         key={task.id}
                         id={task.id}
-                        content={task.content}
+                        content={displayTaskContent(task, projectNumber)}
                         meta={projectNumber ? `#${projectNumber} · ${meta.text}` : meta.text}
                         labels={task.labels}
                         urgent
@@ -472,8 +502,10 @@ export default async function PlanningPage() {
                           <TodoistTaskItem
                             key={task.id}
                             id={task.id}
-                            content={task.content}
-                            meta={projectNumber ? `#${projectNumber} · ${meta.text}` : meta.text}
+                            content={displayTaskContent(task, projectNumber)}
+                            meta={projectNumber
+                              ? `#${projectNumber} · ${taskDate(task) ? meta.text : 'gekoppeld aan project'}`
+                              : meta.text}
                             labels={task.labels}
                             urgent={meta.urgent}
                           />
@@ -486,6 +518,26 @@ export default async function PlanningPage() {
                 </section>
               );
             })}
+
+            {noDateTasks.length ? (
+              <section className="planningAgendaDay">
+                <div className="planningAgendaDayHeader">
+                  <strong>Zonder deadline</strong>
+                  <span>{noDateTasks.length} taken</span>
+                </div>
+                <div className="compactTaskList">
+                  {noDateTasks.map((task) => (
+                    <TodoistTaskItem
+                      key={task.id}
+                      id={task.id}
+                      content={task.content}
+                      meta="Geen deadline"
+                      labels={task.labels}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         </div>
 
