@@ -28,9 +28,9 @@ export async function POST(request: Request) {
     const checklistId = Number(data);
     const { data: items, error: itemsError } = await supabase
       .from('project_checklist_items')
-      .select('id,label,due_date,todoist_task_id')
+      .select('id,label,due_date,todoist_task_id,is_required')
       .eq('project_checklist_id', checklistId)
-      .not('due_date', 'is', null)
+      .eq('is_required', true)
       .is('todoist_task_id', null);
 
     if (itemsError) throw itemsError;
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       try {
         const task = await createPlanningTodoistTask({
           content: `${rentmanProjectNumber} ${item.label}`,
-          dueDate: String(item.due_date),
+          dueDate: item.due_date ? String(item.due_date) : null,
           description: `Automatisch aangemaakt vanuit SHAKENSTYLE checklist · project ${rentmanProjectNumber} · checklist-item ${item.id}`,
         });
 
