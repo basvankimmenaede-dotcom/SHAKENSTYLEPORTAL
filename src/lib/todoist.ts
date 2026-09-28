@@ -91,17 +91,81 @@ export function findRentmanProjectNumber(
 }
 
 
-export async function completePlanningTodoistTask(taskId: string) {
-  const response = await fetch(`${TODOIST_API_BASE}/tasks/${encodeURIComponent(taskId)}/close`, {
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function closeTaskWithRest(taskId: string) {
+  const url = `${TODOIST_API_BASE}/tasks/${encodeURIComponent(taskId)}/close`;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${todoistToken()}`,
+        Accept: 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    if (response.ok) return;
+
+    if (![502, 503, 504].includes(response.status)) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(
+        `Todoist-taak kon niet worden afgerond (${response.status})${detail ? `: ${detail.slice(0, 180)}` : ''}.`,
+      );
+    }
+
+    if (attempt < 2) await sleep(250 * (attempt + 1));
+  }
+
+  throw new Error('Todoist REST tijdelijk niet beschikbaar.');
+}
+
+async function closeTaskWithSync(taskId: string) {
+  const commandId = crypto.randomUUID();
+  const commands = JSON.stringify([
+    {
+      type: 'item_close',
+      uuid: commandId,
+      args: { id: taskId },
+    },
+  ]);
+
+  const body = new URLSearchParams({ commands });
+  const response = await fetch(`${TODOIST_API_BASE}/sync`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${todoistToken()}`,
       Accept: 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
+    body,
     cache: 'no-store',
   });
 
   if (!response.ok) {
-    throw new Error(`Todoist-taak kon niet worden afgerond (${response.status}).`);
+    throw new Error(`Todoist fallback kon taak niet afronden (${response.status}).`);
+  }
+
+  const result = await response.json() as {
+    sync_status?: Record<string, string | { error?: string }>;
+  };
+  const status = result.sync_status?.[commandId];
+
+  if (status !== 'ok') {
+    const detail = typeof status === 'object' && status?.error ? status.error : 'onbekende fout';
+    throw new Error(`Todoist fallback kon taak niet afronden: ${detail}.`);
+  }
+}
+
+export async function completePlanningTodoistTask(taskId: string) {
+  try {
+    await closeTaskWithRest(taskId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (!message.includes('tijdelijk niet beschikbaar')) throw error;
+    await closeTaskWithSync(taskId);
   }
 }
