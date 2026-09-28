@@ -2143,3 +2143,178 @@ tr:last-child td { border-bottom: 0; }
     grid-column: 2;
   }
 }
+
+
+/* Final planning alignment pass */
+.planningCompactGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(360px, .78fr);
+}
+.planningWeekCounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 10px;
+  align-items: stretch;
+}
+.planningWeekStat {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 0 8px;
+  border-left: 1px solid var(--line);
+}
+.planningWeekStat:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.planningWeekStat b {
+  font-size: 18px;
+  line-height: 1;
+}
+.planningWeekStat small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.planningOpsColumn {
+  gap: 12px;
+}
+.planningOpsCard {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.planningOpsHeader,
+.planningCrewDayHeader,
+.planningAgendaDayHeader {
+  min-height: 38px;
+  box-sizing: border-box;
+}
+.planningOpsHeader {
+  padding: 10px 13px;
+  background: #fbfaf8;
+}
+.planningOpsHeader > span,
+.planningOpsHeader > div > span {
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+.planningOpsHeader > strong {
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.planningCrewDayHeader {
+  padding: 8px 12px;
+}
+.planningCrewDayHeader strong {
+  font-size: 10px;
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+.planningCrewDayHeader span {
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.planningCrewRow {
+  grid-template-columns: 32px minmax(0, .75fr) minmax(145px, 1.25fr);
+  gap: 9px;
+  min-height: 54px;
+  padding: 9px 11px;
+}
+.planningCrewAvatar {
+  width: 30px;
+  height: 30px;
+}
+.planningCrewPerson strong {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.planningCrewPerson span {
+  font-size: 8px;
+  line-height: 1.2;
+}
+.planningCrewShift {
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+}
+.planningCrewShift strong {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+}
+.planningCrewShift span {
+  display: block;
+  margin-top: 2px;
+  font-size: 8px;
+  line-height: 1.2;
+}
+.planningExpiredHeader {
+  min-height: 54px;
+  background: #fff2ef;
+}
+.planningExpiredHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningExpiredHeader small {
+  display: block;
+  max-width: 240px;
+  font-size: 8px;
+  line-height: 1.25;
+}
+.planningExpiredHeader > strong {
+  flex: 0 0 auto;
+  min-width: 32px;
+  height: 32px;
+}
+.planningExpiredRow {
+  min-height: 54px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 9px 12px;
+}
+.planningExpiredRow > div:first-child strong {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.planningExpiredRow > div:first-child span {
+  margin-top: 2px;
+  font-size: 8px;
+  line-height: 1.2;
+}
+.planningExpiredMeta {
+  min-width: 78px;
+  justify-items: end;
+}
+.planningExpiredMeta span {
+  font-size: 8px;
+  white-space: nowrap;
+}
+.planningExpiredMeta b {
+  font-size: 8px;
+}
+@media (max-width: 1260px) {
+  .planningCompactGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .planningOpsColumn {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .planningCompactGrid {
+    grid-template-columns: 1fr;
+  }
+  .planningOpsColumn {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}
