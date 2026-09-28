@@ -315,6 +315,7 @@ export type RentmanPlanningProject = {
   location?: { displayname?: string; name?: string } | null;
   customer?: { displayname?: string; name?: string } | null;
   project_type?: { displayname?: string; name?: string; color?: string } | null;
+  custom?: Record<string, unknown>;
 };
 
 function amsterdamDateKey(date = new Date()) {
@@ -354,7 +355,7 @@ function overlapsDate(project: RentmanPlanningProject, dateKey: string) {
 
 export async function getPlanningProjects() {
   const params = new URLSearchParams({
-    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,customer,project_type',
+    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,customer,project_type,custom',
     expand: 'location,customer,project_type',
     sort: '-id',
     limit: '500',
@@ -384,4 +385,42 @@ export async function getPlanningProjects() {
 
 export function getPlanningProjectPeriod(project: RentmanPlanningProject) {
   return projectDateRange(project);
+}
+
+
+function truthyPlanningValue(value: unknown) {
+  if (value === true || value === 1) return true;
+  if (typeof value === 'string') {
+    return ['yes', 'ja', 'true', '1', 'retour', 'compleet', 'complete', 'done'].includes(value.toLowerCase().trim());
+  }
+  return false;
+}
+
+export function getPlanningReturnState(project: RentmanPlanningProject) {
+  const fieldKey = process.env.RENTMAN_RETURN_COMPLETE_FIELD_KEY;
+  if (!fieldKey) return { configured: false, complete: null as boolean | null };
+  return {
+    configured: true,
+    complete: truthyPlanningValue(project.custom?.[fieldKey]),
+  };
+}
+
+export function getOverdueReturnProjects(projects: RentmanPlanningProject[], today: string) {
+  const fieldKey = process.env.RENTMAN_RETURN_COMPLETE_FIELD_KEY;
+  if (!fieldKey) return { configured: false, projects: [] as RentmanPlanningProject[] };
+
+  return {
+    configured: true,
+    projects: projects
+      .filter((project) => {
+        const range = projectDateRange(project);
+        if (!range.endDate || range.endDate >= today) return false;
+        return !truthyPlanningValue(project.custom?.[fieldKey]);
+      })
+      .sort((a, b) => {
+        const aEnd = projectDateRange(a).endDate ?? '';
+        const bEnd = projectDateRange(b).endDate ?? '';
+        return bEnd.localeCompare(aEnd);
+      }),
+  };
 }
