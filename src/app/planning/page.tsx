@@ -209,7 +209,7 @@ export default async function PlanningPage() {
       })),
     supabase
       .from('project_checklists')
-      .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order)'),
+      .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order,deadline_offset_days,due_date,todoist_task_id)'),
     supabase
       .from('checklist_templates')
       .select('id,name')
