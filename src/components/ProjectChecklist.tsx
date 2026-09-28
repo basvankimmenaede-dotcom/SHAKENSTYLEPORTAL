@@ -40,15 +40,16 @@ export default function ProjectChecklist({
 }) {
   const router = useRouter();
   const [templateId, setTemplateId] = useState(String(templates[0]?.id ?? ''));
-  const [busyId, setBusyId] = useState<number | 'create' | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [pendingIds, setPendingIds] = useState<Set<number>>(() => new Set());
   const [error, setError] = useState('');
   const [items, setItems] = useState<PlanningChecklistItem[]>(
     [...(checklist?.project_checklist_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   );
 
   async function createChecklist() {
-    if (!templateId || busyId) return;
-    setBusyId('create');
+    if (!templateId || creating) return;
+    setCreating(true);
     setError('');
 
     const response = await fetch('/api/planning/checklists/create', {
@@ -70,34 +71,45 @@ export default function ProjectChecklist({
 
     const result = await response.json().catch(() => ({}));
     setError(result.error || 'Checklist kon niet worden aangemaakt.');
-    setBusyId(null);
+    setCreating(false);
   }
 
   async function toggleItem(item: PlanningChecklistItem) {
-    if (busyId) return;
+    if (pendingIds.has(item.id)) return;
 
     const nextCompleted = !item.completed;
-    setBusyId(item.id);
     setError('');
+
     setItems((current) =>
       current.map((row) => row.id === item.id ? { ...row, completed: nextCompleted } : row),
     );
-
-    const response = await fetch(`/api/planning/checklists/items/${item.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: nextCompleted }),
+    setPendingIds((current) => {
+      const next = new Set(current);
+      next.add(item.id);
+      return next;
     });
 
-    if (!response.ok) {
-      setItems((current) =>
-        current.map((row) => row.id === item.id ? { ...row, completed: item.completed } : row),
-      );
-      const result = await response.json().catch(() => ({}));
-      setError(result.error || 'Checklist kon niet worden bijgewerkt.');
-    }
+    try {
+      const response = await fetch(`/api/planning/checklists/items/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: nextCompleted }),
+      });
 
-    setBusyId(null);
+      if (!response.ok) {
+        setItems((current) =>
+          current.map((row) => row.id === item.id ? { ...row, completed: item.completed } : row),
+        );
+        const result = await response.json().catch(() => ({}));
+        setError(result.error || 'Checklist kon niet worden bijgewerkt.');
+      }
+    } finally {
+      setPendingIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
+    }
   }
 
   if (!checklist) {
@@ -121,9 +133,9 @@ export default function ProjectChecklist({
             type="button"
             className="button orange"
             onClick={createChecklist}
-            disabled={!templateId || busyId === 'create'}
+            disabled={!templateId || creating}
           >
-            {busyId === 'create' ? 'Aanmaken…' : 'Checklist koppelen'}
+            {creating ? 'Aanmaken…' : 'Checklist koppelen'}
           </button>
         </div>
         {error ? <div className="planningInlineError">{error}</div> : null}
@@ -140,19 +152,27 @@ export default function ProjectChecklist({
         <span>{done}/{items.length} klaar</span>
       </div>
       <div className="projectChecklistItems">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={item.completed ? 'projectChecklistItem complete' : 'projectChecklistItem'}
-            onClick={() => toggleItem(item)}
-            disabled={busyId === item.id}
-          >
-            <span className="projectChecklistBox">{item.completed ? '✓' : ''}</span>
-            <span>{item.label}</span>
-            {item.is_required ? <small>verplicht</small> : null}
-          </button>
-        ))}
+        {items.map((item) => {
+          const pending = pendingIds.has(item.id);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={[
+                'projectChecklistItem',
+                item.completed ? 'complete' : '',
+                pending ? 'saving' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => toggleItem(item)}
+              disabled={pending}
+              aria-busy={pending}
+            >
+              <span className="projectChecklistBox">{item.completed ? '✓' : ''}</span>
+              <span>{item.label}</span>
+              {pending ? <small>opslaan…</small> : item.is_required ? <small>verplicht</small> : null}
+            </button>
+          );
+        })}
       </div>
       {error ? <div className="planningInlineError">{error}</div> : null}
     </div>
