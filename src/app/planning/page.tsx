@@ -3,7 +3,9 @@ import { requirePlanningUser } from '@/lib/auth';
 import {
   getPlanningProjects,
   getPlanningProjectPeriod,
+  getPlanningCrewAssignments,
   type RentmanPlanningProject,
+  type RentmanPlanningCrewAssignment,
 } from '@/lib/rentman';
 import {
   findRentmanProjectNumber,
@@ -178,7 +180,7 @@ export default async function PlanningPage() {
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, checklistResult, templateResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, checklistResult, templateResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -190,6 +192,12 @@ export default async function PlanningPage() {
       .catch((error) => ({
         value: [] as TodoistTask[],
         error: error instanceof Error ? error.message : 'Todoist kon niet worden geladen.',
+      })),
+    getPlanningCrewAssignments()
+      .then((value) => ({ value, error: null as string | null }))
+      .catch((error) => ({
+        value: [] as RentmanPlanningCrewAssignment[],
+        error: error instanceof Error ? error.message : 'Personeelsplanning kon niet worden geladen.',
       })),
     supabase
       .from('project_checklists')
@@ -203,6 +211,7 @@ export default async function PlanningPage() {
 
   const planning = planningResult.value;
   const todoistTasks = todoistResult.value;
+  const crewAssignments = crewResult.value;
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
@@ -229,6 +238,28 @@ export default async function PlanningPage() {
   const weekDays = planning.today
     ? Array.from({ length: 7 }, (_, index) => addDays(planning.today, index))
     : [];
+
+  const projectById = new Map(planning.allProjects.map((project) => [project.id, project]));
+
+  const crewByDay = new Map<string, RentmanPlanningCrewAssignment[]>();
+  for (const dateKey of weekDays) {
+    crewByDay.set(
+      dateKey,
+      crewAssignments
+        .filter((assignment) => {
+          const fn = assignment.function;
+          const start = fn?.planperiod_start ?? fn?.usageperiod_start ?? null;
+          const end = fn?.planperiod_end ?? fn?.usageperiod_end ?? start;
+          if (!start || !end) return false;
+          return start.slice(0, 10) <= dateKey && end.slice(0, 10) >= dateKey;
+        })
+        .sort((a, b) => {
+          const aStart = a.function?.planperiod_start ?? a.function?.usageperiod_start ?? '';
+          const bStart = b.function?.planperiod_start ?? b.function?.usageperiod_start ?? '';
+          return aStart.localeCompare(bStart);
+        }),
+    );
+  }
 
   const projectsByDay = new Map<string, RentmanPlanningProject[]>();
   for (const dateKey of weekDays) {
@@ -324,6 +355,7 @@ export default async function PlanningPage() {
         {weekDays.map((dateKey, index) => {
           const projects = projectsByDay.get(dateKey) ?? [];
           const tasks = tasksByDay.get(dateKey) ?? [];
+          const crew = crewByDay.get(dateKey) ?? [];
           return (
             <a
               key={dateKey}
@@ -338,6 +370,7 @@ export default async function PlanningPage() {
                 <b>{projects.length}</b><small>projecten</small>
                 <i />
                 <b>{tasks.length}</b><small>taken</small>
+                <span className="planningWeekCrew">{crew.length} crew</span>
               </div>
             </a>
           );
@@ -453,98 +486,112 @@ export default async function PlanningPage() {
         </div>
 
         <aside className="planningOpsColumn">
-          <section className="planningOpsCard">
+          <section className="planningOpsCard planningCrewCard">
             <div className="planningOpsHeader">
-              <span>Operationeel overzicht</span>
+              <span>Personeel (Rentman)</span>
+              <strong>{crewAssignments.length} gepland</strong>
             </div>
-            <div className="planningOpsMetrics">
-              <div className="planningOpsMetric warning">
-                <strong>{overdueReturnProjects.length}</strong>
-                <span>Retour nog open</span>
-              </div>
-              <div className="planningOpsMetric">
-                <strong>{checklistPercent}%</strong>
-                <span>Checklist gereed</span>
-              </div>
-              <div className="planningOpsMetric">
-                <strong>{overdueTasks.length}</strong>
-                <span>Taken te laat</span>
-              </div>
-              <div className="planningOpsMetric">
-                <strong>{planning.allProjects.length}</strong>
-                <span>Projecten geladen</span>
-              </div>
+
+            <div className="planningCrewDays">
+              {weekDays.map((dateKey) => {
+                const assignments = crewByDay.get(dateKey) ?? [];
+                if (!assignments.length) return null;
+
+                return (
+                  <section className="planningCrewDay" key={dateKey}>
+                    <div className="planningCrewDayHeader">
+                      <strong>{dayLongLabel(dateKey, planning.today)}</strong>
+                      <span>{assignments.length} activiteiten</span>
+                    </div>
+
+                    <div className="planningCrewList">
+                      {assignments.map((assignment) => {
+                        const fn = assignment.function;
+                        const crew = assignment.crewmember;
+                        const start = fn?.planperiod_start ?? fn?.usageperiod_start ?? null;
+                        const end = fn?.planperiod_end ?? fn?.usageperiod_end ?? null;
+                        const projectId = Number(fn?.project?.split('/').pop());
+                        const project = Number.isFinite(projectId) ? projectById.get(projectId) : undefined;
+                        const name = crew?.displayname
+                          || [crew?.firstname, crew?.middle_name, crew?.lastname].filter(Boolean).join(' ')
+                          || 'Onbekend';
+                        const initials = name
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((part) => part[0]?.toUpperCase())
+                          .join('');
+
+                        return (
+                          <div className="planningCrewRow" key={assignment.id}>
+                            <span className="planningCrewAvatar">{initials || '—'}</span>
+                            <div className="planningCrewPerson">
+                              <strong>{name}</strong>
+                              <span>{fn?.displayname || fn?.name || 'Crew'}</span>
+                            </div>
+                            <div className="planningCrewShift">
+                              <strong>{formatTime(start) ?? '—'} – {formatTime(end) ?? '—'}</strong>
+                              <span>
+                                {project
+                                  ? `#${project.number ?? project.id} · ${project.name}`
+                                  : 'Rentman activiteit'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
+              {!weekDays.some((dateKey) => (crewByDay.get(dateKey) ?? []).length > 0) ? (
+                <div className="compactEmpty">Geen geplande personeelsactiviteiten in deze week.</div>
+              ) : null}
             </div>
           </section>
 
-          <section className="planningOpsCard">
-            <div className="planningOpsHeader">
-              <span>Te late retouren</span>
+          <section className="planningOpsCard planningExpiredCard">
+            <div className="planningOpsHeader planningExpiredHeader">
+              <div>
+                <span>Verlopen bonnen</span>
+                <small>Projectperiode voorbij en retour nog niet afgerond.</small>
+              </div>
               <strong>{overdueReturnProjects.length}</strong>
             </div>
+
             {overdueReturnProjects.length ? (
               <div className="planningOpsList">
-                {overdueReturnProjects.slice(0, 8).map((project) => {
+                {overdueReturnProjects.slice(0, 10).map((project) => {
                   const period = getPlanningProjectPeriod(project);
+                  const daysLate = period.endDate && planning.today
+                    ? Math.max(
+                        1,
+                        Math.floor(
+                          (new Date(`${planning.today}T12:00:00+02:00`).getTime()
+                            - new Date(`${period.endDate}T12:00:00+02:00`).getTime())
+                          / (24 * 60 * 60 * 1000),
+                        ),
+                      )
+                    : null;
+
                   return (
-                    <div className="planningOpsListItem" key={project.id}>
+                    <div className="planningExpiredRow" key={project.id}>
                       <div>
-                        <strong>#{project.number ?? project.id} · {project.name}</strong>
-                        <span>Einde project {shortDate(period.endDate)}</span>
+                        <strong>#{project.number ?? project.id}</strong>
+                        <span>{project.name}</span>
+                      </div>
+                      <div className="planningExpiredMeta">
+                        <span>Verlopen {shortDate(period.endDate)}</span>
+                        {daysLate ? <b>{daysLate} {daysLate === 1 ? 'dag' : 'dagen'}</b> : null}
                       </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="compactEmpty">Geen open retouren.</div>
+              <div className="compactEmpty">Geen verlopen bonnen.</div>
             )}
           </section>
-
-          <section className="planningOpsCard">
-            <div className="planningOpsHeader">
-              <span>Zonder deadline</span>
-              <strong>{noDateTasks.length}</strong>
-            </div>
-            {noDateTasks.length ? (
-              <div className="planningOpsTaskList">
-                {noDateTasks.map((task) => (
-                  <TodoistTaskItem
-                    key={task.id}
-                    id={task.id}
-                    content={task.content}
-                    meta={taskProjectNumber.get(task.id) ? `#${taskProjectNumber.get(task.id)}` : 'Losse taak'}
-                    labels={task.labels}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="compactEmpty">Geen taken zonder deadline.</div>
-            )}
-          </section>
-
-          {laterTasks.length ? (
-            <section className="planningOpsCard">
-              <div className="planningOpsHeader">
-                <span>Later gepland</span>
-                <strong>{laterTasks.length}</strong>
-              </div>
-              <div className="planningOpsTaskList">
-                {laterTasks.map((task) => {
-                  const meta = taskMeta(task, planning.today);
-                  return (
-                    <TodoistTaskItem
-                      key={task.id}
-                      id={task.id}
-                      content={task.content}
-                      meta={meta.text}
-                      labels={task.labels}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
         </aside>
       </section>
     </main>
