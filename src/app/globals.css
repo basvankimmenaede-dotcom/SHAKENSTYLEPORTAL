@@ -1489,3 +1489,433 @@ tr:last-child td { border-bottom: 0; }
   .templateItemEditForm { grid-template-columns: 1fr; }
   .templateItemEditForm .templateOrderInput { width: 90px; }
 }
+
+
+/* Planning proposal B: week strip + compact daily lists */
+.planningCompactPage {
+  max-width: 1540px;
+  padding-top: 24px;
+}
+.planningCompactHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.planningCompactHeader h1 {
+  margin: 0;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+.planningCompactHeader .eyebrowLink { margin-bottom: 9px; }
+.planningCompactActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.planningWeekStrip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 16px;
+}
+.planningWeekDay {
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  transition: .15s ease;
+}
+.planningWeekDay:hover {
+  border-color: #c2bcb3;
+  transform: translateY(-1px);
+}
+.planningWeekDay.active {
+  border-color: rgba(243,112,33,.62);
+  background: #fff7f1;
+}
+.planningWeekDay > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.planningWeekDay > div:first-child strong {
+  font-size: 13px;
+  text-transform: capitalize;
+}
+.planningWeekDay > div:first-child span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.planningWeekCounts {
+  display: grid;
+  grid-template-columns: auto auto 1px auto auto;
+  align-items: baseline;
+  justify-content: start;
+  gap: 5px;
+  margin-top: 10px;
+}
+.planningWeekCounts b {
+  font-size: 18px;
+  line-height: 1;
+}
+.planningWeekCounts small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+.planningWeekCounts i {
+  width: 1px;
+  height: 19px;
+  background: var(--line);
+  margin: 0 3px;
+}
+
+.planningCompactGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.05fr) minmax(280px, .62fr);
+  gap: 12px;
+  align-items: start;
+}
+.planningCompactColumn,
+.planningOpsColumn {
+  min-width: 0;
+}
+.planningCompactColumn {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+.planningColumnHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 15px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf8;
+}
+.planningColumnHeader span {
+  color: var(--orange-dark);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.planningColumnHeader h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+  letter-spacing: -.025em;
+}
+.planningColumnHeader > strong {
+  color: var(--muted);
+  font-size: 11px;
+}
+.planningAgendaList {
+  display: grid;
+}
+.planningAgendaDay {
+  scroll-margin-top: 110px;
+  border-bottom: 1px solid var(--line);
+}
+.planningAgendaDay:last-child { border-bottom: 0; }
+.planningAgendaDayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #f7f6f3;
+  border-bottom: 1px solid #ece9e4;
+}
+.planningAgendaDayHeader strong {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.planningAgendaDayHeader span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.planningOverdueDay .planningAgendaDayHeader {
+  background: #fff1ee;
+  color: #9d3d30;
+}
+.compactProjectList,
+.compactTaskList {
+  display: grid;
+}
+.compactProjectRow {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 13px;
+  border-bottom: 1px solid #efede8;
+}
+.compactProjectRow:last-child { border-bottom: 0; }
+.compactProjectTime {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding-top: 2px;
+}
+.compactProjectTime strong {
+  font-size: 12px;
+  line-height: 1.1;
+}
+.compactProjectTime span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.compactProjectMain {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.compactProjectTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-width: 0;
+}
+.compactProjectTitle > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.compactProjectMain > span {
+  color: var(--muted);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compactProgress {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--orange-soft);
+  color: #8c3d0e;
+  font-size: 9px;
+  font-weight: 900;
+}
+.compactProgress.complete {
+  background: #edf7ef;
+  color: #347043;
+}
+.compactProgress.empty {
+  background: #f1efeb;
+  color: var(--muted);
+}
+.compactChecklistDetails {
+  margin-top: 2px;
+}
+.compactChecklistDetails > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--orange-dark);
+  font-size: 9px;
+  font-weight: 800;
+  list-style: none;
+}
+.compactChecklistDetails > summary::-webkit-details-marker { display: none; }
+.compactChecklistDetails > summary::after {
+  content: ' +';
+}
+.compactChecklistDetails[open] > summary::after {
+  content: ' −';
+}
+.compactChecklistPanel {
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fcfbf9;
+}
+.compactChecklistPanel .projectChecklist {
+  padding-top: 0;
+  border-top: 0;
+}
+.compactChecklistPanel .projectChecklistItems {
+  grid-template-columns: 1fr;
+}
+.compactChecklistPanel .projectChecklistItem {
+  padding: 7px 8px;
+  font-size: 10px;
+}
+.compactChecklistPanel .projectChecklistBox,
+.compactChecklistPanel .todoistCheck {
+  width: 19px;
+  height: 19px;
+}
+.compactEmpty {
+  padding: 12px 14px;
+  color: #aaa49b;
+  font-size: 10px;
+  font-weight: 700;
+}
+.compactTaskList .todoistTask,
+.planningOpsTaskList .todoistTask {
+  border: 0;
+  border-bottom: 1px solid #efede8;
+  border-radius: 0;
+  padding: 9px 13px;
+}
+.compactTaskList .todoistTask:last-child,
+.planningOpsTaskList .todoistTask:last-child { border-bottom: 0; }
+.compactTaskList .todoistTaskUrgent,
+.planningOpsTaskList .todoistTaskUrgent {
+  background: #fff7f4;
+}
+.compactTaskList .todoistTaskBody strong,
+.planningOpsTaskList .todoistTaskBody strong {
+  font-size: 11px;
+}
+.compactTaskList .todoistTaskBody > span,
+.planningOpsTaskList .todoistTaskBody > span {
+  font-size: 9px;
+}
+.compactTaskList .todoistCheck,
+.planningOpsTaskList .todoistCheck {
+  width: 19px;
+  height: 19px;
+  border-radius: 5px;
+  margin-top: 1px;
+}
+
+.planningOpsColumn {
+  display: grid;
+  gap: 12px;
+}
+.planningOpsCard {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+.planningOpsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 13px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf8;
+}
+.planningOpsHeader span {
+  font-size: 11px;
+  font-weight: 900;
+}
+.planningOpsHeader strong {
+  color: var(--muted);
+  font-size: 11px;
+}
+.planningOpsMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.planningOpsMetric {
+  min-height: 86px;
+  padding: 13px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  align-content: center;
+  gap: 3px;
+}
+.planningOpsMetric:nth-child(2n) { border-right: 0; }
+.planningOpsMetric:nth-last-child(-n+2) { border-bottom: 0; }
+.planningOpsMetric strong {
+  font-size: 22px;
+  letter-spacing: -.04em;
+}
+.planningOpsMetric span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.planningOpsMetric.warning {
+  background: #fff4f1;
+  color: #a43f30;
+}
+.planningOpsList {
+  display: grid;
+}
+.planningOpsListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 13px;
+  border-bottom: 1px solid #efede8;
+}
+.planningOpsListItem:last-child { border-bottom: 0; }
+.planningOpsListItem > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.planningOpsListItem strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.planningOpsListItem span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.planningOpsListItem b {
+  color: #a43f30;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1180px) {
+  .planningCompactGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .planningOpsColumn {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .planningWeekStrip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .planningCompactGrid {
+    grid-template-columns: 1fr;
+  }
+  .planningOpsColumn {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .planningCompactHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .planningCompactActions .button {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+  .planningWeekStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .compactProjectRow {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+}
