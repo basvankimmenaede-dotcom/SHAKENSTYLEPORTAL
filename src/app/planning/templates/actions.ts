@@ -2,10 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
+import { getRentmanProjectTypes } from '@/lib/rentman';
 
 function templatePath() {
   revalidatePath('/planning/templates');
   revalidatePath('/planning');
+}
+
+async function projectTypeName(projectTypeId: number | null) {
+  if (projectTypeId === null) return null;
+  const projectTypes = await getRentmanProjectTypes();
+  return projectTypes.find((type) => type.id === projectTypeId)?.name ?? null;
 }
 
 export async function createChecklistTemplate(formData: FormData) {
@@ -13,7 +20,6 @@ export async function createChecklistTemplate(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim();
   const projectTypeIdRaw = String(formData.get('rentman_project_type_id') ?? '').trim();
-  const projectTypeName = String(formData.get('rentman_project_type_name') ?? '').trim();
   const projectTypeId = projectTypeIdRaw === '' ? null : Number(projectTypeIdRaw);
   if (!name || (projectTypeId !== null && !Number.isFinite(projectTypeId))) return;
 
@@ -24,7 +30,7 @@ export async function createChecklistTemplate(formData: FormData) {
       description,
       is_active: true,
       rentman_project_type_id: projectTypeId,
-      rentman_project_type_name: projectTypeId === null ? null : projectTypeName || null,
+      rentman_project_type_name: await projectTypeName(projectTypeId),
     });
 
   if (error) throw new Error(error.message);
@@ -38,7 +44,6 @@ export async function updateChecklistTemplate(formData: FormData) {
   const description = String(formData.get('description') ?? '').trim();
   const isActive = formData.get('is_active') === 'on';
   const projectTypeIdRaw = String(formData.get('rentman_project_type_id') ?? '').trim();
-  const projectTypeName = String(formData.get('rentman_project_type_name') ?? '').trim();
   const projectTypeId = projectTypeIdRaw === '' ? null : Number(projectTypeIdRaw);
 
   if (
@@ -54,7 +59,7 @@ export async function updateChecklistTemplate(formData: FormData) {
       description,
       is_active: isActive,
       rentman_project_type_id: projectTypeId,
-      rentman_project_type_name: projectTypeId === null ? null : projectTypeName || null,
+      rentman_project_type_name: await projectTypeName(projectTypeId),
       updated_at: new Date().toISOString(),
     })
     .eq('id', templateId);
