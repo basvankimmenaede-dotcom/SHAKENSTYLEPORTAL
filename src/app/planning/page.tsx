@@ -96,6 +96,11 @@ function projectOverlapsDate(project: RentmanPlanningProject, dateKey: string) {
   return period.startDate <= dateKey && period.endDate >= dateKey;
 }
 
+function isLongTermRental(project: RentmanPlanningProject) {
+  const typeName = project.project_type?.displayname ?? project.project_type?.name ?? '';
+  return typeName.trim().toLowerCase() === 'langdurige verhuur';
+}
+
 function taskDate(task: TodoistTask) {
   const dates = todoistTaskDate(task);
   return (dates.deadlineDate ?? dates.dueDate)?.slice(0, 10) ?? null;
@@ -274,12 +279,23 @@ export default async function PlanningPage() {
     );
   }
 
+  const longTermProjects = planning.allProjects
+    .filter((project) =>
+      isLongTermRental(project)
+      && weekDays.some((dateKey) => projectOverlapsDate(project, dateKey))
+    )
+    .sort((a, b) => {
+      const aStart = getPlanningProjectPeriod(a).startDate ?? '';
+      const bStart = getPlanningProjectPeriod(b).startDate ?? '';
+      return aStart.localeCompare(bStart);
+    });
+
   const projectsByDay = new Map<string, RentmanPlanningProject[]>();
   for (const dateKey of weekDays) {
     projectsByDay.set(
       dateKey,
       planning.allProjects
-        .filter((project) => projectOverlapsDate(project, dateKey))
+        .filter((project) => !isLongTermRental(project) && projectOverlapsDate(project, dateKey))
         .sort((a, b) => {
           const aStart = getPlanningProjectPeriod(a).start ?? '';
           const bStart = getPlanningProjectPeriod(b).start ?? '';
@@ -497,6 +513,44 @@ export default async function PlanningPage() {
               );
             })}
           </div>
+
+          {longTermProjects.length ? (
+            <section className="planningLongTermSection">
+              <div className="planningLongTermHeader">
+                <div>
+                  <span>Rentman</span>
+                  <h3>Langdurige verhuur</h3>
+                </div>
+                <strong>{longTermProjects.length}</strong>
+              </div>
+              <div className="planningLongTermList">
+                {longTermProjects.map((project) => {
+                  const period = getPlanningProjectPeriod(project);
+                  return (
+                    <article className="planningLongTermRow" key={project.id}>
+                      <div className="planningLongTermDates">
+                        <strong>{shortDate(period.startDate) ?? '—'}</strong>
+                        <span>t/m {shortDate(period.endDate) ?? '—'}</span>
+                      </div>
+                      <div className="planningLongTermMain">
+                        <strong>#{project.number ?? project.id} · {project.name}</strong>
+                        <span>{contactName(project.location)}{project.customer ? ` · ${contactName(project.customer)}` : ''}</span>
+                      </div>
+                      <div className="planningLongTermChecklist">
+                        {checklistProgress(getChecklist(project)) ? (
+                          <span className="compactProgress">
+                            {checklistProgress(getChecklist(project))!.done}/{checklistProgress(getChecklist(project))!.total}
+                          </span>
+                        ) : (
+                          <span className="compactProgress empty">geen checklist</span>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
         </div>
 
         <div className="planningCompactColumn">
