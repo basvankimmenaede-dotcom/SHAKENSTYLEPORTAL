@@ -524,7 +524,9 @@ export default async function PlanningPage() {
                         key={task.id}
                         id={task.id}
                         content={displayTaskContent(task, projectNumber)}
-                        meta={projectNumber ? `#${projectNumber} · ${meta.text}` : meta.text}
+                        meta={projectNumber
+                          ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · ${meta.text}`.replace(' ·  · ', ' · ')
+                          : meta.text}
                         labels={task.labels}
                         urgent
                       />
@@ -553,7 +555,7 @@ export default async function PlanningPage() {
                             id={task.id}
                             content={displayTaskContent(task, projectNumber)}
                             meta={projectNumber
-                              ? `#${projectNumber} · ${taskDate(task) ? meta.text : 'gekoppeld aan project'}`
+                              ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · ${taskDate(task) ? meta.text : 'gekoppeld aan project'}`.replace(' ·  · ', ' · ')
                               : meta.text}
                             labels={task.labels}
                             urgent={meta.urgent}
