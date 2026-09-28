@@ -177,7 +177,7 @@ export async function createPlanningTodoistTask({
   description,
 }: {
   content: string;
-  dueDate: string;
+  dueDate?: string | null;
   description?: string;
 }) {
   const projectId = process.env.TODOIST_PLANNING_PROJECT_ID || DEFAULT_PLANNING_PROJECT_ID;
@@ -192,7 +192,7 @@ export async function createPlanningTodoistTask({
       content,
       description: description ?? '',
       project_id: projectId,
-      due_date: dueDate,
+      ...(dueDate ? { due_date: dueDate } : {}),
     }),
     cache: 'no-store',
   });
