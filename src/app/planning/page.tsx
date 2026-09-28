@@ -310,20 +310,7 @@ export default async function PlanningPage() {
   }
 
   function effectiveTaskDate(task: TodoistTask) {
-    const explicitDate = taskDate(task);
-    if (explicitDate) return explicitDate;
-
-    const projectNumber = taskProjectNumber.get(task.id);
-    if (!projectNumber) return null;
-
-    const project = projectByNumber.get(projectNumber);
-    if (!project) return null;
-
-    const period = getPlanningProjectPeriod(project);
-    if (!period.startDate || !period.endDate) return null;
-
-    const firstVisibleProjectDay = weekDays.find((dateKey) => projectOverlapsDate(project, dateKey));
-    return firstVisibleProjectDay ?? period.startDate;
+    return taskDate(task);
   }
 
   const tasksByDay = new Map<string, TodoistTask[]>();
@@ -372,8 +359,8 @@ export default async function PlanningPage() {
   const todayActionCount = todayActionTasks.length + checklistActionItems.length;
 
   const noDateTasks = todoistTasks
-    .filter((task) => !taskDate(task) && !taskProjectNumber.get(task.id))
-    .slice(0, 20);
+    .filter((task) => !taskDate(task))
+    .slice(0, 40);
 
   const laterTasks = todoistTasks
     .filter((task) => {
@@ -638,15 +625,20 @@ export default async function PlanningPage() {
                   <span>{noDateTasks.length} taken</span>
                 </div>
                 <div className="compactTaskList">
-                  {noDateTasks.map((task) => (
-                    <TodoistTaskItem
-                      key={task.id}
-                      id={task.id}
-                      content={task.content}
-                      meta="Geen deadline"
-                      labels={task.labels}
-                    />
-                  ))}
+                  {noDateTasks.map((task) => {
+                    const projectNumber = taskProjectNumber.get(task.id);
+                    return (
+                      <TodoistTaskItem
+                        key={task.id}
+                        id={task.id}
+                        content={displayTaskContent(task, projectNumber)}
+                        meta={projectNumber
+                          ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · Geen deadline`.replace(' ·  · ', ' · ')
+                          : 'Geen deadline'}
+                        labels={task.labels}
+                      />
+                    );
+                  })}
                 </div>
               </section>
             ) : null}
