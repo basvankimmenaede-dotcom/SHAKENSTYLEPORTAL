@@ -23,6 +23,7 @@ export async function updateBrandSettings(formData: FormData) {
   revalidatePath('/admin/brands');
   revalidatePath('/admin/users');
   revalidatePath('/portal');
+  revalidatePath('/planning');
 }
 
 export async function assignUserProfile(formData: FormData) {
@@ -34,13 +35,13 @@ export async function assignUserProfile(formData: FormData) {
   const role = String(formData.get('role') ?? 'customer');
   const distributorId = distributorRaw ? Number(distributorRaw) : null;
 
-  if (!userId || !['admin', 'customer'].includes(role)) return;
+  if (!userId || !['admin', 'customer', 'warehouse'].includes(role)) return;
 
   await admin
     .from('profiles')
     .update({
       role,
-      distributor_id: role === 'admin' ? null : distributorId,
+      distributor_id: role === 'customer' ? distributorId : null,
     })
     .eq('id', userId);
 
