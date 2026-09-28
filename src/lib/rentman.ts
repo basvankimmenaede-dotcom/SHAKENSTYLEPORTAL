@@ -316,6 +316,7 @@ export type RentmanPlanningProject = {
   customer?: { displayname?: string; name?: string } | null;
   project_type?: { displayname?: string; name?: string; color?: string } | null;
   custom?: Record<string, unknown>;
+  is_cancelled?: boolean;
 };
 
 function amsterdamDateKey(date = new Date()) {
@@ -361,10 +362,26 @@ export async function getPlanningProjects() {
     limit: '500',
   });
 
-  const result = await rentmanFetch<RentmanListResponse<RentmanPlanningProject>>(
-    `/projects?${params.toString()}`,
+  const [result, cancelledSubprojects] = await Promise.all([
+    rentmanFetch<RentmanListResponse<RentmanPlanningProject>>(
+      `/projects?${params.toString()}`,
+    ),
+    rentmanFetchAll<{ project?: string | null }>(
+      '/subprojects?fields=id,project,status&status=/statuses/2&limit=1500',
+    ),
+  ]);
+
+  const cancelledProjectIds = new Set(
+    cancelledSubprojects
+      .map((subproject) => Number(subproject.project?.split('/').pop()))
+      .filter(Number.isFinite),
   );
-  const projects = result.data ?? [];
+
+  const projects = (result.data ?? []).map((project) => ({
+    ...project,
+    is_cancelled: cancelledProjectIds.has(project.id),
+  }));
+  const activeProjects = projects.filter((project) => !project.is_cancelled);
   const today = amsterdamDateKey();
   const tomorrow = addDays(today, 1);
 
@@ -377,9 +394,9 @@ export async function getPlanningProjects() {
   return {
     today,
     tomorrow,
-    allProjects: projects,
-    todayProjects: projects.filter((project) => overlapsDate(project, today)).sort(byStart),
-    tomorrowProjects: projects.filter((project) => overlapsDate(project, tomorrow)).sort(byStart),
+    allProjects: activeProjects,
+    todayProjects: activeProjects.filter((project) => overlapsDate(project, today)).sort(byStart),
+    tomorrowProjects: activeProjects.filter((project) => overlapsDate(project, tomorrow)).sort(byStart),
   };
 }
 
