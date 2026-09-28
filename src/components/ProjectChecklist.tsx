@@ -42,6 +42,9 @@ export default function ProjectChecklist({
   const [templateId, setTemplateId] = useState(String(templates[0]?.id ?? ''));
   const [busyId, setBusyId] = useState<number | 'create' | null>(null);
   const [error, setError] = useState('');
+  const [items, setItems] = useState<PlanningChecklistItem[]>(
+    [...(checklist?.project_checklist_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+  );
 
   async function createChecklist() {
     if (!templateId || busyId) return;
@@ -72,22 +75,28 @@ export default function ProjectChecklist({
 
   async function toggleItem(item: PlanningChecklistItem) {
     if (busyId) return;
+
+    const nextCompleted = !item.completed;
     setBusyId(item.id);
     setError('');
+    setItems((current) =>
+      current.map((row) => row.id === item.id ? { ...row, completed: nextCompleted } : row),
+    );
 
     const response = await fetch(`/api/planning/checklists/items/${item.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: !item.completed }),
+      body: JSON.stringify({ completed: nextCompleted }),
     });
 
-    if (response.ok) {
-      router.refresh();
-      return;
+    if (!response.ok) {
+      setItems((current) =>
+        current.map((row) => row.id === item.id ? { ...row, completed: item.completed } : row),
+      );
+      const result = await response.json().catch(() => ({}));
+      setError(result.error || 'Checklist kon niet worden bijgewerkt.');
     }
 
-    const result = await response.json().catch(() => ({}));
-    setError(result.error || 'Checklist kon niet worden bijgewerkt.');
     setBusyId(null);
   }
 
@@ -122,9 +131,6 @@ export default function ProjectChecklist({
     );
   }
 
-  const items = [...(checklist.project_checklist_items ?? [])].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
   const done = items.filter((item) => item.completed).length;
 
   return (
