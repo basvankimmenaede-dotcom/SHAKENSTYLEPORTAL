@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function TodoistTaskItem({
   id,
@@ -16,20 +15,42 @@ export default function TodoistTaskItem({
   labels?: string[];
   urgent?: boolean;
 }) {
-  const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [error, setError] = useState('');
 
   async function completeTask() {
-    if (saving) return;
+    if (saving || completed) return;
+
     setSaving(true);
+    setCompleted(true);
+    setError('');
+
     const response = await fetch(`/api/planning/todoist/${encodeURIComponent(id)}/complete`, {
       method: 'POST',
     });
-    if (response.ok) {
-      router.refresh();
+
+    if (!response.ok) {
+      setCompleted(false);
+      setSaving(false);
+      const result = await response.json().catch(() => ({}));
+      setError(result.error || 'Taak kon niet worden afgerond.');
       return;
     }
+
     setSaving(false);
+  }
+
+  if (completed) {
+    return (
+      <div className="todoistTask todoistTaskCompleted">
+        <span className="todoistCheck todoistCheckDone">✓</span>
+        <div className="todoistTaskBody">
+          <strong>{content}</strong>
+          <span>Afgerond</span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -51,6 +72,7 @@ export default function TodoistTaskItem({
             {labels.map((label) => <small key={label}>{label}</small>)}
           </div>
         ) : null}
+        {error ? <small className="planningInlineError">{error}</small> : null}
       </div>
     </div>
   );
