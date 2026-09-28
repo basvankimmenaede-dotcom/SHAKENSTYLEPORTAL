@@ -1,8 +1,7 @@
-import AppShell from '@/components/AppShell';
+import PlanningShell from '@/components/PlanningShell';
 import { requireAdmin } from '@/lib/auth';
 
-// Preview environment redeploy marker
 export default async function PlanningLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
-  return <AppShell admin>{children}</AppShell>;
+  return <PlanningShell>{children}</PlanningShell>;
 }
