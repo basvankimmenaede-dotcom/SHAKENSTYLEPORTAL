@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getPlanningProjects, getPlanningProjectPeriod, type RentmanPlanningProject } from '@/lib/rentman';
+import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 
 type ChecklistRow = {
   rentman_project_id: number;
@@ -58,7 +59,9 @@ export default async function PlanningTvPage() {
   }
 
   return (
-    <main className="planningTv">
+    <>
+      <PlanningAutoRefresh intervalMs={30000} />
+      <main className="planningTv">
       <header className="planningTvHeader">
         <div>
           <span>SHAKENSTYLE</span>
@@ -86,6 +89,7 @@ export default async function PlanningTvPage() {
           </div>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
