@@ -9,6 +9,9 @@ export type PlanningChecklistItem = {
   completed: boolean;
   is_required: boolean;
   sort_order: number;
+  deadline_offset_days?: number | null;
+  due_date?: string | null;
+  todoist_task_id?: string | null;
 };
 
 export type PlanningChecklist = {
@@ -169,7 +172,16 @@ export default function ProjectChecklist({
             >
               <span className="projectChecklistBox">{item.completed ? '✓' : ''}</span>
               <span>{item.label}</span>
-              {pending ? <small>opslaan…</small> : item.is_required ? <small>verplicht</small> : null}
+              {pending ? (
+                <small>opslaan…</small>
+              ) : item.due_date ? (
+                <small className="projectChecklistDeadline">
+                  {new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: '2-digit' }).format(new Date(`${item.due_date}T12:00:00`))}
+                  {item.todoist_task_id ? ' · To Do' : ''}
+                </small>
+              ) : item.is_required ? (
+                <small>verplicht</small>
+              ) : null}
             </button>
           );
         })}
