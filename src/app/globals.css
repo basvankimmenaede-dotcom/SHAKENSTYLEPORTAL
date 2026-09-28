@@ -1087,3 +1087,279 @@ tr:last-child td { border-bottom: 0; }
   .tvProject { grid-template-columns: 64px minmax(0, 1fr) 58px; padding: 12px; gap: 10px; }
   .tvProjectTime { font-size: 18px; }
 }
+
+
+/* Standalone internal planning shell */
+.planningStandaloneTopbar {
+  min-height: 92px;
+  padding: 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: #111;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.planningBrand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.planningBrand .brandLogoImage {
+  width: 210px;
+  max-width: 28vw;
+}
+.planningBrand > span {
+  padding-left: 14px;
+  border-left: 1px solid rgba(255,255,255,.22);
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.planningStandaloneNav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.planningStandaloneNav a,
+.planningStandaloneNav .ghostButton {
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.planningStandaloneNav a:hover,
+.planningStandaloneNav .ghostButton:hover { border-color: var(--orange); }
+.planningStandaloneNav .planningPortalLink {
+  background: rgba(255,255,255,.09);
+}
+
+/* Project checklist */
+.projectChecklist {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.projectChecklistTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.projectChecklistTitle strong { font-size: 13px; }
+.projectChecklistTitle span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.projectChecklistItems {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.projectChecklistItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.projectChecklistItem:hover { border-color: var(--orange); }
+.projectChecklistItem.complete {
+  background: #f1f8f2;
+  border-color: #c9dfcc;
+  color: #36683e;
+}
+.projectChecklistItem small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.projectChecklistBox {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #c6c2ba;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.projectChecklistItem.complete .projectChecklistBox {
+  background: #3d804b;
+  border-color: #3d804b;
+  color: #fff;
+}
+.projectChecklistCreateRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+}
+.projectChecklistCreateRow .select,
+.projectChecklistCreateRow .button {
+  min-height: 42px;
+  margin: 0;
+}
+.planningInlineError {
+  color: #9b382d;
+  background: #fff0ee;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Todoist in planning */
+.planningTodoistBlock {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.todoistTaskList { display: grid; gap: 7px; }
+.todoistTask {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.todoistTaskUrgent { border-color: #e3b6ad; background: #fff8f6; }
+.todoistCheck {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #c6c2ba;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-size: 10px;
+}
+.todoistCheck:hover { border-color: var(--orange); }
+.todoistTaskBody { min-width: 0; display: grid; gap: 4px; }
+.todoistTaskBody strong {
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.todoistTaskBody > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.todoistLabels { display: flex; flex-wrap: wrap; gap: 4px; }
+.todoistLabels small {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #f0eee9;
+  color: #555;
+  font-size: 9px;
+  font-weight: 800;
+}
+.standaloneTaskGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.standaloneTaskCard {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.standaloneTaskCard > .badge { width: fit-content; }
+
+/* Return warnings */
+.warningMetric {
+  border-color: #e5c1b8;
+  background: #fff9f7;
+}
+.planningAlertSection {
+  margin: 8px 0 34px;
+  padding: 20px;
+  border: 1px solid #e7b6aa;
+  border-radius: 18px;
+  background: #fff7f4;
+}
+.returnAlertGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.returnAlertCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid #ead0ca;
+  border-radius: 12px;
+  background: #fff;
+}
+.returnAlertCard > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.returnAlertCard strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.returnAlertCard small { color: var(--muted); font-size: 10px; }
+.returnStatus {
+  flex: 0 0 auto;
+  max-width: 180px;
+  text-align: right;
+  color: #a14132;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+@media (max-width: 1050px) {
+  .standaloneTaskGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 780px) {
+  .planningStandaloneTopbar {
+    position: static;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+  .planningBrand .brandLogoImage { width: 180px; max-width: 58vw; }
+  .planningStandaloneNav { justify-content: flex-start; }
+  .projectChecklistItems { grid-template-columns: 1fr; }
+  .returnAlertGrid { grid-template-columns: 1fr; }
+  .standaloneTaskGrid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .projectChecklistCreateRow { grid-template-columns: 1fr; }
+  .returnAlertCard { align-items: flex-start; flex-direction: column; }
+  .returnStatus { max-width: none; text-align: left; }
+}
