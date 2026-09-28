@@ -2318,3 +2318,80 @@ tr:last-child td { border-bottom: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Prominent today action warning */
+.planningActionBanner {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin: -2px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid #ef9a83;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #fff1ec 0%, #fff8f4 100%);
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgba(167, 69, 41, .06);
+}
+.planningActionBanner:hover {
+  border-color: var(--orange);
+  transform: translateY(-1px);
+}
+.planningActionIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #ef5a35;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+.planningActionCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningActionCopy > span {
+  color: #b3442c;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.planningActionCopy > strong {
+  font-size: 16px;
+  line-height: 1.15;
+}
+.planningActionCopy > small {
+  color: #7d6f68;
+  font-size: 9px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningActionCta {
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #efc6ba;
+  color: #a53f28;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .planningActionBanner {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+  .planningActionCta {
+    grid-column: 2;
+    width: fit-content;
+  }
+  .planningActionCopy > small {
+    white-space: normal;
+  }
+}
