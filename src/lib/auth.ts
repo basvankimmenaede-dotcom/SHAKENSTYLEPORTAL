@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export type PortalProfile = {
   id: string;
-  role: 'admin' | 'customer';
+  role: 'admin' | 'customer' | 'warehouse';
   full_name: string | null;
   distributor_id: number | null;
 };
@@ -27,5 +27,12 @@ export async function requireUser() {
 export async function requireAdmin() {
   const session = await requireUser();
   if (session.profile.role !== 'admin') redirect('/portal');
+  return session;
+}
+
+
+export async function requirePlanningUser() {
+  const session = await requireUser();
+  if (!['admin', 'warehouse'].includes(session.profile.role)) redirect('/portal');
   return session;
 }
