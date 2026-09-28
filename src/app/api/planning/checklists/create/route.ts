@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requirePlanningUser } from '@/lib/auth';
+import { createPlanningTodoistTask } from '@/lib/todoist';
 
 export async function POST(request: Request) {
   const { supabase } = await requirePlanningUser();
@@ -23,7 +24,45 @@ export async function POST(request: Request) {
     });
 
     if (error) throw error;
-    return NextResponse.json({ ok: true, checklistId: data });
+
+    const checklistId = Number(data);
+    const { data: items, error: itemsError } = await supabase
+      .from('project_checklist_items')
+      .select('id,label,due_date,todoist_task_id')
+      .eq('project_checklist_id', checklistId)
+      .not('due_date', 'is', null)
+      .is('todoist_task_id', null);
+
+    if (itemsError) throw itemsError;
+
+    const todoistErrors: string[] = [];
+    for (const item of items ?? []) {
+      try {
+        const task = await createPlanningTodoistTask({
+          content: `${rentmanProjectNumber} ${item.label}`,
+          dueDate: String(item.due_date),
+          description: `Automatisch aangemaakt vanuit SHAKENSTYLE checklist · project ${rentmanProjectNumber} · checklist-item ${item.id}`,
+        });
+
+        const { error: updateError } = await supabase
+          .from('project_checklist_items')
+          .update({ todoist_task_id: task.id })
+          .eq('id', item.id);
+
+        if (updateError) throw updateError;
+      } catch (todoistError) {
+        todoistErrors.push(
+          todoistError instanceof Error ? todoistError.message : `Taak voor ${item.label} kon niet worden aangemaakt.`,
+        );
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      checklistId,
+      todoistCreated: (items?.length ?? 0) - todoistErrors.length,
+      todoistErrors,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Checklist kon niet worden aangemaakt.';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
