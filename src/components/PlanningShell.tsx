@@ -29,7 +29,10 @@ export default function PlanningShell({
           <Link href="/planning">Dashboard</Link>
           <Link href="/planning/tv">TV-weergave</Link>
           {role === 'admin' ? (
-            <Link href="/admin" className="planningPortalLink">Beheerportaal</Link>
+            <>
+              <Link href="/planning/templates">Checklist-templates</Link>
+              <Link href="/admin" className="planningPortalLink">Beheerportaal</Link>
+            </>
           ) : null}
           <LogoutButton />
         </nav>
