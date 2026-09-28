@@ -423,7 +423,7 @@ export default async function PlanningPage() {
         <div className="planningCompactColumn">
           <div className="planningColumnHeader">
             <div>
-              <span>Todoist</span>
+              <span>To Do</span>
               <h2>Taken</h2>
             </div>
             <strong>{todoistTasks.length} open</strong>
