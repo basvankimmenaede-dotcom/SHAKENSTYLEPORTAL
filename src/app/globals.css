@@ -2395,3 +2395,68 @@ tr:last-child td { border-bottom: 0; }
     white-space: normal;
   }
 }
+
+
+/* Checklist deadlines */
+.templateItemHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.templateItemHeader > div small {
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.templateItemEditForm {
+  grid-template-columns: 72px minmax(220px, 1fr) 128px auto auto;
+}
+.templateAddItemForm {
+  grid-template-columns: minmax(220px, 1fr) 128px auto auto;
+}
+.templateDeadlineField {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.templateDeadlineField > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.templateDeadlineInput {
+  min-width: 0;
+  text-align: center;
+}
+.projectChecklistDeadline {
+  color: #a34718 !important;
+  font-weight: 900 !important;
+  white-space: nowrap;
+}
+@media (max-width: 1050px) {
+  .templateItemEditForm {
+    grid-template-columns: 70px minmax(0, 1fr) 120px;
+  }
+  .templateItemEditForm .templateRequiredToggle,
+  .templateItemEditForm .templateSaveItem {
+    grid-column: auto;
+  }
+  .templateAddItemForm {
+    grid-template-columns: minmax(0, 1fr) 120px auto;
+  }
+  .templateAddItemForm .button {
+    grid-column: auto;
+  }
+}
+@media (max-width: 760px) {
+  .templateItemEditForm,
+  .templateAddItemForm {
+    grid-template-columns: 1fr;
+  }
+  .templateDeadlineField {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+}
