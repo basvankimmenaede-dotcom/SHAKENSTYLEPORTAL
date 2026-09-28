@@ -302,3 +302,85 @@ export async function getLastEquipmentUsageDate(equipmentId: number) {
 
   return completed[0]?.usageperiod_start ?? null;
 }
+
+
+export type RentmanPlanningProject = {
+  id: number;
+  name: string;
+  number?: number | string | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+  location?: { displayname?: string; name?: string } | null;
+  customer?: { displayname?: string; name?: string } | null;
+  project_type?: { displayname?: string; name?: string; color?: string } | null;
+};
+
+function amsterdamDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Amsterdam',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addDays(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return date.toISOString().slice(0, 10);
+}
+
+function projectDateRange(project: RentmanPlanningProject) {
+  const start = project.usageperiod_start ?? project.planperiod_start ?? null;
+  const end = project.usageperiod_end ?? project.planperiod_end ?? start;
+  return {
+    start,
+    end,
+    startDate: start?.slice(0, 10) ?? null,
+    endDate: end?.slice(0, 10) ?? start?.slice(0, 10) ?? null,
+  };
+}
+
+function overlapsDate(project: RentmanPlanningProject, dateKey: string) {
+  const range = projectDateRange(project);
+  if (!range.startDate || !range.endDate) return false;
+  return range.startDate <= dateKey && range.endDate >= dateKey;
+}
+
+export async function getPlanningProjects() {
+  const params = new URLSearchParams({
+    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,customer,project_type',
+    expand: 'location,customer,project_type',
+    sort: '-id',
+    limit: '500',
+  });
+
+  const result = await rentmanFetch<RentmanListResponse<RentmanPlanningProject>>(
+    `/projects?${params.toString()}`,
+  );
+  const projects = result.data ?? [];
+  const today = amsterdamDateKey();
+  const tomorrow = addDays(today, 1);
+
+  const byStart = (a: RentmanPlanningProject, b: RentmanPlanningProject) => {
+    const aStart = projectDateRange(a).start ?? '';
+    const bStart = projectDateRange(b).start ?? '';
+    return aStart.localeCompare(bStart);
+  };
+
+  return {
+    today,
+    tomorrow,
+    todayProjects: projects.filter((project) => overlapsDate(project, today)).sort(byStart),
+    tomorrowProjects: projects.filter((project) => overlapsDate(project, tomorrow)).sort(byStart),
+  };
+}
+
+export function getPlanningProjectPeriod(project: RentmanPlanningProject) {
+  return projectDateRange(project);
+}
