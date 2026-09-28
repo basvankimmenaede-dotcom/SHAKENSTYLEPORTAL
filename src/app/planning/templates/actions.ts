@@ -12,11 +12,20 @@ export async function createChecklistTemplate(formData: FormData) {
   const { supabase } = await requireAdmin();
   const name = String(formData.get('name') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim();
-  if (!name) return;
+  const projectTypeIdRaw = String(formData.get('rentman_project_type_id') ?? '').trim();
+  const projectTypeName = String(formData.get('rentman_project_type_name') ?? '').trim();
+  const projectTypeId = projectTypeIdRaw === '' ? null : Number(projectTypeIdRaw);
+  if (!name || (projectTypeId !== null && !Number.isFinite(projectTypeId))) return;
 
   const { error } = await supabase
     .from('checklist_templates')
-    .insert({ name, description, is_active: true });
+    .insert({
+      name,
+      description,
+      is_active: true,
+      rentman_project_type_id: projectTypeId,
+      rentman_project_type_name: projectTypeId === null ? null : projectTypeName || null,
+    });
 
   if (error) throw new Error(error.message);
   templatePath();
@@ -28,8 +37,15 @@ export async function updateChecklistTemplate(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim();
   const isActive = formData.get('is_active') === 'on';
+  const projectTypeIdRaw = String(formData.get('rentman_project_type_id') ?? '').trim();
+  const projectTypeName = String(formData.get('rentman_project_type_name') ?? '').trim();
+  const projectTypeId = projectTypeIdRaw === '' ? null : Number(projectTypeIdRaw);
 
-  if (!Number.isFinite(templateId) || !name) return;
+  if (
+    !Number.isFinite(templateId)
+    || !name
+    || (projectTypeId !== null && !Number.isFinite(projectTypeId))
+  ) return;
 
   const { error } = await supabase
     .from('checklist_templates')
@@ -37,6 +53,8 @@ export async function updateChecklistTemplate(formData: FormData) {
       name,
       description,
       is_active: isActive,
+      rentman_project_type_id: projectTypeId,
+      rentman_project_type_name: projectTypeId === null ? null : projectTypeName || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', templateId);
