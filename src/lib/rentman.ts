@@ -314,7 +314,7 @@ export type RentmanPlanningProject = {
   planperiod_end?: string | null;
   location?: { displayname?: string; name?: string } | null;
   customer?: { displayname?: string; name?: string } | null;
-  project_type?: { displayname?: string; name?: string; color?: string } | null;
+  project_type?: { id?: number; displayname?: string; name?: string; color?: string } | null;
   custom?: Record<string, unknown>;
   is_cancelled?: boolean;
 };
@@ -478,4 +478,17 @@ export async function getPlanningCrewAssignments() {
   );
 
   return result.data ?? [];
+}
+
+
+export type RentmanProjectType = {
+  id: number;
+  name: string;
+  displayname?: string;
+};
+
+export async function getRentmanProjectTypes() {
+  return rentmanFetchAll<RentmanProjectType>(
+    '/projecttypes?fields=id,name&limit=300',
+  );
 }
