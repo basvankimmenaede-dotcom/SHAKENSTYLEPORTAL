@@ -1919,3 +1919,44 @@ tr:last-child td { border-bottom: 0; }
     grid-template-columns: 52px minmax(0, 1fr);
   }
 }
+
+
+/* Compact checklist creation inside planning rows */
+.compactChecklistPanel .projectChecklistCreate {
+  gap: 8px;
+}
+.compactChecklistPanel .projectChecklistTitle {
+  align-items: center;
+}
+.compactChecklistPanel .projectChecklistTitle strong {
+  font-size: 11px;
+}
+.compactChecklistPanel .projectChecklistTitle span {
+  font-size: 9px;
+}
+.compactChecklistPanel .projectChecklistCreateRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+}
+.compactChecklistPanel .projectChecklistCreateRow .select {
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  font-size: 11px;
+}
+.compactChecklistPanel .projectChecklistCreateRow .button {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .compactChecklistPanel .projectChecklistCreateRow {
+    grid-template-columns: 1fr;
+  }
+  .compactChecklistPanel .projectChecklistCreateRow .button {
+    width: 100%;
+  }
+}
