@@ -169,3 +169,40 @@ export async function completePlanningTodoistTask(taskId: string) {
     await closeTaskWithSync(taskId);
   }
 }
+
+
+export async function createPlanningTodoistTask({
+  content,
+  dueDate,
+  description,
+}: {
+  content: string;
+  dueDate: string;
+  description?: string;
+}) {
+  const projectId = process.env.TODOIST_PLANNING_PROJECT_ID || DEFAULT_PLANNING_PROJECT_ID;
+  const response = await fetch(`${TODOIST_API_BASE}/tasks`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${todoistToken()}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      content,
+      description: description ?? '',
+      project_id: projectId,
+      due_date: dueDate,
+    }),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(
+      `Todoist-taak kon niet worden aangemaakt (${response.status})${detail ? `: ${detail.slice(0, 180)}` : ''}.`,
+    );
+  }
+
+  return response.json() as Promise<TodoistTask>;
+}
