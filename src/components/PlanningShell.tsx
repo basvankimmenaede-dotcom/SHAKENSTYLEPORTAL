@@ -10,7 +10,7 @@ export default function PlanningShell({
   role,
 }: {
   children: React.ReactNode;
-  role: 'admin' | 'warehouse';
+  role: 'admin' | 'warehouse' | 'customer';
 }) {
   const pathname = usePathname();
 
