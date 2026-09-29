@@ -3160,3 +3160,31 @@ tr:last-child td { border-bottom: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Grouped crew rows */
+.planningCrewAvatarStack,
+.crewPlanningModalAvatarStack {
+  display: flex;
+  align-items: center;
+  min-width: 58px;
+}
+.planningCrewAvatarStack .planningCrewAvatar,
+.crewPlanningModalAvatarStack .crewPlanningModalAvatar {
+  margin-left: -10px;
+  border: 2px solid #fff;
+}
+.planningCrewAvatarStack .planningCrewAvatar:first-child,
+.crewPlanningModalAvatarStack .crewPlanningModalAvatar:first-child {
+  margin-left: 0;
+}
+.planningCrewAvatarStack .planningCrewAvatar {
+  width: 34px;
+  height: 34px;
+  font-size: 10px;
+}
+.crewPlanningModalAvatarStack .crewPlanningModalAvatar {
+  width: 42px;
+  height: 42px;
+  font-size: 12px;
+}
