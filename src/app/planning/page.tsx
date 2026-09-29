@@ -6,6 +6,7 @@ import {
   getPlanningCrewAssignments,
   getPlanningProjectFunctionGroups,
   getPlanningProjectFunctions,
+  getPlanningProjectVehicles,
   getOverdueReturnProjects as getRentmanOverdueReturnProjects,
   type RentmanPlanningProject,
   type RentmanPlanningCrewAssignment,
@@ -194,7 +195,7 @@ export default async function PlanningPage() {
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, crewResult, functionGroupsResult, projectFunctionsResult, checklistResult, templateResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, functionGroupsResult, projectFunctionsResult, projectVehiclesResult, checklistResult, templateResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -219,6 +220,9 @@ export default async function PlanningPage() {
     getPlanningProjectFunctions()
       .then((value) => ({ value, error: null as string | null }))
       .catch(() => ({ value: [], error: null as string | null })),
+    getPlanningProjectVehicles()
+      .then((value) => ({ value, error: null as string | null }))
+      .catch(() => ({ value: [], error: null as string | null })),
     supabase
       .from('project_checklists')
       .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order,deadline_offset_days,due_date,todoist_task_id)'),
@@ -234,6 +238,7 @@ export default async function PlanningPage() {
   const crewAssignments = crewResult.value;
   const projectFunctionGroups = functionGroupsResult.value;
   const projectFunctions = projectFunctionsResult.value;
+  const projectVehicles = projectVehiclesResult.value;
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
@@ -284,6 +289,15 @@ export default async function PlanningPage() {
     const current = functionsByProjectId.get(projectId) ?? [];
     current.push(fn);
     functionsByProjectId.set(projectId, current);
+  }
+
+  const vehiclesByProjectId = new Map<number, typeof projectVehicles>();
+  for (const item of projectVehicles) {
+    const projectId = Number(item.function?.project?.split('/').pop());
+    if (!Number.isFinite(projectId)) continue;
+    const current = vehiclesByProjectId.get(projectId) ?? [];
+    current.push(item);
+    vehiclesByProjectId.set(projectId, current);
   }
 
   const crewByDay = new Map<string, RentmanPlanningCrewAssignment[]>();
@@ -710,6 +724,14 @@ export default async function PlanningPage() {
                             contactEmail={locationContact?.email || null}
                             notes={typeof project?.custom?.custom_103 === 'string' ? project.custom.custom_103 : null}
                             bar={typeof project?.custom?.custom_38 === 'string' ? project.custom.custom_38 : null}
+                            vehicles={(project ? vehiclesByProjectId.get(project.id) ?? [] : []).map((item) => ({
+                              id: item.id,
+                              name: item.vehicle?.displayname || item.vehicle?.name || 'Voertuig',
+                              licensePlate: item.vehicle?.licenseplate || null,
+                              functionName: item.function?.displayname || item.function?.name || null,
+                              start: item.function?.planperiod_start || item.function?.usageperiod_start || null,
+                              end: item.function?.planperiod_end || item.function?.usageperiod_end || null,
+                            }))}
                             timeline={project ? (() => {
                               const groups = functionGroupsByProjectId.get(project.id) ?? [];
                               const functions = functionsByProjectId.get(project.id) ?? [];
