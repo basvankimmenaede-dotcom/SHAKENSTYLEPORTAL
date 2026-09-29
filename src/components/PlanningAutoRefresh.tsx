@@ -14,7 +14,7 @@ function isUserInteracting() {
 }
 
 export default function PlanningAutoRefresh({
-  intervalMs = 60000,
+  intervalMs = 300000,
 }: {
   intervalMs?: number;
 }) {
