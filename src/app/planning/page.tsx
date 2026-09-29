@@ -341,7 +341,7 @@ export default async function PlanningPage() {
         .sort((a, b) => {
           const aStart = a.usageperiod_start ?? a.planperiod_start ?? '';
           const bStart = b.usageperiod_start ?? b.planperiod_start ?? '';
-          return aStart.localeCompare(bStart);
+          return bStart.localeCompare(aStart);
         }),
     );
   }
