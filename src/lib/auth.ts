@@ -67,7 +67,7 @@ export async function requireModulePermission(
 ) {
   const session = await requireUser();
 
-  if (session.profile.role === 'admin') return session;
+  if (session.profile.role === 'admin') return { ...session, permissionLevel: 'manage' as PermissionLevel };
 
   const level = await getUserPermissionLevel(session.supabase, session.user.id, permissionKey);
   if (!permissionAtLeast(level, required)) {
