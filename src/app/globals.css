@@ -2772,8 +2772,9 @@ tr:last-child td { border-bottom: 0; }
 }
 .crewPlanningTimelineRow {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(110px, .85fr) minmax(110px, .85fr);
   gap: 14px;
+  align-items: center;
   padding: 13px 16px;
   border-top: 1px solid #ede9e3;
 }
@@ -2784,24 +2785,31 @@ tr:last-child td { border-bottom: 0; }
   background: #fff1e8;
   box-shadow: inset 3px 0 0 #ef642f;
 }
-.crewPlanningTimelineTime {
-  display: flex;
-  gap: 5px;
-  align-items: baseline;
-  white-space: nowrap;
-}
-.crewPlanningTimelineTime strong {
-  font-size: 11px;
-}
-.crewPlanningTimelineTime span {
-  color: var(--muted);
-  font-size: 10px;
-}
 .crewPlanningTimelineBody {
   min-width: 0;
   display: grid;
   gap: 2px;
 }
+.crewPlanningTimelineMoment {
+  display: grid;
+  gap: 2px;
+}
+.crewPlanningTimelineMoment > span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.crewPlanningTimelineMoment > strong {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.crewPlanningTimelineMoment > small {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .crewPlanningTimelineBody > strong {
   font-size: 12px;
 }
@@ -2837,7 +2845,10 @@ tr:last-child td { border-bottom: 0; }
     grid-template-columns: 1fr;
   }
   .crewPlanningTimelineRow {
-    grid-template-columns: 1fr;
-    gap: 5px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+  .crewPlanningTimelineBody {
+    grid-column: 1 / -1;
   }
 }
