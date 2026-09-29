@@ -744,12 +744,24 @@ export default async function PlanningPage() {
                               }>();
 
                               for (const group of groups) {
+                                const groupFunctions = functions
+                                  .filter((projectFunction) => projectFunction.group?.id === group.id)
+                                  .map((projectFunction) => {
+                                    const label = projectFunction.displayname || projectFunction.name || 'Functie';
+                                    const amount = projectFunction.amount && projectFunction.amount > 1
+                                      ? ` × ${projectFunction.amount}`
+                                      : '';
+                                    return `${label}${amount}`;
+                                  });
+
                                 timelineGroups.set(group.id, {
                                   id: group.id,
                                   name: group.displayname || group.name || null,
                                   start: group.planperiod_start || group.usageperiod_start || null,
                                   end: group.planperiod_end || group.usageperiod_end || null,
-                                  remark: group.remark || null,
+                                  remark: groupFunctions.length
+                                    ? groupFunctions.join(' · ')
+                                    : group.remark || null,
                                 });
                               }
 
@@ -757,14 +769,18 @@ export default async function PlanningPage() {
                                 const group = projectFunction.group;
                                 if (group?.id) {
                                   if (!timelineGroups.has(group.id)) {
+                                    const label = projectFunction.displayname || projectFunction.name || 'Functie';
+                                    const amount = projectFunction.amount && projectFunction.amount > 1
+                                      ? ` × ${projectFunction.amount}`
+                                      : '';
                                     timelineGroups.set(group.id, {
                                       id: group.id,
-                                      name: group.displayname || group.name || null,
+                                      name: group.displayname || group.name || label,
                                       start: group.planperiod_start || group.usageperiod_start
                                         || projectFunction.planperiod_start || projectFunction.usageperiod_start || null,
                                       end: group.planperiod_end || group.usageperiod_end
                                         || projectFunction.planperiod_end || projectFunction.usageperiod_end || null,
-                                      remark: group.remark || null,
+                                      remark: `${label}${amount}`,
                                     });
                                   }
                                   continue;
@@ -775,7 +791,9 @@ export default async function PlanningPage() {
                                   name: projectFunction.displayname || projectFunction.name || null,
                                   start: projectFunction.planperiod_start || projectFunction.usageperiod_start || null,
                                   end: projectFunction.planperiod_end || projectFunction.usageperiod_end || null,
-                                  remark: null,
+                                  remark: projectFunction.amount && projectFunction.amount > 1
+                                    ? `${projectFunction.amount} gepland`
+                                    : null,
                                 });
                               }
 
