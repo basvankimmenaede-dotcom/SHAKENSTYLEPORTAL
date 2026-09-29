@@ -32,6 +32,42 @@ async function rentmanFetch<T>(pathOrUrl: string): Promise<T> {
   return response.json();
 }
 
+async function rentmanPlanningFetch<T>(pathOrUrl: string): Promise<T> {
+  const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${API_BASE}${pathOrUrl}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token()}`,
+      Accept: 'application/json',
+    },
+    next: { revalidate: 30 },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Beheerverbinding mislukt (${response.status}).`);
+  }
+
+  return response.json();
+}
+
+async function rentmanPlanningFetchAll<T>(path: string): Promise<T[]> {
+  const items: T[] = [];
+  let nextUrl: string | null = path;
+  let pageCount = 0;
+
+  while (nextUrl) {
+    const result: RentmanListResponse<T> = await rentmanPlanningFetch<RentmanListResponse<T>>(nextUrl);
+    items.push(...(result.data ?? []));
+    nextUrl = result.next_page_url ?? null;
+    pageCount += 1;
+
+    if (pageCount > 100) {
+      throw new Error('De beheergegevens zijn te groot om veilig te laden.');
+    }
+  }
+
+  return items;
+}
+
 async function rentmanFetchAll<T>(path: string): Promise<T[]> {
   const items: T[] = [];
   let nextUrl: string | null = path;
@@ -380,10 +416,10 @@ export async function getPlanningProjects() {
   });
 
   const [result, subprojects] = await Promise.all([
-    rentmanFetch<RentmanListResponse<RentmanPlanningProject>>(
+    rentmanPlanningFetch<RentmanListResponse<RentmanPlanningProject>>(
       `/projects?${params.toString()}`,
     ),
-    rentmanFetchAll<{
+    rentmanPlanningFetchAll<{
       project?: string | null;
       status?: string | null;
     }>(
@@ -504,7 +540,7 @@ export async function getPlanningCrewAssignments() {
     limit: '1500',
   });
 
-  const result = await rentmanFetch<RentmanListResponse<RentmanPlanningCrewAssignment>>(
+  const result = await rentmanPlanningFetch<RentmanListResponse<RentmanPlanningCrewAssignment>>(
     `/projectcrew?${params.toString()}`,
   );
 
@@ -524,7 +560,7 @@ export type RentmanPlanningEquipmentGroup = {
 };
 
 export async function getPlanningProjectEquipmentGroups() {
-  return rentmanFetchAll<RentmanPlanningEquipmentGroup>(
+  return rentmanPlanningFetchAll<RentmanPlanningEquipmentGroup>(
     '/projectequipmentgroup?fields=id,project,name,displayname,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end&sort=-id&limit=1500',
   );
 }
@@ -556,8 +592,14 @@ export type RentmanPlanningProjectVehicle = {
 };
 
 export async function getPlanningProjectVehicles() {
-  return rentmanFetchAll<RentmanPlanningProjectVehicle>(
+  return rentmanPlanningFetchAll<RentmanPlanningProjectVehicle>(
     '/projectvehicles?fields=id,function,vehicle&expand=function,vehicle&sort=-id&limit=1500',
+  );
+}
+
+export async function getPlanningProjectVehiclesForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningProjectVehicle>(
+    `/projects/${projectId}/projectvehicles?fields=id,function,vehicle&expand=function,vehicle&limit=300`,
   );
 }
 
@@ -587,8 +629,14 @@ export type RentmanPlanningProjectFunction = {
 };
 
 export async function getPlanningProjectFunctions() {
-  return rentmanFetchAll<RentmanPlanningProjectFunction>(
+  return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
     '/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&sort=-planperiod_start&limit=1500',
+  );
+}
+
+export async function getPlanningProjectFunctionsForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
+    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&limit=300`,
   );
 }
 
@@ -607,8 +655,14 @@ export type RentmanPlanningFunctionGroup = {
 };
 
 export async function getPlanningProjectFunctionGroups() {
-  return rentmanFetchAll<RentmanPlanningFunctionGroup>(
+  return rentmanPlanningFetchAll<RentmanPlanningFunctionGroup>(
     '/projectfunctiongroups?fields=id,name,displayname,project,subproject,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,remark&sort=-planperiod_start&limit=1500',
+  );
+}
+
+export async function getPlanningProjectFunctionGroupsForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningFunctionGroup>(
+    `/projects/${projectId}/projectfunctiongroups?fields=id,name,displayname,project,subproject,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,remark&limit=300`,
   );
 }
 
