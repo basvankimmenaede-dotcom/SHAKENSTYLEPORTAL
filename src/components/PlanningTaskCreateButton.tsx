@@ -8,12 +8,24 @@ type ProjectOption = {
   name: string;
 };
 
-export default function PlanningTaskCreateButton({ projects }: { projects: ProjectOption[] }) {
+type AssigneeOption = {
+  id: string;
+  name: string;
+};
+
+export default function PlanningTaskCreateButton({
+  projects,
+  assignees,
+}: {
+  projects: ProjectOption[];
+  assignees: AssigneeOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [projectNumber, setProjectNumber] = useState('');
+  const [assigneeProfileId, setAssigneeProfileId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,6 +53,7 @@ export default function PlanningTaskCreateButton({ projects }: { projects: Proje
         dueDate: dueDate || null,
         projectNumber: projectNumber || null,
         projectName: selectedProject?.name || null,
+        assigneeProfileId: assigneeProfileId || null,
       }),
     });
 
@@ -54,6 +67,7 @@ export default function PlanningTaskCreateButton({ projects }: { projects: Proje
     setContent('');
     setDueDate('');
     setProjectNumber('');
+    setAssigneeProfileId('');
     setSaving(false);
     setOpen(false);
     router.refresh();
@@ -126,6 +140,16 @@ export default function PlanningTaskCreateButton({ projects }: { projects: Proje
                 />
               </label>
             </div>
+
+            <label className="planningTaskAssigneeField">
+              <span>Toewijzen aan</span>
+              <select value={assigneeProfileId} onChange={(event) => setAssigneeProfileId(event.target.value)}>
+                <option value="">Niemand</option>
+                {assignees.map((assignee) => (
+                  <option value={assignee.id} key={assignee.id}>{assignee.name}</option>
+                ))}
+              </select>
+            </label>
 
             <div className="planningTaskCreateActions">
               {error ? <small>{error}</small> : <span />}
