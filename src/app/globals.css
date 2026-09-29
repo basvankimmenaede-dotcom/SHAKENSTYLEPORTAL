@@ -3188,3 +3188,23 @@ tr:last-child td { border-bottom: 0; }
   height: 42px;
   font-size: 12px;
 }
+
+
+/* Keep grouped crew rows aligned */
+.planningCrewRow.grouped {
+  grid-template-columns: 54px minmax(0, .95fr) minmax(0, 1.25fr);
+}
+.planningCrewAvatarStack {
+  min-width: 28px;
+}
+.planningCrewRow.grouped .planningCrewAvatarStack {
+  min-width: 54px;
+}
+.planningCrewRow.grouped .planningCrewPerson strong {
+  font-size: 9.5px;
+}
+.planningCrewRow.grouped .planningCrewPerson span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
