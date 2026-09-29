@@ -667,7 +667,12 @@ export default async function PlanningPage() {
                             <span className="planningCrewAvatar">{initials || '—'}</span>
                             <div className="planningCrewPerson">
                               <strong>{name}</strong>
-                              <span>{fn?.displayname || fn?.name || 'Crew'}</span>
+                              <span>
+                                {fn?.displayname || fn?.name || 'Crew'}
+                                {fn?.group?.displayname || fn?.group?.name
+                                  ? ` · ${fn.group.displayname || fn.group.name}`
+                                  : ''}
+                              </span>
                             </div>
                             <div className="planningCrewShift">
                               <strong>{formatTime(start) ?? '—'} – {formatTime(end) ?? '—'}</strong>
