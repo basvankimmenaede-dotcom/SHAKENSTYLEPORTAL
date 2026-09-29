@@ -512,6 +512,37 @@ export async function getPlanningCrewAssignments() {
 }
 
 
+export type RentmanPlanningProjectFunction = {
+  id: number;
+  name?: string;
+  displayname?: string;
+  type?: string;
+  project?: string | null;
+  group?: {
+    id?: number;
+    name?: string;
+    displayname?: string;
+    project?: string | null;
+    planperiod_start?: string | null;
+    planperiod_end?: string | null;
+    usageperiod_start?: string | null;
+    usageperiod_end?: string | null;
+    remark?: string | null;
+  } | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  amount?: number | null;
+};
+
+export async function getPlanningProjectFunctions() {
+  return rentmanFetchAll<RentmanPlanningProjectFunction>(
+    '/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&sort=+planperiod_start&limit=1500',
+  );
+}
+
+
 export type RentmanPlanningFunctionGroup = {
   id: number;
   name?: string;
