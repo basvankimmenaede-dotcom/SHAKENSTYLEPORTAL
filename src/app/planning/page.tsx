@@ -653,7 +653,8 @@ export default async function PlanningPage({
           ) : null}
         </div>
 
-        <div className="planningCompactColumn">
+        <div className="planningTaskBillingColumn">
+          <section className="planningCompactColumn">
           <div className="planningColumnHeader">
             <div>
               <span>To Do</span>
@@ -776,25 +777,35 @@ export default async function PlanningPage({
             ) : null}
           </div>
 
+          </section>
+
           {canSeeBilling ? (
-            <section className="planningBillingCard">
-              <div className="planningBillingCardHeader">
+            <section className="planningCompactColumn planningBillingStandalone">
+              <div className="planningColumnHeader planningBillingStandaloneHeader">
                 <div>
-                  <span>Facturatie</span>
-                  <h3>{openBillingItems.length ? `${openBillingItems.length} openstaand` : 'Alles bijgewerkt ✓'}</h3>
+                  <span>Financieel</span>
+                  <h2>Facturatie</h2>
                 </div>
-                {oldestBillingDays !== null && openBillingItems.length ? (
-                  <strong>oudste {oldestBillingDays} {oldestBillingDays === 1 ? 'dag' : 'dagen'}</strong>
-                ) : null}
+                <strong>{openBillingItems.length} open</strong>
               </div>
-              <p>
-                {openBillingItems.length
-                  ? 'Blijvende facturatiewerkvoorraad. Regels verdwijnen pas wanneer je ze zelf afhandelt.'
-                  : 'Er staan momenteel geen projecten open om te factureren.'}
-              </p>
-              <Link className="planningBillingOpen" href="/planning/billing">
-                Open facturatielijst →
-              </Link>
+              <div className="planningBillingCard">
+                <div className="planningBillingCardHeader">
+                  <div>
+                    <h3>{openBillingItems.length ? `${openBillingItems.length} openstaand` : 'Alles bijgewerkt ✓'}</h3>
+                    {oldestBillingDays !== null && openBillingItems.length ? (
+                      <span>Oudste {oldestBillingDays} {oldestBillingDays === 1 ? 'dag' : 'dagen'}</span>
+                    ) : null}
+                  </div>
+                </div>
+                <p>
+                  {openBillingItems.length
+                    ? 'Blijvende facturatiewerkvoorraad. Regels verdwijnen pas wanneer je ze zelf afhandelt.'
+                    : 'Er staan momenteel geen projecten open om te factureren.'}
+                </p>
+                <Link className="planningBillingOpen" href="/planning/billing">
+                  Open facturatielijst →
+                </Link>
+              </div>
             </section>
           ) : null}
         </div>
