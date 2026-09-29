@@ -92,6 +92,12 @@ export default function CrewPlanningPopup(props: Props) {
     : people.length === 2
       ? `${people[0].name} + ${people[1].name}`
       : `${people[0].name}, ${people[1].name} +${people.length - 2}`;
+  const firstName = (value: string) => value.trim().split(/\s+/)[0] || value;
+  const rowDisplayName = people.length === 1
+    ? people[0].name
+    : people.length === 2
+      ? `${firstName(people[0].name)} + ${firstName(people[1].name)}`
+      : `${firstName(people[0].name)} + ${firstName(people[1].name)} +${people.length - 2}`;
   const timeline = props.timeline ?? [];
   const vehicles = props.vehicles ?? [];
 
@@ -99,7 +105,7 @@ export default function CrewPlanningPopup(props: Props) {
     <>
       <button
         type="button"
-        className="planningCrewRow planningCrewRowButton"
+        className={`planningCrewRow planningCrewRowButton${people.length > 1 ? ' grouped' : ''}`}
         onClick={() => setOpen(true)}
       >
         <span className="planningCrewAvatarStack" aria-hidden="true">
@@ -110,8 +116,8 @@ export default function CrewPlanningPopup(props: Props) {
           ))}
         </span>
         <span className="planningCrewPerson">
-          <strong>{displayName}</strong>
-          <span>{role}{people.length > 1 ? ` · ${people.length} personen` : ''}</span>
+          <strong>{rowDisplayName}</strong>
+          <span>{role}{people.length > 1 ? ` · ${people.length}p` : ''}</span>
         </span>
         <span className="planningCrewShift">
           <strong>{formatTime(props.start)} – {formatTime(props.end)}</strong>
