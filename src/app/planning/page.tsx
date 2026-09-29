@@ -4,6 +4,7 @@ import {
   getPlanningProjects,
   getPlanningProjectPeriod,
   getPlanningCrewAssignments,
+  getPlanningProjectFunctionGroups,
   getOverdueReturnProjects as getRentmanOverdueReturnProjects,
   type RentmanPlanningProject,
   type RentmanPlanningCrewAssignment,
@@ -192,7 +193,7 @@ export default async function PlanningPage() {
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, crewResult, checklistResult, templateResult, crewDetailsResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, functionGroupsResult, checklistResult, templateResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -211,6 +212,9 @@ export default async function PlanningPage() {
         value: [] as RentmanPlanningCrewAssignment[],
         error: error instanceof Error ? error.message : 'Personeelsplanning kon niet worden geladen.',
       })),
+    getPlanningProjectFunctionGroups()
+      .then((value) => ({ value, error: null as string | null }))
+      .catch(() => ({ value: [], error: null as string | null })),
     supabase
       .from('project_checklists')
       .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order,deadline_offset_days,due_date,todoist_task_id)'),
@@ -219,23 +223,12 @@ export default async function PlanningPage() {
       .select('id,name,rentman_project_type_id')
       .eq('is_active', true)
       .order('name'),
-    supabase
-      .from('planning_crew_details')
-      .select('rentman_assignment_id,notes,bar'),
   ]);
 
   const planning = planningResult.value;
   const todoistTasks = todoistResult.value;
   const crewAssignments = crewResult.value;
-  const crewDetailsByAssignment = new Map(
-    (crewDetailsResult.data ?? []).map((detail) => [
-      Number(detail.rentman_assignment_id),
-      {
-        notes: detail.notes as string | null,
-        bar: detail.bar as string | null,
-      },
-    ]),
-  );
+  const projectFunctionGroups = functionGroupsResult.value;
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
@@ -269,6 +262,15 @@ export default async function PlanningPage() {
       .filter((project) => project.number)
       .map((project) => [String(project.number), project]),
   );
+
+  const functionGroupsByProjectId = new Map<number, typeof projectFunctionGroups>();
+  for (const group of projectFunctionGroups) {
+    const projectId = Number(group.project?.split('/').pop());
+    if (!Number.isFinite(projectId)) continue;
+    const current = functionGroupsByProjectId.get(projectId) ?? [];
+    current.push(group);
+    functionGroupsByProjectId.set(projectId, current);
+  }
 
   const crewByDay = new Map<string, RentmanPlanningCrewAssignment[]>();
   for (const dateKey of weekDays) {
@@ -661,7 +663,6 @@ export default async function PlanningPage() {
                           .map((part) => part[0]?.toUpperCase())
                           .join('');
 
-                        const detail = crewDetailsByAssignment.get(assignment.id);
                         const locationAddress = project?.location
                           ? [
                               [project.location.visit_street, project.location.visit_number].filter(Boolean).join(' '),
@@ -693,8 +694,15 @@ export default async function PlanningPage() {
                             contactName={locationContactName}
                             contactPhone={locationContact?.mobilephone || locationContact?.phone || null}
                             contactEmail={locationContact?.email || null}
-                            initialNotes={detail?.notes ?? null}
-                            initialBar={detail?.bar ?? null}
+                            notes={typeof project?.custom?.custom_103 === 'string' ? project.custom.custom_103 : null}
+                            bar={typeof project?.custom?.custom_38 === 'string' ? project.custom.custom_38 : null}
+                            timeline={(project ? functionGroupsByProjectId.get(project.id) ?? [] : []).map((group) => ({
+                              id: group.id,
+                              name: group.displayname || group.name || null,
+                              start: group.planperiod_start || group.usageperiod_start || null,
+                              end: group.planperiod_end || group.usageperiod_end || null,
+                              remark: group.remark || null,
+                            }))}
                           />
                         );
                       })}
