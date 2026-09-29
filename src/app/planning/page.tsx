@@ -386,6 +386,24 @@ export default async function PlanningPage() {
     );
   }
 
+  const crewGroupsByDay = new Map<string, RentmanPlanningCrewAssignment[][]>();
+  for (const dateKey of weekDays) {
+    const grouped = new Map<string, RentmanPlanningCrewAssignment[]>();
+    for (const assignment of crewByDay.get(dateKey) ?? []) {
+      const fn = assignment.function;
+      const start = fn?.planperiod_start ?? fn?.usageperiod_start ?? '';
+      const end = fn?.planperiod_end ?? fn?.usageperiod_end ?? '';
+      const project = fn?.project ?? '';
+      const functionName = fn?.displayname ?? fn?.name ?? '';
+      const groupName = fn?.group?.displayname ?? fn?.group?.name ?? '';
+      const key = [project, start, end, functionName, groupName].join('|');
+      const current = grouped.get(key) ?? [];
+      current.push(assignment);
+      grouped.set(key, current);
+    }
+    crewGroupsByDay.set(dateKey, Array.from(grouped.values()));
+  }
+
   const longTermProjects = planning.allProjects
     .filter((project) =>
       isLongTermRental(project)
@@ -745,17 +763,19 @@ export default async function PlanningPage() {
             <div className="planningCrewDays">
               {weekDays.map((dateKey) => {
                 const assignments = crewByDay.get(dateKey) ?? [];
-                if (!assignments.length) return null;
+                const assignmentGroups = crewGroupsByDay.get(dateKey) ?? [];
+                if (!assignmentGroups.length) return null;
 
                 return (
                   <section className="planningCrewDay" key={dateKey}>
                     <div className="planningCrewDayHeader">
                       <strong>{dayLongLabel(dateKey, planning.today)}</strong>
-                      <span>{assignments.length} activiteiten</span>
+                      <span>{assignmentGroups.length} activiteiten</span>
                     </div>
 
                     <div className="planningCrewList">
-                      {assignments.map((assignment) => {
+                      {assignmentGroups.map((assignmentGroup) => {
+                        const assignment = assignmentGroup[0];
                         const fn = assignment.function;
                         const crew = assignment.crewmember;
                         const start = fn?.planperiod_start ?? fn?.usageperiod_start ?? null;
@@ -771,6 +791,21 @@ export default async function PlanningPage() {
                           .slice(0, 2)
                           .map((part) => part[0]?.toUpperCase())
                           .join('');
+                        const people = assignmentGroup.map((groupAssignment) => {
+                          const groupCrew = groupAssignment.crewmember;
+                          const groupName = groupCrew?.displayname
+                            || [groupCrew?.firstname, groupCrew?.middle_name, groupCrew?.lastname].filter(Boolean).join(' ')
+                            || 'Onbekend';
+                          return {
+                            name: groupName,
+                            initials: groupName
+                              .split(/\s+/)
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((part) => part[0]?.toUpperCase())
+                              .join(''),
+                          };
+                        });
 
                         const locationAddress = project?.location
                           ? [
@@ -787,11 +822,12 @@ export default async function PlanningPage() {
 
                         return (
                           <CrewPlanningPopup
-                            key={assignment.id}
+                            key={assignmentGroup.map((item) => item.id).join('-')}
                             assignmentId={assignment.id}
                             projectId={project?.id ?? null}
                             name={name}
                             initials={initials}
+                            people={people}
                             functionName={fn?.displayname || fn?.name || 'Crew'}
                             groupName={fn?.group?.displayname || fn?.group?.name || null}
                             start={start}
