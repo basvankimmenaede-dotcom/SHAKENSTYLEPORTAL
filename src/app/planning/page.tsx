@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getUserPermissionLevel, permissionAtLeast, requirePlanningUser } from '@/lib/auth';
-import { syncBillingQueueFromPlanning } from '@/lib/billing';
+import { syncBillingQueueOncePerDay } from '@/lib/billing';
 import {
   getPlanningProjects,
   getPlanningProjectPeriod,
@@ -267,11 +267,12 @@ export default async function PlanningPage({
   const canManageBilling = permissionAtLeast(billingLevel, 'manage');
 
   if (canManageBilling && planning.allProjects.length) {
-    await syncBillingQueueFromPlanning({
+    await syncBillingQueueOncePerDay({
       supabase,
       projects: planning.allProjects,
       equipmentGroups,
       userId: user.id,
+      today: planning.today,
     }).catch(() => undefined);
   }
 
