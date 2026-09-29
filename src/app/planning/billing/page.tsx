@@ -51,28 +51,28 @@ export default async function BillingPage() {
         </div>
       </section>
 
-      {canManage ? (
-        <details className="card billingManualCard">
-          <summary>+ Handmatige facturatieregel toevoegen</summary>
-          <form action={addManualBillingItem} className="billingManualForm">
-            <div className="field">
-              <label htmlFor="project_name">Omschrijving</label>
-              <input id="project_name" name="project_name" className="input" required placeholder="Bijv. cocktailtraining kantoor" />
-            </div>
-            <div className="field">
-              <label htmlFor="customer_name">Klant</label>
-              <input id="customer_name" name="customer_name" className="input" placeholder="Optioneel" />
-            </div>
-            <div className="field billingManualNote">
-              <label htmlFor="note">Notitie</label>
-              <input id="note" name="note" className="input" placeholder="Optioneel" />
-            </div>
-            <button className="button orange" type="submit">Toevoegen</button>
-          </form>
-        </details>
-      ) : null}
-
-      <BillingQueue initialItems={billingItems} canManage={canManage} />
+      <BillingQueue initialItems={billingItems} canManage={canManage}>
+        {canManage ? (
+          <details className="card billingManualCard">
+            <summary>+ Handmatige facturatieregel toevoegen</summary>
+            <form action={addManualBillingItem} className="billingManualForm">
+              <div className="field">
+                <label htmlFor="project_name">Omschrijving</label>
+                <input id="project_name" name="project_name" className="input" required placeholder="Bijv. cocktailtraining kantoor" />
+              </div>
+              <div className="field">
+                <label htmlFor="customer_name">Klant</label>
+                <input id="customer_name" name="customer_name" className="input" placeholder="Optioneel" />
+              </div>
+              <div className="field billingManualNote">
+                <label htmlFor="note">Notitie</label>
+                <input id="note" name="note" className="input" placeholder="Optioneel" />
+              </div>
+              <button className="button orange" type="submit">Toevoegen</button>
+            </form>
+          </details>
+        ) : null}
+      </BillingQueue>
     </main>
   );
 }
