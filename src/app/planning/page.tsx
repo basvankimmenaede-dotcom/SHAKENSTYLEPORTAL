@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { requirePlanningUser } from '@/lib/auth';
+import { getUserPermissionLevel, permissionAtLeast, requirePlanningUser } from '@/lib/auth';
+import { syncBillingQueueFromPlanning } from '@/lib/billing';
 import {
   getPlanningProjects,
   getPlanningProjectPeriod,
@@ -260,6 +261,33 @@ export default async function PlanningPage({
   const equipmentGroups = equipmentGroupsResult.value;
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
+
+  const billingLevel = await getUserPermissionLevel(supabase, user.id, 'billing');
+  const canSeeBilling = permissionAtLeast(billingLevel, 'view');
+  const canManageBilling = permissionAtLeast(billingLevel, 'manage');
+
+  if (canManageBilling && planning.allProjects.length) {
+    await syncBillingQueueFromPlanning({
+      supabase,
+      projects: planning.allProjects,
+      equipmentGroups,
+      userId: user.id,
+    }).catch(() => undefined);
+  }
+
+  const billingSummary = canSeeBilling
+    ? await supabase
+        .from('billing_items')
+        .select('usage_end,created_at')
+        .eq('status', 'open')
+        .order('usage_end', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true })
+    : { data: [] as Array<{ usage_end: string | null; created_at: string }> };
+  const openBillingItems = billingSummary.data ?? [];
+  const oldestBillingDate = openBillingItems[0]?.usage_end ?? openBillingItems[0]?.created_at ?? null;
+  const oldestBillingDays = oldestBillingDate
+    ? Math.max(0, Math.floor((Date.now() - new Date(oldestBillingDate).getTime()) / (24 * 60 * 60 * 1000)))
+    : null;
 
   const checklists = (checklistResult.data ?? []) as ChecklistRow[];
   const templates = (templateResult.data ?? []) as ChecklistTemplate[];
@@ -747,6 +775,28 @@ export default async function PlanningPage({
               </section>
             ) : null}
           </div>
+
+          {canSeeBilling ? (
+            <section className="planningBillingCard">
+              <div className="planningBillingCardHeader">
+                <div>
+                  <span>Facturatie</span>
+                  <h3>{openBillingItems.length ? `${openBillingItems.length} openstaand` : 'Alles bijgewerkt ✓'}</h3>
+                </div>
+                {oldestBillingDays !== null && openBillingItems.length ? (
+                  <strong>oudste {oldestBillingDays} {oldestBillingDays === 1 ? 'dag' : 'dagen'}</strong>
+                ) : null}
+              </div>
+              <p>
+                {openBillingItems.length
+                  ? 'Blijvende facturatiewerkvoorraad. Regels verdwijnen pas wanneer je ze zelf afhandelt.'
+                  : 'Er staan momenteel geen projecten open om te factureren.'}
+              </p>
+              <Link className="planningBillingOpen" href="/planning/billing">
+                Open facturatielijst →
+              </Link>
+            </section>
+          ) : null}
         </div>
 
         <aside className="planningOpsColumn">
