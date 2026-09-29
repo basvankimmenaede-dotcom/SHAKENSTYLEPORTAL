@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getUserPermissionLevel, permissionAtLeast } from '@/lib/auth';
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -12,5 +13,15 @@ export default async function HomePage() {
     .eq('id', user.id)
     .single();
 
-  redirect(profile?.role === 'admin' ? '/admin' : '/portal');
+  if (profile?.role === 'admin') redirect('/admin');
+
+  const [planningLevel, portalLevel] = await Promise.all([
+    getUserPermissionLevel(supabase, user.id, 'planning'),
+    getUserPermissionLevel(supabase, user.id, 'portal'),
+  ]);
+
+  if (permissionAtLeast(planningLevel, 'view')) redirect('/planning');
+  if (permissionAtLeast(portalLevel, 'view')) redirect('/portal');
+
+  redirect('/account');
 }
