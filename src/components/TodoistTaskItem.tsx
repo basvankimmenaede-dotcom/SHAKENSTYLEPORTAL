@@ -10,6 +10,7 @@ export default function TodoistTaskItem({
   urgent = false,
   assignees = [],
   assigneeProfileId = '',
+  currentUserId,
 }: {
   id: string;
   content: string;
@@ -18,6 +19,7 @@ export default function TodoistTaskItem({
   urgent?: boolean;
   assignees?: Array<{ id: string; name: string }>;
   assigneeProfileId?: string | null;
+  currentUserId: string;
 }) {
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -45,6 +47,7 @@ export default function TodoistTaskItem({
     }
 
     setSaving(false);
+    window.dispatchEvent(new Event('planning-task-state-changed'));
   }
 
   async function assignTask(nextAssignee: string) {
@@ -72,11 +75,12 @@ export default function TodoistTaskItem({
     }
 
     setAssignmentSaving(false);
+    window.dispatchEvent(new Event('planning-task-state-changed'));
   }
 
   if (completed) {
     return (
-      <div className="todoistTask todoistTaskCompleted">
+      <div className="todoistTask todoistTaskCompleted" data-task-mine={assignedTo === currentUserId ? 'true' : 'false'}>
         <span className="todoistCheck todoistCheckDone">✓</span>
         <div className="todoistTaskBody">
           <strong>{content}</strong>
@@ -87,7 +91,10 @@ export default function TodoistTaskItem({
   }
 
   return (
-    <div className={urgent ? 'todoistTask todoistTaskUrgent' : 'todoistTask'}>
+    <div
+      className={urgent ? 'todoistTask todoistTaskUrgent' : 'todoistTask'}
+      data-task-mine={assignedTo === currentUserId ? 'true' : 'false'}
+    >
       <button
         type="button"
         className="todoistCheck"
