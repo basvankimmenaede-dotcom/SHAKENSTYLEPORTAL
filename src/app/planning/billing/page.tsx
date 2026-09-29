@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { addManualBillingItem, setBillingItemStatus } from './actions';
 import { requireModulePermission } from '@/lib/auth';
-import { syncBillingQueueFromPlanning } from '@/lib/billing';
+import { amsterdamBillingDateKey, billingSyncNeeded, syncBillingQueueOncePerDay } from '@/lib/billing';
 import { getPlanningProjectEquipmentGroups, getPlanningProjects } from '@/lib/rentman';
 
 function formatDate(value?: string | null) {
@@ -27,16 +27,21 @@ export default async function BillingPage({
   const canManage = permissionLevel === 'manage';
 
   if (canManage) {
-    const [planningResult, equipmentGroups] = await Promise.all([
-      getPlanningProjects(),
-      getPlanningProjectEquipmentGroups(),
-    ]);
-    await syncBillingQueueFromPlanning({
-      supabase,
-      projects: planningResult.allProjects,
-      equipmentGroups,
-      userId: user.id,
-    });
+    const today = amsterdamBillingDateKey();
+    const needed = await billingSyncNeeded(supabase, today);
+    if (needed) {
+      const [planningResult, equipmentGroups] = await Promise.all([
+        getPlanningProjects(),
+        getPlanningProjectEquipmentGroups(),
+      ]);
+      await syncBillingQueueOncePerDay({
+        supabase,
+        projects: planningResult.allProjects,
+        equipmentGroups,
+        userId: user.id,
+        today,
+      });
+    }
   }
 
   let query = supabase
