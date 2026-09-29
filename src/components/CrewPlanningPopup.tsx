@@ -149,10 +149,13 @@ export default function CrewPlanningPopup(props: Props) {
     if (!open || !props.projectId || detailsLoaded || detailsLoading) return;
 
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+
     setDetailsLoading(true);
     setDetailsError('');
 
-    fetch(`/api/planning/crew-popup/${props.projectId}`)
+    fetch(`/api/planning/crew-popup/${props.projectId}`, { signal: controller.signal })
       .then(async (response) => {
         const result = await response.json() as DetailResponse;
         if (!response.ok || !result.ok) {
@@ -256,12 +259,23 @@ export default function CrewPlanningPopup(props: Props) {
       })
       .catch((error) => {
         if (cancelled) return;
-        setDetailsError(error instanceof Error ? error.message : 'Projectdetails konden niet worden geladen.');
+        setDetailsError(
+          error instanceof DOMException && error.name === 'AbortError'
+            ? 'Rentman reageerde te langzaam. Sluit dit venster en probeer opnieuw.'
+            : error instanceof Error
+              ? error.message
+              : 'Projectdetails konden niet worden geladen.',
+        );
         setDetailsLoading(false);
+      })
+      .finally(() => {
+        window.clearTimeout(timeout);
       });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
   }, [
     open,
@@ -270,8 +284,6 @@ export default function CrewPlanningPopup(props: Props) {
     props.projectPlanStart,
     props.projectUsageEnd,
     props.projectUsageStart,
-    detailsLoaded,
-    detailsLoading,
   ]);
 
   const role = [props.functionName, props.groupName].filter(Boolean).join(' · ');
