@@ -3786,3 +3786,45 @@ tr:last-child td { border-bottom: 0; }
     height: calc(100% - 20px) !important;
   }
 }
+
+
+/* Equipment card image layout: full-height centered image rail */
+.itemCard {
+  grid-template-columns: 150px minmax(0, 1fr) !important;
+  align-items: stretch;
+}
+.itemImage {
+  width: 150px !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  align-self: stretch !important;
+  padding: 0 !important;
+  background: #f7f6f3 !important;
+}
+.itemImage .itemImageAsset {
+  inset: 18px !important;
+  width: calc(100% - 36px) !important;
+  height: calc(100% - 36px) !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+.itemBody {
+  align-self: center;
+  padding: 24px 28px !important;
+}
+@media (max-width: 620px) {
+  .itemCard {
+    grid-template-columns: 105px minmax(0, 1fr) !important;
+  }
+  .itemImage {
+    width: 105px !important;
+  }
+  .itemImage .itemImageAsset {
+    inset: 12px !important;
+    width: calc(100% - 24px) !important;
+    height: calc(100% - 24px) !important;
+  }
+  .itemBody {
+    padding: 18px !important;
+  }
+}
