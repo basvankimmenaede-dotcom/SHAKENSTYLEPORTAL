@@ -570,7 +570,7 @@ export type RentmanPlanningProjectFunction = {
 
 export async function getPlanningProjectFunctions() {
   return rentmanFetchAll<RentmanPlanningProjectFunction>(
-    '/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&sort=+planperiod_start&limit=1500',
+    '/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&sort=-planperiod_start&limit=1500',
   );
 }
 
@@ -590,7 +590,7 @@ export type RentmanPlanningFunctionGroup = {
 
 export async function getPlanningProjectFunctionGroups() {
   return rentmanFetchAll<RentmanPlanningFunctionGroup>(
-    '/projectfunctiongroups?fields=id,name,displayname,project,subproject,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,remark&sort=+planperiod_start&limit=1500',
+    '/projectfunctiongroups?fields=id,name,displayname,project,subproject,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,remark&sort=-planperiod_start&limit=1500',
   );
 }
 
