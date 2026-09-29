@@ -20,6 +20,7 @@ import ProjectChecklist, {
 } from '@/components/ProjectChecklist';
 import TodoistTaskItem from '@/components/TodoistTaskItem';
 import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
+import CrewPlanningPopup from '@/components/CrewPlanningPopup';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -191,7 +192,7 @@ export default async function PlanningPage() {
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, crewResult, checklistResult, templateResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, checklistResult, templateResult, crewDetailsResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -218,11 +219,23 @@ export default async function PlanningPage() {
       .select('id,name,rentman_project_type_id')
       .eq('is_active', true)
       .order('name'),
+    supabase
+      .from('planning_crew_details')
+      .select('rentman_assignment_id,notes,bar'),
   ]);
 
   const planning = planningResult.value;
   const todoistTasks = todoistResult.value;
   const crewAssignments = crewResult.value;
+  const crewDetailsByAssignment = new Map(
+    (crewDetailsResult.data ?? []).map((detail) => [
+      Number(detail.rentman_assignment_id),
+      {
+        notes: detail.notes as string | null,
+        bar: detail.bar as string | null,
+      },
+    ]),
+  );
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
@@ -648,27 +661,41 @@ export default async function PlanningPage() {
                           .map((part) => part[0]?.toUpperCase())
                           .join('');
 
+                        const detail = crewDetailsByAssignment.get(assignment.id);
+                        const locationAddress = project?.location
+                          ? [
+                              [project.location.visit_street, project.location.visit_number].filter(Boolean).join(' '),
+                              [project.location.visit_postalcode, project.location.visit_city].filter(Boolean).join(' '),
+                            ].filter(Boolean).join(', ')
+                          : null;
+                        const locationContact = project?.loc_contact;
+                        const locationContactName = locationContact?.displayname
+                          || [locationContact?.firstname, locationContact?.middle_name, locationContact?.lastname]
+                            .filter(Boolean)
+                            .join(' ')
+                          || null;
+
                         return (
-                          <div className="planningCrewRow" key={assignment.id}>
-                            <span className="planningCrewAvatar">{initials || '—'}</span>
-                            <div className="planningCrewPerson">
-                              <strong>{name}</strong>
-                              <span>
-                                {fn?.displayname || fn?.name || 'Crew'}
-                                {fn?.group?.displayname || fn?.group?.name
-                                  ? ` · ${fn.group.displayname || fn.group.name}`
-                                  : ''}
-                              </span>
-                            </div>
-                            <div className="planningCrewShift">
-                              <strong>{formatTime(start) ?? '—'} – {formatTime(end) ?? '—'}</strong>
-                              <span>
-                                {project
-                                  ? `#${project.number ?? project.id} · ${project.name}`
-                                  : 'Rentman activiteit'}
-                              </span>
-                            </div>
-                          </div>
+                          <CrewPlanningPopup
+                            key={assignment.id}
+                            assignmentId={assignment.id}
+                            projectId={project?.id ?? null}
+                            name={name}
+                            initials={initials}
+                            functionName={fn?.displayname || fn?.name || 'Crew'}
+                            groupName={fn?.group?.displayname || fn?.group?.name || null}
+                            start={start}
+                            end={end}
+                            projectNumber={project?.number ?? null}
+                            projectName={project?.name ?? null}
+                            locationName={project?.location?.displayname || project?.location?.name || null}
+                            locationAddress={locationAddress}
+                            contactName={locationContactName}
+                            contactPhone={locationContact?.mobilephone || locationContact?.phone || null}
+                            contactEmail={locationContact?.email || null}
+                            initialNotes={detail?.notes ?? null}
+                            initialBar={detail?.bar ?? null}
+                          />
                         );
                       })}
                     </div>
