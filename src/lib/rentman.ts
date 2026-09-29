@@ -627,6 +627,7 @@ export async function getPlanningProjectVehiclesForProject(projectId: number) {
 export type RentmanPlanningProjectFunction = {
   id: number;
   name?: string;
+  subproject?: string | null;
   displayname?: string;
   type?: string;
   project?: string | null;
@@ -656,10 +657,43 @@ export async function getPlanningProjectFunctions() {
 
 export async function getPlanningProjectFunctionsForProject(projectId: number) {
   return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
-    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&limit=300`,
+    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&limit=300`,
   );
 }
 
+
+export type RentmanPlanningSubproject = {
+  id: number;
+  name?: string;
+  project?: string | null;
+  location?: {
+    displayname?: string;
+    name?: string;
+    visit_street?: string;
+    visit_number?: string;
+    visit_postalcode?: string;
+    visit_city?: string;
+  } | null;
+  loc_contact?: {
+    displayname?: string;
+    firstname?: string;
+    middle_name?: string;
+    lastname?: string;
+    phone?: string;
+    mobilephone?: string;
+    email?: string;
+  } | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+};
+
+export async function getPlanningSubprojectsForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningSubproject>(
+    `/projects/${projectId}/subprojects?fields=id,name,project,location,loc_contact,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end&expand=location,loc_contact&limit=100`,
+  );
+}
 
 export type RentmanPlanningFunctionGroup = {
   id: number;
