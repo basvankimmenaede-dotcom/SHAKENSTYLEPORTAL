@@ -35,6 +35,7 @@ type DetailResponse = {
   functions?: Array<{
     id: number;
     name?: string;
+    subproject?: string | null;
     displayname?: string;
     amount?: number | null;
     planperiod_start?: string | null;
@@ -50,6 +51,27 @@ type DetailResponse = {
       usageperiod_start?: string | null;
       usageperiod_end?: string | null;
       remark?: string | null;
+    } | null;
+  }>;
+  subprojects?: Array<{
+    id: number;
+    name?: string;
+    location?: {
+      displayname?: string;
+      name?: string;
+      visit_street?: string;
+      visit_number?: string;
+      visit_postalcode?: string;
+      visit_city?: string;
+    } | null;
+    loc_contact?: {
+      displayname?: string;
+      firstname?: string;
+      middle_name?: string;
+      lastname?: string;
+      phone?: string;
+      mobilephone?: string;
+      email?: string;
     } | null;
   }>;
   vehicles?: Array<{
@@ -135,6 +157,13 @@ export default function CrewPlanningPopup(props: Props) {
   const [detailsError, setDetailsError] = useState('');
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
+  const [matchedLocation, setMatchedLocation] = useState<{
+    name?: string | null;
+    address?: string | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -245,6 +274,53 @@ export default function CrewPlanningPopup(props: Props) {
             .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? '')),
         );
 
+        const matchingFunction = functions.find((projectFunction) => {
+          const functionMatches = (projectFunction.displayname || projectFunction.name || '')
+            .trim().toLowerCase() === props.functionName.trim().toLowerCase();
+          const groupMatches = !props.groupName || (
+            (projectFunction.group?.displayname || projectFunction.group?.name || '')
+              .trim().toLowerCase() === props.groupName.trim().toLowerCase()
+          );
+          const start = projectFunction.planperiod_start || projectFunction.usageperiod_start || null;
+          return functionMatches && groupMatches && (!props.start || sameDate(start, props.start));
+        }) ?? functions.find((projectFunction) => {
+          const groupMatches = props.groupName && (
+            (projectFunction.group?.displayname || projectFunction.group?.name || '')
+              .trim().toLowerCase() === props.groupName.trim().toLowerCase()
+          );
+          const start = projectFunction.planperiod_start || projectFunction.usageperiod_start || null;
+          return Boolean(groupMatches && (!props.start || sameDate(start, props.start)));
+        });
+
+        const subprojectId = Number(matchingFunction?.subproject?.split('/').pop());
+        const matchedSubproject = Number.isFinite(subprojectId)
+          ? (result.subprojects ?? []).find((subproject) => subproject.id === subprojectId)
+          : null;
+
+        if (matchedSubproject?.location || matchedSubproject?.loc_contact) {
+          const location = matchedSubproject.location;
+          const contact = matchedSubproject.loc_contact;
+          const addressParts = [
+            [location?.visit_street, location?.visit_number].filter(Boolean).join(' '),
+            [location?.visit_postalcode, location?.visit_city].filter(Boolean).join(' '),
+          ].filter(Boolean);
+          const fallbackContactName = [
+            contact?.firstname,
+            contact?.middle_name,
+            contact?.lastname,
+          ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+
+          setMatchedLocation({
+            name: location?.displayname || location?.name || null,
+            address: addressParts.length ? addressParts.join(', ') : null,
+            contactName: contact?.displayname || fallbackContactName || null,
+            contactPhone: contact?.mobilephone || contact?.phone || null,
+            contactEmail: contact?.email || null,
+          });
+        } else {
+          setMatchedLocation(null);
+        }
+
         setVehicles((result.vehicles ?? []).map((item) => ({
           id: item.id,
           name: item.vehicle?.displayname || item.vehicle?.name || 'Voertuig',
@@ -284,6 +360,9 @@ export default function CrewPlanningPopup(props: Props) {
     props.projectPlanStart,
     props.projectUsageEnd,
     props.projectUsageStart,
+    props.functionName,
+    props.groupName,
+    props.start,
   ]);
 
   const role = [props.functionName, props.groupName].filter(Boolean).join(' · ');
@@ -376,14 +455,20 @@ export default function CrewPlanningPopup(props: Props) {
             <div className="crewPlanningInfoGrid">
               <div className="crewPlanningInfoCard">
                 <span>Locatie</span>
-                <strong>{props.locationName || 'Geen locatie gekoppeld'}</strong>
-                {props.locationAddress ? <small>{props.locationAddress}</small> : null}
+                <strong>{matchedLocation?.name || props.locationName || 'Geen locatie gekoppeld'}</strong>
+                {(matchedLocation?.address || props.locationAddress) ? (
+                  <small>{matchedLocation?.address || props.locationAddress}</small>
+                ) : null}
               </div>
               <div className="crewPlanningInfoCard">
                 <span>Contactpersoon</span>
-                <strong>{props.contactName || 'Geen contactpersoon gekoppeld'}</strong>
-                {props.contactPhone ? <small>{props.contactPhone}</small> : null}
-                {props.contactEmail ? <small>{props.contactEmail}</small> : null}
+                <strong>{matchedLocation?.contactName || props.contactName || 'Geen contactpersoon gekoppeld'}</strong>
+                {(matchedLocation?.contactPhone || props.contactPhone) ? (
+                  <small>{matchedLocation?.contactPhone || props.contactPhone}</small>
+                ) : null}
+                {(matchedLocation?.contactEmail || props.contactEmail) ? (
+                  <small>{matchedLocation?.contactEmail || props.contactEmail}</small>
+                ) : null}
               </div>
             </div>
 
