@@ -1,3 +1,5 @@
+import { revalidateTag } from 'next/cache';
+
 const TODOIST_API_BASE = 'https://api.todoist.com/api/v1';
 const DEFAULT_PLANNING_PROJECT_ID = '6hfMXMXm6FR5ccRC';
 
@@ -38,7 +40,7 @@ async function todoistFetch<T>(path: string): Promise<T> {
       Authorization: `Bearer ${todoistToken()}`,
       Accept: 'application/json',
     },
-    cache: 'no-store',
+    next: { revalidate: 30, tags: ['todoist-planning'] },
   });
 
   if (!response.ok) {
@@ -108,7 +110,10 @@ async function closeTaskWithRest(taskId: string) {
       cache: 'no-store',
     });
 
-    if (response.ok) return;
+    if (response.ok) {
+      revalidateTag('todoist-planning');
+      return;
+    }
 
     if (![502, 503, 504].includes(response.status)) {
       const detail = await response.text().catch(() => '');
@@ -158,6 +163,8 @@ async function closeTaskWithSync(taskId: string) {
     const detail = typeof status === 'object' && status?.error ? status.error : 'onbekende fout';
     throw new Error(`Todoist fallback kon taak niet afronden: ${detail}.`);
   }
+
+  revalidateTag('todoist-planning');
 }
 
 export async function completePlanningTodoistTask(taskId: string) {
@@ -204,5 +211,7 @@ export async function createPlanningTodoistTask({
     );
   }
 
-  return response.json() as Promise<TodoistTask>;
+  const task = await response.json() as TodoistTask;
+  revalidateTag('todoist-planning');
+  return task;
 }
