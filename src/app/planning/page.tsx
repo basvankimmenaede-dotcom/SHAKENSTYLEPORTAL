@@ -629,7 +629,7 @@ export default async function PlanningPage() {
 
         <div className="planningTaskBillingColumn">
           <section className="planningCompactColumn">
-          <div className="planningColumnHeader">
+          <div className="planningColumnHeader planningTaskColumnHeader">
             <div>
               <span>To Do</span>
               <h2>Taken</h2>
