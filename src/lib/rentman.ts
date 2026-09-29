@@ -390,6 +390,10 @@ function addDays(dateKey: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function planningDateTime(dateKey: string, endOfDay = false) {
+  return `${dateKey}T${endOfDay ? '23:59:59' : '00:00:00'}Z`;
+}
+
 function projectDateRange(project: RentmanPlanningProject) {
   const start = project.usageperiod_start ?? project.planperiod_start ?? null;
   const end = project.usageperiod_end ?? project.planperiod_end ?? start;
@@ -533,12 +537,17 @@ export type RentmanPlanningCrewAssignment = {
 };
 
 export async function getPlanningCrewAssignments() {
+  const today = amsterdamDateKey();
+  const windowStart = addDays(today, -1);
+  const windowEnd = addDays(today, 8);
   const params = new URLSearchParams({
     fields: 'id,function,crewmember',
     expand: 'function,function.group,crewmember',
     sort: '-id',
     limit: '1500',
   });
+  params.set('planperiod_start[lte]', planningDateTime(windowEnd, true));
+  params.set('planperiod_end[gte]', planningDateTime(windowStart));
 
   const result = await rentmanPlanningFetch<RentmanListResponse<RentmanPlanningCrewAssignment>>(
     `/projectcrew?${params.toString()}`,
@@ -560,8 +569,19 @@ export type RentmanPlanningEquipmentGroup = {
 };
 
 export async function getPlanningProjectEquipmentGroups() {
+  const today = amsterdamDateKey();
+  const windowStart = addDays(today, -60);
+  const windowEnd = addDays(today, 30);
+  const params = new URLSearchParams({
+    fields: 'id,project,name,displayname,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end',
+    sort: '-id',
+    limit: '1500',
+  });
+  params.set('usageperiod_start[lte]', planningDateTime(windowEnd, true));
+  params.set('usageperiod_end[gte]', planningDateTime(windowStart));
+
   return rentmanPlanningFetchAll<RentmanPlanningEquipmentGroup>(
-    '/projectequipmentgroup?fields=id,project,name,displayname,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end&sort=-id&limit=1500',
+    `/projectequipmentgroup?${params.toString()}`,
   );
 }
 
