@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+type TimelineItem = {
+  id: number;
+  name?: string | null;
+  start?: string | null;
+  end?: string | null;
+  remark?: string | null;
+};
 
 type Props = {
   assignmentId: number;
@@ -18,9 +24,12 @@ type Props = {
   contactName?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
-  initialNotes?: string | null;
-  initialBar?: string | null;
+  notes?: string | null;
+  bar?: string | null;
+  timeline?: TimelineItem[];
 };
+
+import { useEffect, useState } from 'react';
 
 function formatTime(value?: string | null) {
   if (!value) return '—';
@@ -41,14 +50,12 @@ function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+function sameDate(a?: string | null, b?: string | null) {
+  return Boolean(a && b && a.slice(0, 10) === b.slice(0, 10));
+}
+
 export default function CrewPlanningPopup(props: Props) {
   const [open, setOpen] = useState(false);
-  const [notes, setNotes] = useState(props.initialNotes ?? '');
-  const [bar, setBar] = useState(props.initialBar ?? '');
-  const [savedNotes, setSavedNotes] = useState(props.initialNotes ?? '');
-  const [savedBar, setSavedBar] = useState(props.initialBar ?? '');
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -59,48 +66,15 @@ export default function CrewPlanningPopup(props: Props) {
     return () => window.removeEventListener('keydown', handleKeydown);
   }, [open]);
 
-  async function save() {
-    if (saving) return;
-    setSaving(true);
-    setStatus('');
-
-    const response = await fetch('/api/planning/crew-details', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        assignmentId: props.assignmentId,
-        projectId: props.projectId ?? null,
-        notes,
-        bar,
-      }),
-    });
-
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setStatus(result.error || 'Opslaan mislukt.');
-      setSaving(false);
-      return;
-    }
-
-    setSavedNotes(notes);
-    setSavedBar(bar);
-    setStatus('Opgeslagen');
-    setSaving(false);
-  }
-
   const role = [props.functionName, props.groupName].filter(Boolean).join(' · ');
+  const timeline = props.timeline ?? [];
 
   return (
     <>
       <button
         type="button"
         className="planningCrewRow planningCrewRowButton"
-        onClick={() => {
-          setNotes(savedNotes);
-          setBar(savedBar);
-          setStatus('');
-          setOpen(true);
-        }}
+        onClick={() => setOpen(true)}
       >
         <span className="planningCrewAvatar">{props.initials || '—'}</span>
         <span className="planningCrewPerson">
@@ -144,7 +118,7 @@ export default function CrewPlanningPopup(props: Props) {
               <span className="crewPlanningModalAvatar">{props.initials || '—'}</span>
               <div>
                 <h2>{props.name}</h2>
-                <span>{role}</span>
+                <span className="crewPlanningModalRole">{role}</span>
               </div>
             </div>
 
@@ -170,45 +144,56 @@ export default function CrewPlanningPopup(props: Props) {
               </div>
             </div>
 
-            <div className="crewPlanningSchedule">
-              <div className="crewPlanningScheduleHeader">
-                <span>Tijdschema volgens Rentman</span>
-                <small>{formatDate(props.start)}</small>
+            <div className="crewPlanningReadOnlyGrid">
+              <div className="crewPlanningReadOnlyCard">
+                <span>Notities</span>
+                <p>{props.notes || '—'}</p>
               </div>
-              <div className="crewPlanningScheduleRow">
-                <strong>{formatTime(props.start)}</strong>
-                <span>–</span>
-                <strong>{formatTime(props.end)}</strong>
-                <b>{role}</b>
+              <div className="crewPlanningReadOnlyCard">
+                <span>Bar</span>
+                <p>{props.bar || '—'}</p>
               </div>
             </div>
 
-            <label className="crewPlanningField">
-              <span>Notities</span>
-              <textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Bijv. glaswerk meenemen, bijzonderheden voor pakbon..."
-                rows={3}
-              />
-            </label>
+            <div className="crewPlanningSchedule">
+              <div className="crewPlanningScheduleHeader">
+                <span>Volledig tijdschema project</span>
+                <small>{props.start ? formatDate(props.start) : ''}</small>
+              </div>
 
-            <label className="crewPlanningField">
-              <span>Bar</span>
-              <input
-                value={bar}
-                onChange={(event) => setBar(event.target.value)}
-                placeholder="Bijv. Frontbar 1"
-              />
-            </label>
-
-            <div className="crewPlanningModalFooter">
-              <small className={status && status !== 'Opgeslagen' ? 'planningInlineError' : ''}>
-                {status}
-              </small>
-              <button type="button" className="button orange" onClick={save} disabled={saving}>
-                {saving ? 'Opslaan…' : 'Opslaan'}
-              </button>
+              {timeline.length ? (
+                <div className="crewPlanningTimeline">
+                  {timeline.map((item) => {
+                    const active = Boolean(
+                      props.groupName
+                      && item.name
+                      && item.name.trim().toLowerCase() === props.groupName.trim().toLowerCase()
+                      && sameDate(item.start, props.start)
+                    );
+                    return (
+                      <div
+                        className={active ? 'crewPlanningTimelineRow active' : 'crewPlanningTimelineRow'}
+                        key={item.id}
+                      >
+                        <div className="crewPlanningTimelineTime">
+                          <strong>{formatTime(item.start)}</strong>
+                          <span>–</span>
+                          <strong>{formatTime(item.end)}</strong>
+                        </div>
+                        <div className="crewPlanningTimelineBody">
+                          <strong>{item.name || 'Activiteit'}</strong>
+                          <small>{formatDate(item.start)}</small>
+                          {item.remark ? <p>{item.remark}</p> : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="crewPlanningTimelineEmpty">
+                  Geen projectschema gevonden in Rentman.
+                </div>
+              )}
             </div>
           </section>
         </div>
