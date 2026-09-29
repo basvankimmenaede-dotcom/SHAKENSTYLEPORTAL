@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function TodoistTaskItem({
   id,
@@ -20,7 +19,6 @@ export default function TodoistTaskItem({
   assignees?: Array<{ id: string; name: string }>;
   assigneeProfileId?: string | null;
 }) {
-  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState('');
@@ -74,7 +72,6 @@ export default function TodoistTaskItem({
     }
 
     setAssignmentSaving(false);
-    router.refresh();
   }
 
   if (completed) {
