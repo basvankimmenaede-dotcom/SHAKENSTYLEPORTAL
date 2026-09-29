@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function TodoistTaskItem({
   id,
@@ -8,16 +9,23 @@ export default function TodoistTaskItem({
   meta,
   labels = [],
   urgent = false,
+  assignees = [],
+  assigneeProfileId = '',
 }: {
   id: string;
   content: string;
   meta?: string | null;
   labels?: string[];
   urgent?: boolean;
+  assignees?: Array<{ id: string; name: string }>;
+  assigneeProfileId?: string | null;
 }) {
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState('');
+  const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [assignedTo, setAssignedTo] = useState(assigneeProfileId ?? '');
 
   async function completeTask() {
     if (saving || completed) return;
@@ -39,6 +47,34 @@ export default function TodoistTaskItem({
     }
 
     setSaving(false);
+  }
+
+  async function assignTask(nextAssignee: string) {
+    if (assignmentSaving) return;
+    const previous = assignedTo;
+    setAssignedTo(nextAssignee);
+    setAssignmentSaving(true);
+    setError('');
+
+    const response = await fetch('/api/planning/tasks/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskId: id,
+        assigneeProfileId: nextAssignee || null,
+      }),
+    });
+
+    if (!response.ok) {
+      setAssignedTo(previous);
+      const result = await response.json().catch(() => ({}));
+      setError(result.error || 'Toewijzing kon niet worden opgeslagen.');
+      setAssignmentSaving(false);
+      return;
+    }
+
+    setAssignmentSaving(false);
+    router.refresh();
   }
 
   if (completed) {
@@ -70,6 +106,21 @@ export default function TodoistTaskItem({
         {labels.length ? (
           <div className="todoistLabels">
             {labels.map((label) => <small key={label}>{label}</small>)}
+          </div>
+        ) : null}
+        {assignees.length ? (
+          <div className="todoistAssignee">
+            <span>Toegewezen aan</span>
+            <select
+              value={assignedTo}
+              onChange={(event) => assignTask(event.target.value)}
+              disabled={assignmentSaving}
+            >
+              <option value="">Niemand</option>
+              {assignees.map((assignee) => (
+                <option value={assignee.id} key={assignee.id}>{assignee.name}</option>
+              ))}
+            </select>
           </div>
         ) : null}
         {error ? <small className="planningInlineError">{error}</small> : null}
