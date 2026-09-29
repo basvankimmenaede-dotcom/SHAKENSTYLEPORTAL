@@ -32,6 +32,42 @@ async function rentmanFetch<T>(pathOrUrl: string): Promise<T> {
   return response.json();
 }
 
+async function rentmanPlanningFetch<T>(pathOrUrl: string): Promise<T> {
+  const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${API_BASE}${pathOrUrl}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token()}`,
+      Accept: 'application/json',
+    },
+    next: { revalidate: 30 },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Beheerverbinding mislukt (${response.status}).`);
+  }
+
+  return response.json();
+}
+
+async function rentmanPlanningFetchAll<T>(path: string): Promise<T[]> {
+  const items: T[] = [];
+  let nextUrl: string | null = path;
+  let pageCount = 0;
+
+  while (nextUrl) {
+    const result: RentmanListResponse<T> = await rentmanPlanningFetch<RentmanListResponse<T>>(nextUrl);
+    items.push(...(result.data ?? []));
+    nextUrl = result.next_page_url ?? null;
+    pageCount += 1;
+
+    if (pageCount > 100) {
+      throw new Error('De beheergegevens zijn te groot om veilig te laden.');
+    }
+  }
+
+  return items;
+}
+
 async function rentmanFetchAll<T>(path: string): Promise<T[]> {
   const items: T[] = [];
   let nextUrl: string | null = path;
@@ -301,4 +337,398 @@ export async function getLastEquipmentUsageDate(equipmentId: number) {
     });
 
   return completed[0]?.usageperiod_start ?? null;
+}
+
+
+export type RentmanPlanningProject = {
+  id: number;
+  name: string;
+  number?: number | string | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+  location?: {
+    displayname?: string;
+    name?: string;
+    visit_street?: string;
+    visit_number?: string;
+    visit_postalcode?: string;
+    visit_city?: string;
+  } | null;
+  loc_contact?: {
+    displayname?: string;
+    firstname?: string;
+    middle_name?: string;
+    lastname?: string;
+    phone?: string;
+    mobilephone?: string;
+    email?: string;
+  } | null;
+  customer?: { displayname?: string; name?: string } | null;
+  project_type?: { id?: number; displayname?: string; name?: string; color?: string } | null;
+  custom?: Record<string, unknown>;
+  is_cancelled?: boolean;
+  return_complete?: boolean | null;
+};
+
+function amsterdamDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Amsterdam',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addDays(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return date.toISOString().slice(0, 10);
+}
+
+function planningDateTime(dateKey: string, endOfDay = false) {
+  return `${dateKey}T${endOfDay ? '23:59:59' : '00:00:00'}Z`;
+}
+
+function projectDateRange(project: RentmanPlanningProject) {
+  const start = project.usageperiod_start ?? project.planperiod_start ?? null;
+  const end = project.usageperiod_end ?? project.planperiod_end ?? start;
+  return {
+    start,
+    end,
+    startDate: start?.slice(0, 10) ?? null,
+    endDate: end?.slice(0, 10) ?? start?.slice(0, 10) ?? null,
+  };
+}
+
+function overlapsDate(project: RentmanPlanningProject, dateKey: string) {
+  const range = projectDateRange(project);
+  if (!range.startDate || !range.endDate) return false;
+  return range.startDate <= dateKey && range.endDate >= dateKey;
+}
+
+export async function getPlanningProjects() {
+  const params = new URLSearchParams({
+    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,loc_contact,customer,project_type,custom',
+    expand: 'location,loc_contact,customer,project_type',
+    sort: '-id',
+    limit: '500',
+  });
+
+  const [result, subprojects] = await Promise.all([
+    rentmanPlanningFetch<RentmanListResponse<RentmanPlanningProject>>(
+      `/projects?${params.toString()}`,
+    ),
+    rentmanPlanningFetchAll<{
+      project?: string | null;
+      status?: string | null;
+    }>(
+      '/subprojects?fields=id,project,status&limit=1500',
+    ),
+  ]);
+
+  const subprojectsByProjectId = new Map<number, Array<{ status?: string | null }>>();
+  for (const subproject of subprojects) {
+    const projectId = Number(subproject.project?.split('/').pop());
+    if (!Number.isFinite(projectId)) continue;
+    const current = subprojectsByProjectId.get(projectId) ?? [];
+    current.push(subproject);
+    subprojectsByProjectId.set(projectId, current);
+  }
+
+  const cancelledProjectIds = new Set(
+    subprojects
+      .filter((subproject) => subproject.status === '/statuses/2')
+      .map((subproject) => Number(subproject.project?.split('/').pop()))
+      .filter(Number.isFinite),
+  );
+
+  const projects = (result.data ?? []).map((project) => {
+    const projectSubprojects = (subprojectsByProjectId.get(project.id) ?? [])
+      .filter((subproject) => subproject.status !== '/statuses/2');
+    const returnComplete = projectSubprojects.length
+      ? projectSubprojects.every((subproject) => subproject.status === '/statuses/6')
+      : null;
+
+    return {
+      ...project,
+      is_cancelled: cancelledProjectIds.has(project.id),
+      return_complete: returnComplete,
+    };
+  });
+  const activeProjects = projects.filter((project) => !project.is_cancelled);
+  const today = amsterdamDateKey();
+  const tomorrow = addDays(today, 1);
+
+  const byStart = (a: RentmanPlanningProject, b: RentmanPlanningProject) => {
+    const aStart = projectDateRange(a).start ?? '';
+    const bStart = projectDateRange(b).start ?? '';
+    return aStart.localeCompare(bStart);
+  };
+
+  return {
+    today,
+    tomorrow,
+    allProjects: activeProjects,
+    todayProjects: activeProjects.filter((project) => overlapsDate(project, today)).sort(byStart),
+    tomorrowProjects: activeProjects.filter((project) => overlapsDate(project, tomorrow)).sort(byStart),
+  };
+}
+
+export function getPlanningProjectPeriod(project: RentmanPlanningProject) {
+  return projectDateRange(project);
+}
+
+
+export function getPlanningReturnState(project: RentmanPlanningProject) {
+  return {
+    configured: project.return_complete !== null && project.return_complete !== undefined,
+    complete: project.return_complete ?? null,
+  };
+}
+
+export function getOverdueReturnProjects(projects: RentmanPlanningProject[], today: string) {
+  return {
+    configured: true,
+    projects: projects
+      .filter((project) => {
+        const range = projectDateRange(project);
+        if (!range.endDate || range.endDate >= today) return false;
+        return project.return_complete === false;
+      })
+      .sort((a, b) => {
+        const aEnd = projectDateRange(a).endDate ?? '';
+        const bEnd = projectDateRange(b).endDate ?? '';
+        return bEnd.localeCompare(aEnd);
+      }),
+  };
+}
+
+
+export type RentmanPlanningCrewAssignment = {
+  id: number;
+  function?: {
+    id: number;
+    displayname?: string;
+    name?: string;
+    project?: string | null;
+    group?: {
+      id?: number;
+      displayname?: string;
+      name?: string;
+    } | null;
+    planperiod_start?: string | null;
+    planperiod_end?: string | null;
+    usageperiod_start?: string | null;
+    usageperiod_end?: string | null;
+  } | null;
+  crewmember?: {
+    id: number;
+    displayname?: string;
+    firstname?: string;
+    middle_name?: string;
+    lastname?: string;
+    active?: boolean;
+  } | null;
+};
+
+export async function getPlanningCrewAssignments() {
+  const today = amsterdamDateKey();
+  const windowStart = addDays(today, -1);
+  const windowEnd = addDays(today, 8);
+  const params = new URLSearchParams({
+    fields: 'id,function,crewmember',
+    expand: 'function,function.group,crewmember',
+    sort: '-id',
+    limit: '1500',
+  });
+  params.set('planperiod_start[lte]', planningDateTime(windowEnd, true));
+  params.set('planperiod_end[gte]', planningDateTime(windowStart));
+
+  const result = await rentmanPlanningFetch<RentmanListResponse<RentmanPlanningCrewAssignment>>(
+    `/projectcrew?${params.toString()}`,
+  );
+
+  return result.data ?? [];
+}
+
+
+export type RentmanPlanningEquipmentGroup = {
+  id: number;
+  project?: string | null;
+  name?: string;
+  displayname?: string;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+};
+
+export async function getPlanningProjectEquipmentGroups() {
+  const today = amsterdamDateKey();
+  const windowStart = addDays(today, -60);
+  const windowEnd = addDays(today, 30);
+  const params = new URLSearchParams({
+    fields: 'id,project,name,displayname,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end',
+    sort: '-id',
+    limit: '1500',
+  });
+  params.set('usageperiod_start[lte]', planningDateTime(windowEnd, true));
+  params.set('usageperiod_end[gte]', planningDateTime(windowStart));
+
+  return rentmanPlanningFetchAll<RentmanPlanningEquipmentGroup>(
+    `/projectequipmentgroup?${params.toString()}`,
+  );
+}
+
+
+export type RentmanPlanningProjectVehicle = {
+  id: number;
+  function?: {
+    id?: number;
+    project?: string | null;
+    displayname?: string;
+    name?: string;
+    planperiod_start?: string | null;
+    planperiod_end?: string | null;
+    usageperiod_start?: string | null;
+    usageperiod_end?: string | null;
+    group?: {
+      id?: number;
+      displayname?: string;
+      name?: string;
+    } | string | null;
+  } | null;
+  vehicle?: {
+    id?: number;
+    displayname?: string;
+    name?: string;
+    licenseplate?: string;
+  } | null;
+};
+
+export async function getPlanningProjectVehicles() {
+  return rentmanPlanningFetchAll<RentmanPlanningProjectVehicle>(
+    '/projectvehicles?fields=id,function,vehicle&expand=function,vehicle&sort=-id&limit=1500',
+  );
+}
+
+export async function getPlanningProjectVehiclesForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningProjectVehicle>(
+    `/projects/${projectId}/projectvehicles?fields=id,function,vehicle&expand=function,vehicle&limit=300`,
+  );
+}
+
+
+export type RentmanPlanningProjectFunction = {
+  id: number;
+  name?: string;
+  subproject?: string | null;
+  displayname?: string;
+  type?: string;
+  project?: string | null;
+  group?: {
+    id?: number;
+    name?: string;
+    displayname?: string;
+    project?: string | null;
+    planperiod_start?: string | null;
+    planperiod_end?: string | null;
+    usageperiod_start?: string | null;
+    usageperiod_end?: string | null;
+    remark?: string | null;
+  } | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  amount?: number | null;
+};
+
+export async function getPlanningProjectFunctions() {
+  return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
+    '/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&sort=-planperiod_start&limit=1500',
+  );
+}
+
+export async function getPlanningProjectFunctionsForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
+    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&limit=300`,
+  );
+}
+
+
+export type RentmanPlanningSubproject = {
+  id: number;
+  name?: string;
+  project?: string | null;
+  location?: {
+    displayname?: string;
+    name?: string;
+    visit_street?: string;
+    visit_number?: string;
+    visit_postalcode?: string;
+    visit_city?: string;
+  } | null;
+  loc_contact?: {
+    displayname?: string;
+    firstname?: string;
+    middle_name?: string;
+    lastname?: string;
+    phone?: string;
+    mobilephone?: string;
+    email?: string;
+  } | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+};
+
+export async function getPlanningSubprojectsForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningSubproject>(
+    `/projects/${projectId}/subprojects?fields=id,name,project,location,loc_contact,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end&expand=location,loc_contact&limit=100`,
+  );
+}
+
+export type RentmanPlanningFunctionGroup = {
+  id: number;
+  name?: string;
+  displayname?: string;
+  project?: string | null;
+  subproject?: string | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  remark?: string | null;
+};
+
+export async function getPlanningProjectFunctionGroups() {
+  return rentmanPlanningFetchAll<RentmanPlanningFunctionGroup>(
+    '/projectfunctiongroups?fields=id,name,displayname,project,subproject,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,remark&sort=-planperiod_start&limit=1500',
+  );
+}
+
+export async function getPlanningProjectFunctionGroupsForProject(projectId: number) {
+  return rentmanPlanningFetchAll<RentmanPlanningFunctionGroup>(
+    `/projects/${projectId}/projectfunctiongroups?fields=id,name,displayname,project,subproject,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,remark&limit=300`,
+  );
+}
+
+
+export type RentmanProjectType = {
+  id: number;
+  name: string;
+  displayname?: string;
+};
+
+export async function getRentmanProjectTypes() {
+  return rentmanFetchAll<RentmanProjectType>(
+    '/projecttypes?fields=id,name&limit=300',
+  );
 }

@@ -811,3 +811,3020 @@ tr:last-child td { border-bottom: 0; }
     width: 100%;
   }
 }
+
+
+/* Planning dashboard */
+.planningPage { max-width: 1320px; }
+.planningHero { align-items: flex-end; }
+.planningMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.planningMetrics .card { padding: 18px 20px; box-shadow: none; }
+.planningDaySection { margin-top: 34px; }
+.planningDayHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+.planningDayHeader span {
+  color: var(--orange-dark);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 800;
+  font-size: 12px;
+}
+.planningDayHeader h2 {
+  margin: 4px 0 0;
+  font-size: clamp(26px, 3vw, 38px);
+  letter-spacing: -.04em;
+}
+.planningDayHeader > strong { color: var(--muted); font-size: 13px; }
+.planningProjectGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+.planningProjectCard {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+  box-shadow: var(--shadow);
+}
+.planningProjectTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+.planningProjectMeta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.planningType {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.planningProjectCard h3 {
+  margin: 10px 0 0;
+  font-size: 22px;
+  letter-spacing: -.025em;
+  line-height: 1.16;
+}
+.planningTime {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.planningTime strong { color: var(--ink); font-size: 18px; }
+.planningDetails {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.planningDetails > div {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 12px;
+  min-width: 0;
+}
+.planningDetails span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.planningDetails strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.planningChecklist { display: grid; gap: 8px; }
+.planningChecklistLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.planningChecklistLabel span { color: var(--muted); }
+.planningProgress {
+  height: 8px;
+  border-radius: 999px;
+  background: #ece9e4;
+  overflow: hidden;
+}
+.planningProgress span {
+  display: block;
+  height: 100%;
+  background: var(--orange);
+  border-radius: inherit;
+}
+.planningChecklistEmpty {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f4f3ef;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.planningCardFooter {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.planningDone { color: #2d7a3d; }
+.planningEmpty {
+  border: 1px dashed #cfcac2;
+  border-radius: 16px;
+  padding: 26px;
+  color: var(--muted);
+  text-align: center;
+  background: rgba(255,255,255,.5);
+}
+
+/* 16:9 read-only planning screen */
+.planningTv {
+  min-height: 100vh;
+  padding: 34px 42px 42px;
+  background: #111;
+  color: #fff;
+}
+.planningTvHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+}
+.planningTvHeader span {
+  display: block;
+  color: var(--orange);
+  font-weight: 900;
+  letter-spacing: .12em;
+  font-size: 13px;
+}
+.planningTvHeader h1 {
+  margin: 4px 0 0;
+  font-size: clamp(42px, 5vw, 76px);
+  line-height: .95;
+  letter-spacing: -.055em;
+}
+.planningTvClock {
+  color: rgba(255,255,255,.55);
+  font-size: 15px;
+  font-weight: 700;
+}
+.planningTvColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 28px;
+}
+.planningTvDayTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.planningTvDayTitle span { font-size: 24px; font-weight: 900; }
+.planningTvDayTitle strong {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--orange);
+  font-size: 16px;
+}
+.planningTvList { display: grid; gap: 12px; }
+.tvProject {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 74px;
+  gap: 16px;
+  align-items: center;
+  min-height: 92px;
+  padding: 15px 17px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 16px;
+  background: #1b1b1b;
+}
+.tvProjectTime {
+  font-size: 23px;
+  font-weight: 900;
+  color: var(--orange);
+}
+.tvProjectMain { min-width: 0; }
+.tvProjectMain strong {
+  display: block;
+  font-size: clamp(18px, 1.6vw, 28px);
+  line-height: 1.12;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tvProjectMain span {
+  display: block;
+  margin-top: 7px;
+  color: rgba(255,255,255,.58);
+  font-size: 13px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tvCheck {
+  justify-self: end;
+  min-width: 62px;
+  padding: 10px 8px;
+  text-align: center;
+  border-radius: 10px;
+  background: rgba(243,112,33,.16);
+  color: #ff9b5e;
+  font-weight: 900;
+}
+.tvCheck.complete { background: rgba(67,158,80,.18); color: #75d083; }
+.tvEmpty {
+  padding: 28px;
+  border: 1px dashed rgba(255,255,255,.18);
+  border-radius: 16px;
+  text-align: center;
+  color: rgba(255,255,255,.5);
+}
+
+@media (max-width: 980px) {
+  .planningMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .planningProjectGrid { grid-template-columns: 1fr; }
+  .planningTvColumns { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .planningMetrics { grid-template-columns: 1fr 1fr; }
+  .planningHero { align-items: stretch; }
+  .planningHero .button { width: 100%; text-align: center; }
+  .planningProjectTop { flex-direction: column; }
+  .planningDetails { grid-template-columns: 1fr; }
+  .planningTv { padding: 22px 18px 28px; }
+  .planningTvHeader { align-items: flex-start; flex-direction: column; }
+  .tvProject { grid-template-columns: 64px minmax(0, 1fr) 58px; padding: 12px; gap: 10px; }
+  .tvProjectTime { font-size: 18px; }
+}
+
+
+/* Standalone internal planning shell */
+.planningStandaloneTopbar {
+  min-height: 92px;
+  padding: 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: #111;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.planningBrand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.planningBrand .brandLogoImage {
+  width: 210px;
+  max-width: 28vw;
+}
+.planningBrand > span {
+  padding-left: 14px;
+  border-left: 1px solid rgba(255,255,255,.22);
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.planningStandaloneNav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.planningStandaloneNav a,
+.planningStandaloneNav .ghostButton {
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.planningStandaloneNav a:hover,
+.planningStandaloneNav .ghostButton:hover { border-color: var(--orange); }
+.planningStandaloneNav .planningPortalLink {
+  background: rgba(255,255,255,.09);
+}
+
+/* Project checklist */
+.projectChecklist {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.projectChecklistTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.projectChecklistTitle strong { font-size: 13px; }
+.projectChecklistTitle span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.projectChecklistItems {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.projectChecklistItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.projectChecklistItem:hover { border-color: var(--orange); }
+.projectChecklistItem.complete {
+  background: #f1f8f2;
+  border-color: #c9dfcc;
+  color: #36683e;
+}
+.projectChecklistItem small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.projectChecklistBox {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #c6c2ba;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.projectChecklistItem.complete .projectChecklistBox {
+  background: #3d804b;
+  border-color: #3d804b;
+  color: #fff;
+}
+.projectChecklistCreateRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+}
+.projectChecklistCreateRow .select,
+.projectChecklistCreateRow .button {
+  min-height: 42px;
+  margin: 0;
+}
+.planningInlineError {
+  color: #9b382d;
+  background: #fff0ee;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Todoist in planning */
+.planningTodoistBlock {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.todoistTaskList { display: grid; gap: 7px; }
+.todoistTask {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.todoistTaskUrgent { border-color: #e3b6ad; background: #fff8f6; }
+.todoistCheck {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #c6c2ba;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+.todoistCheck:hover { border-color: var(--orange); }
+.todoistCheckDone {
+  background: #3d804b;
+  border-color: #3d804b;
+  color: #fff;
+}
+.todoistTaskBody { min-width: 0; display: grid; gap: 4px; }
+.todoistTaskBody strong {
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.todoistTaskBody > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.todoistLabels { display: flex; flex-wrap: wrap; gap: 4px; }
+.todoistLabels small {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #f0eee9;
+  color: #555;
+  font-size: 9px;
+  font-weight: 800;
+}
+.standaloneTaskGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.standaloneTaskCard {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.standaloneTaskCard > .badge { width: fit-content; }
+
+/* Return warnings */
+.warningMetric {
+  border-color: #e5c1b8;
+  background: #fff9f7;
+}
+.planningAlertSection {
+  margin: 8px 0 34px;
+  padding: 20px;
+  border: 1px solid #e7b6aa;
+  border-radius: 18px;
+  background: #fff7f4;
+}
+.returnAlertGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.returnAlertCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid #ead0ca;
+  border-radius: 12px;
+  background: #fff;
+}
+.returnAlertCard > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.returnAlertCard strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.returnAlertCard small { color: var(--muted); font-size: 10px; }
+.returnStatus {
+  flex: 0 0 auto;
+  max-width: 180px;
+  text-align: right;
+  color: #a14132;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+@media (max-width: 1050px) {
+  .standaloneTaskGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 780px) {
+  .planningStandaloneTopbar {
+    position: static;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+  .planningBrand .brandLogoImage { width: 180px; max-width: 58vw; }
+  .planningStandaloneNav { justify-content: flex-start; }
+  .projectChecklistItems { grid-template-columns: 1fr; }
+  .returnAlertGrid { grid-template-columns: 1fr; }
+  .standaloneTaskGrid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .projectChecklistCreateRow { grid-template-columns: 1fr; }
+  .returnAlertCard { align-items: flex-start; flex-direction: column; }
+  .returnStatus { max-width: none; text-align: left; }
+}
+
+
+/* Checklist template management */
+.planningTemplatesPage { max-width: 1180px; }
+.templateCreateCard {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr);
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 22px;
+}
+.templateCreateCard h2 { margin-bottom: 6px; }
+.templateCreateCard p { margin: 0; }
+.templateCreateForm {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.templateStack { display: grid; gap: 18px; }
+.templateCard {
+  display: grid;
+  gap: 18px;
+  box-shadow: none;
+}
+.templateInactive { opacity: .68; }
+.templateHeaderForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+}
+.templateHeaderFields {
+  display: grid;
+  grid-template-columns: minmax(220px, .7fr) minmax(280px, 1.3fr);
+  gap: 10px;
+}
+.templateNameInput { font-weight: 800; }
+.templateActiveToggle,
+.templateRequiredToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.templateActiveToggle input,
+.templateRequiredToggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--orange);
+}
+.templateItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.templateItemHeader span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.templateItemList { display: grid; gap: 8px; }
+.templateItemRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.templateItemEditForm {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.templateOrderInput { text-align: center; }
+.templateSaveItem { white-space: nowrap; }
+.templateDeleteButton {
+  border: 0;
+  background: transparent;
+  color: #a14132;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 9px 4px;
+}
+.templateDeleteButton:hover { text-decoration: underline; }
+.templateAddItemForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px dashed #d7d2ca;
+}
+@media (max-width: 900px) {
+  .templateCreateCard { grid-template-columns: 1fr; }
+  .templateCreateForm,
+  .templateHeaderFields { grid-template-columns: 1fr; }
+  .templateHeaderForm { grid-template-columns: 1fr; }
+  .templateHeaderForm .button { width: fit-content; }
+  .templateItemRow { grid-template-columns: 1fr; }
+  .templateItemEditForm { grid-template-columns: 70px minmax(0, 1fr); }
+  .templateItemEditForm .templateRequiredToggle,
+  .templateItemEditForm .templateSaveItem { grid-column: auto; }
+  .templateAddItemForm { grid-template-columns: 1fr; }
+  .templateAddItemForm .button { width: fit-content; }
+}
+@media (max-width: 560px) {
+  .templateItemEditForm { grid-template-columns: 1fr; }
+  .templateItemEditForm .templateOrderInput { width: 90px; }
+}
+
+
+/* Planning proposal B: week strip + compact daily lists */
+.planningCompactPage {
+  max-width: 1540px;
+  padding-top: 24px;
+}
+.planningCompactHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.planningCompactHeader h1 {
+  margin: 0;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+.planningCompactHeader .eyebrowLink { margin-bottom: 9px; }
+.planningCompactActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.planningWeekStrip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 16px;
+}
+.planningWeekDay {
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  transition: .15s ease;
+}
+.planningWeekDay:hover {
+  border-color: #c2bcb3;
+  transform: translateY(-1px);
+}
+.planningWeekDay.active {
+  border-color: rgba(243,112,33,.62);
+  background: #fff7f1;
+}
+.planningWeekDay > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.planningWeekDay > div:first-child strong {
+  font-size: 13px;
+  text-transform: capitalize;
+}
+.planningWeekDay > div:first-child span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.planningWeekCounts {
+  display: grid;
+  grid-template-columns: auto auto 1px auto auto;
+  align-items: baseline;
+  justify-content: start;
+  gap: 5px;
+  margin-top: 10px;
+}
+.planningWeekCounts b {
+  font-size: 18px;
+  line-height: 1;
+}
+.planningWeekCounts small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+.planningWeekCounts i {
+  width: 1px;
+  height: 19px;
+  background: var(--line);
+  margin: 0 3px;
+}
+
+.planningCompactGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.05fr) minmax(280px, .62fr);
+  gap: 12px;
+  align-items: start;
+}
+.planningCompactColumn,
+.planningOpsColumn {
+  min-width: 0;
+}
+.planningCompactColumn {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+.planningColumnHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 15px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf8;
+}
+.planningColumnHeader span {
+  color: var(--orange-dark);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.planningColumnHeader h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+  letter-spacing: -.025em;
+}
+.planningColumnHeader > strong {
+  color: var(--muted);
+  font-size: 11px;
+}
+.planningAgendaList {
+  display: grid;
+}
+.planningAgendaDay {
+  scroll-margin-top: 110px;
+  border-bottom: 1px solid var(--line);
+}
+.planningAgendaDay:last-child { border-bottom: 0; }
+.planningAgendaDayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #f7f6f3;
+  border-bottom: 1px solid #ece9e4;
+}
+.planningAgendaDayHeader strong {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.planningAgendaDayHeader span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.planningOverdueDay .planningAgendaDayHeader {
+  background: #fff1ee;
+  color: #9d3d30;
+}
+.compactProjectList,
+.compactTaskList {
+  display: grid;
+}
+.compactProjectRow {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 13px;
+  border-bottom: 1px solid #efede8;
+}
+.compactProjectRow:last-child { border-bottom: 0; }
+.compactProjectTime {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding-top: 2px;
+}
+.compactProjectTime strong {
+  font-size: 12px;
+  line-height: 1.1;
+}
+.compactProjectTime span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.compactProjectMain {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.compactProjectTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-width: 0;
+}
+.compactProjectTitle > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.compactProjectMain > span {
+  color: var(--muted);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compactProgress {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--orange-soft);
+  color: #8c3d0e;
+  font-size: 9px;
+  font-weight: 900;
+}
+.compactProgress.complete {
+  background: #edf7ef;
+  color: #347043;
+}
+.compactProgress.empty {
+  background: #f1efeb;
+  color: var(--muted);
+}
+.compactChecklistDetails {
+  margin-top: 2px;
+}
+.compactChecklistDetails > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--orange-dark);
+  font-size: 9px;
+  font-weight: 800;
+  list-style: none;
+}
+.compactChecklistDetails > summary::-webkit-details-marker { display: none; }
+.compactChecklistDetails > summary::after {
+  content: ' +';
+}
+.compactChecklistDetails[open] > summary::after {
+  content: ' −';
+}
+.compactChecklistPanel {
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fcfbf9;
+}
+.compactChecklistPanel .projectChecklist {
+  padding-top: 0;
+  border-top: 0;
+}
+.compactChecklistPanel .projectChecklistItems {
+  grid-template-columns: 1fr;
+}
+.compactChecklistPanel .projectChecklistItem {
+  padding: 7px 8px;
+  font-size: 10px;
+}
+.compactChecklistPanel .projectChecklistBox,
+.compactChecklistPanel .todoistCheck {
+  width: 19px;
+  height: 19px;
+}
+.compactEmpty {
+  padding: 12px 14px;
+  color: #aaa49b;
+  font-size: 10px;
+  font-weight: 700;
+}
+.compactTaskList .todoistTask,
+.planningOpsTaskList .todoistTask {
+  border: 0;
+  border-bottom: 1px solid #efede8;
+  border-radius: 0;
+  padding: 9px 13px;
+}
+.compactTaskList .todoistTask:last-child,
+.planningOpsTaskList .todoistTask:last-child { border-bottom: 0; }
+.compactTaskList .todoistTaskUrgent,
+.planningOpsTaskList .todoistTaskUrgent {
+  background: #fff7f4;
+}
+.compactTaskList .todoistTaskBody strong,
+.planningOpsTaskList .todoistTaskBody strong {
+  font-size: 11px;
+}
+.compactTaskList .todoistTaskBody > span,
+.planningOpsTaskList .todoistTaskBody > span {
+  font-size: 9px;
+}
+.compactTaskList .todoistCheck,
+.planningOpsTaskList .todoistCheck {
+  width: 19px;
+  height: 19px;
+  border-radius: 5px;
+  margin-top: 1px;
+}
+
+.planningOpsColumn {
+  display: grid;
+  gap: 12px;
+}
+.planningOpsCard {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+.planningOpsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 13px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf8;
+}
+.planningOpsHeader span {
+  font-size: 11px;
+  font-weight: 900;
+}
+.planningOpsHeader strong {
+  color: var(--muted);
+  font-size: 11px;
+}
+.planningOpsMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.planningOpsMetric {
+  min-height: 86px;
+  padding: 13px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  align-content: center;
+  gap: 3px;
+}
+.planningOpsMetric:nth-child(2n) { border-right: 0; }
+.planningOpsMetric:nth-last-child(-n+2) { border-bottom: 0; }
+.planningOpsMetric strong {
+  font-size: 22px;
+  letter-spacing: -.04em;
+}
+.planningOpsMetric span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.planningOpsMetric.warning {
+  background: #fff4f1;
+  color: #a43f30;
+}
+.planningOpsList {
+  display: grid;
+}
+.planningOpsListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 13px;
+  border-bottom: 1px solid #efede8;
+}
+.planningOpsListItem:last-child { border-bottom: 0; }
+.planningOpsListItem > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.planningOpsListItem strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.planningOpsListItem span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.planningOpsListItem b {
+  color: #a43f30;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1180px) {
+  .planningCompactGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .planningOpsColumn {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .planningWeekStrip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .planningCompactGrid {
+    grid-template-columns: 1fr;
+  }
+  .planningOpsColumn {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .planningCompactHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .planningCompactActions .button {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+  .planningWeekStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .compactProjectRow {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+}
+
+
+/* Compact checklist creation inside planning rows */
+.compactChecklistPanel .projectChecklistCreate {
+  gap: 8px;
+}
+.compactChecklistPanel .projectChecklistTitle {
+  align-items: center;
+}
+.compactChecklistPanel .projectChecklistTitle strong {
+  font-size: 11px;
+}
+.compactChecklistPanel .projectChecklistTitle span {
+  font-size: 9px;
+}
+.compactChecklistPanel .projectChecklistCreateRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+}
+.compactChecklistPanel .projectChecklistCreateRow .select {
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  font-size: 11px;
+}
+.compactChecklistPanel .projectChecklistCreateRow .button {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .compactChecklistPanel .projectChecklistCreateRow {
+    grid-template-columns: 1fr;
+  }
+  .compactChecklistPanel .projectChecklistCreateRow .button {
+    width: 100%;
+  }
+}
+
+
+/* Rentman personnel + expired slips */
+.planningWeekCrew {
+  grid-column: 1 / -1;
+  margin-top: 3px;
+  color: var(--orange-dark);
+  font-size: 9px;
+  font-weight: 800;
+}
+.planningCrewCard {
+  overflow: hidden;
+}
+.planningCrewDays {
+  display: grid;
+}
+.planningCrewDay {
+  border-bottom: 1px solid var(--line);
+}
+.planningCrewDay:last-child {
+  border-bottom: 0;
+}
+.planningCrewDayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #f7f6f3;
+  border-bottom: 1px solid #ece9e4;
+}
+.planningCrewDayHeader strong {
+  font-size: 10px;
+  text-transform: capitalize;
+}
+.planningCrewDayHeader span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.planningCrewList {
+  display: grid;
+}
+.planningCrewRow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, .8fr) minmax(0, 1.25fr);
+  gap: 8px;
+  align-items: center;
+  padding: 9px 11px;
+  border-bottom: 1px solid #efede8;
+}
+.planningCrewRow:last-child {
+  border-bottom: 0;
+}
+.planningCrewAvatar {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f5d7c6;
+  color: #8b3b12;
+  font-size: 9px;
+  font-weight: 900;
+}
+.planningCrewPerson,
+.planningCrewShift {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningCrewPerson strong,
+.planningCrewShift strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningCrewPerson strong {
+  font-size: 10px;
+}
+.planningCrewPerson span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+.planningCrewShift {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #fff0e6;
+}
+.planningCrewShift strong {
+  font-size: 10px;
+}
+.planningCrewShift span {
+  color: var(--muted);
+  font-size: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningExpiredCard {
+  border-color: #e8b0a6;
+  background: #fffafa;
+}
+.planningExpiredHeader {
+  background: #fff2ef;
+}
+.planningExpiredHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.planningExpiredHeader small {
+  color: #a25a4e;
+  font-size: 8px;
+  line-height: 1.35;
+}
+.planningExpiredHeader > strong {
+  min-width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #ffd9d3;
+  color: #b33d2d;
+  font-size: 18px;
+}
+.planningExpiredRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0d8d3;
+}
+.planningExpiredRow:last-child {
+  border-bottom: 0;
+}
+.planningExpiredRow > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningExpiredRow > div:first-child strong {
+  font-size: 10px;
+}
+.planningExpiredRow > div:first-child span {
+  color: var(--muted);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningExpiredMeta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+.planningExpiredMeta span {
+  color: var(--muted);
+  font-size: 8px;
+}
+.planningExpiredMeta b {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #ffdcd7;
+  color: #b33d2d;
+  font-size: 8px;
+  white-space: nowrap;
+}
+@media (max-width: 1180px) {
+  .planningCrewRow {
+    grid-template-columns: 30px minmax(0, .65fr) minmax(0, 1.35fr);
+  }
+}
+@media (max-width: 640px) {
+  .planningCrewRow {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+  .planningCrewShift {
+    grid-column: 2;
+  }
+}
+
+
+/* Final planning alignment pass */
+.planningCompactGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(360px, .78fr);
+}
+.planningWeekCounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 10px;
+  align-items: stretch;
+}
+.planningWeekStat {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 0 8px;
+  border-left: 1px solid var(--line);
+}
+.planningWeekStat:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.planningWeekStat b {
+  font-size: 18px;
+  line-height: 1;
+}
+.planningWeekStat small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.planningOpsColumn {
+  gap: 12px;
+}
+.planningOpsCard {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.planningOpsHeader,
+.planningCrewDayHeader,
+.planningAgendaDayHeader {
+  min-height: 38px;
+  box-sizing: border-box;
+}
+.planningOpsHeader {
+  padding: 10px 13px;
+  background: #fbfaf8;
+}
+.planningOpsHeader > span,
+.planningOpsHeader > div > span {
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+.planningOpsHeader > strong {
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.planningCrewDayHeader {
+  padding: 8px 12px;
+}
+.planningCrewDayHeader strong {
+  font-size: 10px;
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+.planningCrewDayHeader span {
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.planningCrewRow {
+  grid-template-columns: 32px minmax(0, .75fr) minmax(145px, 1.25fr);
+  gap: 9px;
+  min-height: 54px;
+  padding: 9px 11px;
+}
+.planningCrewAvatar {
+  width: 30px;
+  height: 30px;
+}
+.planningCrewPerson strong {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.planningCrewPerson span {
+  font-size: 8px;
+  line-height: 1.2;
+}
+.planningCrewShift {
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+}
+.planningCrewShift strong {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+}
+.planningCrewShift span {
+  display: block;
+  margin-top: 2px;
+  font-size: 8px;
+  line-height: 1.2;
+}
+.planningExpiredHeader {
+  min-height: 54px;
+  background: #fff2ef;
+}
+.planningExpiredHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningExpiredHeader small {
+  display: block;
+  max-width: 240px;
+  font-size: 8px;
+  line-height: 1.25;
+}
+.planningExpiredHeader > strong {
+  flex: 0 0 auto;
+  min-width: 32px;
+  height: 32px;
+}
+.planningExpiredRow {
+  min-height: 54px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 9px 12px;
+}
+.planningExpiredRow > div:first-child strong {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.planningExpiredRow > div:first-child span {
+  margin-top: 2px;
+  font-size: 8px;
+  line-height: 1.2;
+}
+.planningExpiredMeta {
+  min-width: 78px;
+  justify-items: end;
+}
+.planningExpiredMeta span {
+  font-size: 8px;
+  white-space: nowrap;
+}
+.planningExpiredMeta b {
+  font-size: 8px;
+}
+@media (max-width: 1260px) {
+  .planningCompactGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .planningOpsColumn {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .planningCompactGrid {
+    grid-template-columns: 1fr;
+  }
+  .planningOpsColumn {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Prominent today action warning */
+.planningActionBanner {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin: -2px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid #ef9a83;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #fff1ec 0%, #fff8f4 100%);
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgba(167, 69, 41, .06);
+}
+.planningActionBanner:hover {
+  border-color: var(--orange);
+  transform: translateY(-1px);
+}
+.planningActionIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #ef5a35;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+.planningActionCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningActionCopy > span {
+  color: #b3442c;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.planningActionCopy > strong {
+  font-size: 16px;
+  line-height: 1.15;
+}
+.planningActionCopy > small {
+  color: #7d6f68;
+  font-size: 9px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningActionCta {
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #efc6ba;
+  color: #a53f28;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .planningActionBanner {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+  .planningActionCta {
+    grid-column: 2;
+    width: fit-content;
+  }
+  .planningActionCopy > small {
+    white-space: normal;
+  }
+}
+
+
+/* Checklist deadlines */
+.templateItemHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.templateItemHeader > div small {
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.templateItemEditForm {
+  grid-template-columns: 72px minmax(220px, 1fr) 128px auto auto;
+}
+.templateAddItemForm {
+  grid-template-columns: minmax(220px, 1fr) 128px auto auto;
+}
+.templateDeadlineField {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.templateDeadlineField > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.templateDeadlineInput {
+  min-width: 0;
+  text-align: center;
+}
+.projectChecklistDeadline {
+  color: #a34718 !important;
+  font-weight: 900 !important;
+  white-space: nowrap;
+}
+@media (max-width: 1050px) {
+  .templateItemEditForm {
+    grid-template-columns: 70px minmax(0, 1fr) 120px;
+  }
+  .templateItemEditForm .templateRequiredToggle,
+  .templateItemEditForm .templateSaveItem {
+    grid-column: auto;
+  }
+  .templateAddItemForm {
+    grid-template-columns: minmax(0, 1fr) 120px auto;
+  }
+  .templateAddItemForm .button {
+    grid-column: auto;
+  }
+}
+@media (max-width: 760px) {
+  .templateItemEditForm,
+  .templateAddItemForm {
+    grid-template-columns: 1fr;
+  }
+  .templateDeadlineField {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+}
+
+
+/* Long-term rentals separated from daily agenda */
+.planningLongTermSection {
+  border-top: 1px solid var(--line);
+  background: #fbfaf8;
+}
+.planningLongTermHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.planningLongTermHeader > div {
+  min-width: 0;
+}
+.planningLongTermHeader span {
+  color: var(--orange-dark);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.planningLongTermHeader h3 {
+  margin: 3px 0 0;
+  font-size: 15px;
+  letter-spacing: -.02em;
+}
+.planningLongTermHeader > strong {
+  color: var(--muted);
+  font-size: 10px;
+}
+.planningLongTermList {
+  display: grid;
+}
+.planningLongTermRow {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 13px;
+  border-bottom: 1px solid #efede8;
+  background: #fff;
+}
+.planningLongTermRow:last-child {
+  border-bottom: 0;
+}
+.planningLongTermDates,
+.planningLongTermMain {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.planningLongTermDates strong {
+  font-size: 10px;
+}
+.planningLongTermDates span,
+.planningLongTermMain span {
+  color: var(--muted);
+  font-size: 8px;
+}
+.planningLongTermMain > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.planningLongTermMain > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningLongTermChecklist {
+  flex: 0 0 auto;
+}
+@media (max-width: 640px) {
+  .planningLongTermRow {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+  .planningLongTermChecklist {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+
+/* Checklist template project-type preference */
+.templateCreateForm {
+  grid-template-columns: minmax(150px, .9fr) minmax(220px, 1.3fr) minmax(190px, 1fr) auto;
+}
+.templateHeaderFields {
+  grid-template-columns: minmax(190px, .8fr) minmax(260px, 1.2fr) minmax(190px, .9fr);
+}
+.templateProjectTypeSelect {
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .templateCreateForm,
+  .templateHeaderFields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 720px) {
+  .templateCreateForm,
+  .templateHeaderFields {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Personnel planning popup */
+.planningCrewRowButton {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #efede8;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.planningCrewRowButton:hover {
+  background: #fffaf6;
+}
+.planningCrewRowButton:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: -2px;
+}
+.crewPlanningModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(50, 47, 43, .46);
+  backdrop-filter: blur(3px);
+}
+.crewPlanningModal {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 26px;
+  border: 1px solid #e2ded7;
+  border-radius: 22px;
+  background: #fbfaf7;
+  box-shadow: 0 30px 80px rgba(38, 34, 30, .24);
+}
+.crewPlanningModalClose {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.crewPlanningModalClose:hover {
+  background: #f0ede8;
+}
+.crewPlanningModalPerson {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 46px;
+}
+.crewPlanningModalAvatar {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #ef642f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+.crewPlanningModalPerson h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -.03em;
+}
+.crewPlanningModalRole {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.crewPlanningProjectCard {
+  display: grid;
+  gap: 4px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningProjectCard > span,
+.crewPlanningInfoCard > span,
+.crewPlanningScheduleHeader > span,
+.crewPlanningField > span {
+  color: #ee5a24;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.crewPlanningProjectCard strong {
+  font-size: 15px;
+}
+.crewPlanningInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.crewPlanningInfoCard {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningInfoCard strong {
+  font-size: 13px;
+}
+.crewPlanningInfoCard small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.crewPlanningSchedule {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningScheduleHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ede9e3;
+}
+.crewPlanningScheduleHeader small {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+.crewPlanningScheduleRow {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 14px 16px;
+}
+.crewPlanningScheduleRow strong {
+  font-size: 14px;
+}
+.crewPlanningScheduleRow > span {
+  color: var(--muted);
+}
+.crewPlanningScheduleRow b {
+  justify-self: end;
+  color: var(--ink);
+  font-size: 11px;
+}
+.crewPlanningReadOnlyGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(160px, .8fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.crewPlanningReadOnlyCard {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningReadOnlyCard > span {
+  color: #ee5a24;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.crewPlanningReadOnlyCard p {
+  margin: 7px 0 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.crewPlanningTimeline {
+  display: grid;
+}
+.crewPlanningTimelineRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(110px, .85fr) minmax(110px, .85fr);
+  gap: 14px;
+  align-items: center;
+  padding: 13px 16px;
+  border-top: 1px solid #ede9e3;
+}
+.crewPlanningTimelineRow:first-child {
+  border-top: 0;
+}
+.crewPlanningTimelineRow.active {
+  background: #fff1e8;
+  box-shadow: inset 3px 0 0 #ef642f;
+}
+.crewPlanningTimelineBody {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.crewPlanningTimelineMoment {
+  display: grid;
+  gap: 2px;
+}
+.crewPlanningTimelineMoment > span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.crewPlanningTimelineMoment > strong {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.crewPlanningTimelineMoment > small {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.crewPlanningTimelineBody > strong {
+  font-size: 12px;
+}
+.crewPlanningTimelineBody > small {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: capitalize;
+}
+.crewPlanningTimelineBody p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.crewPlanningTimelineEmpty {
+  padding: 16px;
+  color: var(--muted);
+  font-size: 10px;
+}
+@media (max-width: 640px) {
+  .crewPlanningModalBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .crewPlanningModal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 18px 20px;
+  }
+  .crewPlanningInfoGrid,
+  .crewPlanningReadOnlyGrid {
+    grid-template-columns: 1fr;
+  }
+  .crewPlanningTimelineRow {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+  .crewPlanningTimelineBody {
+    grid-column: 1 / -1;
+  }
+}
+
+
+.crewPlanningNotesCard p {
+  font-weight: 900;
+  font-size: 13px;
+  color: #161616;
+}
+
+
+.crewPlanningVehicleCard {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningVehicleCard > span {
+  color: #ee5a24;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.crewPlanningVehicleCard > p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.crewPlanningVehicleList {
+  display: grid;
+  gap: 8px;
+  margin-top: 9px;
+}
+.crewPlanningVehicleRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #eee9e2;
+}
+.crewPlanningVehicleRow:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.crewPlanningVehicleRow > div {
+  display: grid;
+  gap: 2px;
+}
+.crewPlanningVehicleRow > div:last-child {
+  justify-items: end;
+  text-align: right;
+}
+.crewPlanningVehicleRow strong {
+  font-size: 13px;
+}
+.crewPlanningVehicleRow span {
+  font-size: 10px;
+  font-weight: 800;
+}
+.crewPlanningVehicleRow small {
+  color: var(--muted);
+  font-size: 9px;
+}
+@media (max-width: 640px) {
+  .crewPlanningVehicleRow {
+    display: grid;
+  }
+  .crewPlanningVehicleRow > div:last-child {
+    justify-items: start;
+    text-align: left;
+  }
+}
+
+
+/* Compact personnel popup */
+.crewPlanningModal {
+  width: min(760px, 100%);
+  max-height: min(860px, calc(100vh - 36px));
+  padding: 20px;
+}
+.crewPlanningModalPerson {
+  gap: 11px;
+}
+.crewPlanningModalAvatar {
+  width: 46px;
+  height: 46px;
+  font-size: 14px;
+}
+.crewPlanningModalPerson h2 {
+  font-size: 20px;
+}
+.crewPlanningProjectCard {
+  margin-top: 16px;
+  padding: 10px 13px;
+}
+.crewPlanningInfoGrid,
+.crewPlanningReadOnlyGrid {
+  gap: 8px;
+  margin-top: 8px;
+}
+.crewPlanningInfoCard,
+.crewPlanningReadOnlyCard {
+  padding: 10px 13px;
+}
+.crewPlanningInfoCard {
+  gap: 2px;
+}
+.crewPlanningReadOnlyCard p {
+  margin-top: 4px;
+  line-height: 1.35;
+}
+.crewPlanningVehicleCard {
+  margin-top: 8px;
+  padding: 10px 13px;
+}
+.crewPlanningVehicleList {
+  gap: 5px;
+  margin-top: 6px;
+}
+.crewPlanningVehicleRow {
+  align-items: center;
+  padding-top: 5px;
+}
+.crewPlanningSchedule {
+  margin-top: 8px;
+}
+.crewPlanningScheduleHeader {
+  padding: 9px 13px;
+}
+.crewPlanningTimelineRow {
+  grid-template-columns: minmax(0, 1.5fr) minmax(150px, .9fr) minmax(150px, .9fr);
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 13px;
+}
+.crewPlanningTimelineBody {
+  gap: 1px;
+}
+.crewPlanningTimelineBody > strong {
+  font-size: 11px;
+  line-height: 1.15;
+}
+.crewPlanningTimelineBody p {
+  margin-top: 1px;
+  font-size: 9px;
+  line-height: 1.25;
+}
+.crewPlanningTimelineMoment {
+  grid-template-columns: 24px auto auto;
+  gap: 5px;
+  align-items: baseline;
+}
+.crewPlanningTimelineMoment > span {
+  font-size: 7px;
+}
+.crewPlanningTimelineMoment > strong,
+.crewPlanningTimelineMoment > small {
+  font-size: 9px;
+  line-height: 1.1;
+}
+.crewPlanningNotesCard p {
+  font-size: 13px;
+  line-height: 1.3;
+}
+@media (max-width: 640px) {
+  .crewPlanningModal {
+    padding: 16px 14px 16px;
+  }
+  .crewPlanningTimelineRow {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 9px 12px;
+  }
+  .crewPlanningTimelineBody {
+    grid-column: auto;
+  }
+  .crewPlanningTimelineMoment {
+    grid-template-columns: 24px auto auto;
+  }
+}
+
+
+/* Planning task create */
+.planningTaskHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.planningTaskCreateButton {
+  border: 1px solid #ef642f;
+  border-radius: 999px;
+  background: #fff;
+  color: #c94a20;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.planningTaskCreateButton:hover {
+  background: #fff5ef;
+}
+.planningTaskCreateBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(37, 34, 31, .48);
+  backdrop-filter: blur(3px);
+}
+.planningTaskCreateModal {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 22px;
+  border: 1px solid #e3ddd5;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgba(38, 34, 30, .22);
+}
+.planningTaskCreateModal h2 {
+  margin: 0 42px 18px 0;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+.planningTaskCreateClose {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+.planningTaskCreateClose:hover {
+  background: #f2efeb;
+}
+.planningTaskCreateModal label {
+  display: grid;
+  gap: 6px;
+}
+.planningTaskCreateModal label > span {
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 900;
+}
+.planningTaskCreateModal input,
+.planningTaskCreateModal select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  border: 1px solid #ddd7cf;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 11px;
+  font: inherit;
+  font-size: 12px;
+}
+.planningTaskCreateModal input:focus,
+.planningTaskCreateModal select:focus {
+  border-color: #ef642f;
+  outline: 2px solid rgba(239, 100, 47, .16);
+}
+.planningTaskCreateGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(150px, .8fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.planningTaskCreateActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+.planningTaskCreateActions > small {
+  margin-right: auto;
+  color: #b33a2b;
+  font-size: 9px;
+}
+@media (max-width: 640px) {
+  .planningTaskHeaderActions {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .planningTaskCreateBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .planningTaskCreateModal {
+    width: 100%;
+    border-radius: 18px 18px 0 0;
+    padding: 20px 16px;
+  }
+  .planningTaskCreateGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Grouped crew rows */
+.planningCrewAvatarStack,
+.crewPlanningModalAvatarStack {
+  display: flex;
+  align-items: center;
+  min-width: 58px;
+}
+.planningCrewAvatarStack .planningCrewAvatar,
+.crewPlanningModalAvatarStack .crewPlanningModalAvatar {
+  margin-left: -10px;
+  border: 2px solid #fff;
+}
+.planningCrewAvatarStack .planningCrewAvatar:first-child,
+.crewPlanningModalAvatarStack .crewPlanningModalAvatar:first-child {
+  margin-left: 0;
+}
+.planningCrewAvatarStack .planningCrewAvatar {
+  width: 34px;
+  height: 34px;
+  font-size: 10px;
+}
+.crewPlanningModalAvatarStack .crewPlanningModalAvatar {
+  width: 42px;
+  height: 42px;
+  font-size: 12px;
+}
+
+
+/* Keep grouped crew rows aligned */
+.planningCrewRow.grouped {
+  grid-template-columns: 54px minmax(0, .95fr) minmax(0, 1.25fr);
+}
+.planningCrewAvatarStack {
+  min-width: 28px;
+}
+.planningCrewRow.grouped .planningCrewAvatarStack {
+  min-width: 54px;
+}
+.planningCrewRow.grouped .planningCrewPerson strong {
+  font-size: 9.5px;
+}
+.planningCrewRow.grouped .planningCrewPerson span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* Planning task assignees and filters */
+.planningTaskFilters {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid #e3ddd5;
+  border-radius: 999px;
+  background: #f7f5f2;
+}
+.planningTaskFilters a,
+.planningTaskFilters button {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.planningTaskFilters a.active,
+.planningTaskFilters button.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(30, 27, 24, .08);
+}
+.planningTaskAssigneeField {
+  margin-top: 12px;
+}
+.todoistAssignee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+.todoistAssignee > span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+.todoistAssignee select {
+  min-width: 0;
+  height: 25px;
+  max-width: 150px;
+  border: 1px solid #ddd7cf;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 22px 0 7px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 800;
+}
+@media (max-width: 760px) {
+  .planningTaskHeaderActions {
+    align-items: flex-end;
+  }
+  .planningTaskFilters {
+    order: 3;
+  }
+  .todoistAssignee {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .todoistAssignee select {
+    max-width: 100%;
+  }
+}
+
+
+/* Central users & permissions */
+.centralPermissionsDetails {
+  margin-top: 4px;
+  padding-top: 18px;
+}
+.centralPermissionsDetails > summary {
+  margin-bottom: 0;
+  font-size: 14px;
+}
+.permissionsForm {
+  padding-top: 14px;
+}
+.permissionsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.permissionControl {
+  display: flex;
+  min-width: 0;
+  min-height: 118px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e8e2da;
+  border-radius: 12px;
+  background: #fbfaf8;
+}
+.permissionControl > span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.permissionControl strong {
+  font-size: 11px;
+  line-height: 1.25;
+}
+.permissionControl small {
+  max-width: 30ch;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.45;
+}
+.permissionControl .select {
+  width: 100%;
+  min-height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.centralPermissionsDetails .button.orange {
+  min-height: 38px;
+  padding-inline: 16px;
+}
+.userAccessCard {
+  gap: 16px;
+}
+.userAccessHeader h2 {
+  margin: 0 0 3px !important;
+}
+.userProfileForm {
+  display: grid;
+  grid-template-columns: 140px minmax(180px, 220px) max-content;
+  gap: 10px;
+  align-items: center;
+  padding-top: 0;
+}
+.userProfileForm .select,
+.userProfileForm .button {
+  min-height: 42px;
+}
+@media (max-width: 1100px) {
+  .permissionsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .permissionsGrid {
+    grid-template-columns: 1fr;
+  }
+  .permissionControl {
+    min-height: auto;
+  }
+  .userProfileForm {
+    grid-template-columns: 1fr;
+  }
+  .userProfileForm .select,
+  .userProfileForm .button {
+    width: 100% !important;
+  }
+}
+
+
+/* Billing queue */
+.planningTaskBillingColumn {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.planningBillingStandalone {
+  overflow: hidden;
+}
+.planningBillingStandaloneHeader {
+  align-items: center;
+}
+.planningBillingCard {
+  margin: 0;
+  padding: 14px 15px 15px;
+  border: 0;
+  border-radius: 0;
+  background: #fffaf3;
+}
+.planningBillingCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.planningBillingCardHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -.02em;
+}
+.planningBillingCardHeader span {
+  display: block;
+  margin-top: 3px;
+  color: #9b5d20;
+  font-size: 9px;
+  font-weight: 800;
+}
+.planningBillingCard p {
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+.planningBillingOpen {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 8px;
+  background: #1f1b18;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.billingPage {
+  padding-bottom: 48px;
+}
+.billingHero {
+  align-items: flex-end;
+  gap: 24px;
+  padding-top: 26px;
+  padding-bottom: 24px;
+}
+.billingHero > div:first-child {
+  max-width: 920px;
+}
+.billingBack {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.billingHero h1 {
+  margin: 0;
+  font-size: clamp(42px, 5vw, 64px);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+.billingHero p {
+  max-width: 900px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.45;
+}
+.billingHeroMetric {
+  display: grid;
+  min-width: 120px;
+  justify-items: end;
+  align-self: flex-end;
+  padding-bottom: 2px;
+}
+.billingHeroMetric strong {
+  font-size: 46px;
+  line-height: .95;
+  letter-spacing: -.04em;
+}
+.billingHeroMetric span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+.billingTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+}
+.billingTabs a,
+.billingTabs button {
+  padding: 8px 12px;
+  border: 1px solid #e6e0d8;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+.billingTabs a.active,
+.billingTabs button.active {
+  background: #1f1b18;
+  color: #fff;
+  border-color: #1f1b18;
+}
+.billingManualCard {
+  margin-bottom: 18px;
+  padding: 18px 20px;
+}
+.billingManualCard summary {
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: -.015em;
+}
+.billingManualForm {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1.3fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+}
+.billingManualForm .field label {
+  font-size: 12px;
+}
+.billingManualForm .input {
+  min-height: 42px;
+  font-size: 14px;
+}
+.billingList {
+  display: grid;
+  gap: 10px;
+}
+.billingRow {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid #e9e4dd;
+  border-radius: 14px;
+  background: #fff;
+}
+.billingSourceBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+.billingSourceBadge.rentman {
+  background: #eef3ff;
+  color: #30528d;
+}
+.billingSourceBadge.manual {
+  background: #f5efe7;
+  color: #70583f;
+}
+.billingMain {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.billingMain > strong {
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+}
+.billingMain > span,
+.billingMain > small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.billingState {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+.billingActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.billingActions .button {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+.billingDone,
+.billingSkipped {
+  font-size: 12px;
+  font-weight: 850;
+}
+.billingDone {
+  color: #287047;
+}
+.billingSkipped {
+  color: var(--muted);
+}
+@media (max-width: 980px) {
+  .billingHero {
+    align-items: flex-start;
+  }
+  .billingHeroMetric {
+    justify-items: start;
+  }
+}
+@media (max-width: 820px) {
+  .billingManualForm {
+    grid-template-columns: 1fr 1fr;
+  }
+  .billingManualNote {
+    grid-column: 1 / -1;
+  }
+  .billingRow {
+    grid-template-columns: 1fr;
+  }
+  .billingState {
+    justify-items: start;
+  }
+  .billingActions {
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 560px) {
+  .billingHero {
+    padding-top: 18px;
+  }
+  .billingHero h1 {
+    font-size: 42px;
+  }
+  .billingHero p {
+    font-size: 16px;
+  }
+  .billingManualForm {
+    grid-template-columns: 1fr;
+  }
+  .billingManualNote {
+    grid-column: auto;
+  }
+  .billingRow {
+    padding: 14px;
+  }
+  .billingActions .button {
+    width: 100%;
+  }
+}
+
+
+/* Instant client-side task filtering */
+.planningTaskFilters button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+#planning-task-list[data-task-filter="mine"] .todoistTask[data-task-mine="false"] {
+  display: none;
+}
+#planning-task-list .planningTaskFilterEmpty .compactTaskList {
+  min-height: 34px;
+  position: relative;
+}
+#planning-task-list .planningTaskFilterEmpty .compactTaskList::after {
+  content: 'Geen taken.';
+  display: block;
+  padding: 10px 13px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+
+/* Fast billing filters + optimized portal imagery */
+.billingTabs button {
+  cursor: pointer;
+  font: inherit;
+}
+.itemImage,
+.detailImagePanel,
+.attachmentThumb {
+  position: relative;
+}
+
+
+/* Repair client-button layouts after interactive filter conversion */
+.planningTaskColumnHeader {
+  align-items: flex-start;
+}
+.planningTaskHeaderActions {
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.planningTaskFilters {
+  flex: 0 0 auto;
+}
+.planningTaskFilters button {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.planningTaskFilters button.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(30, 27, 24, .08);
+}
+.planningTaskCreate {
+  flex: 0 0 auto;
+}
+.billingTabs button {
+  appearance: none;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #e6e0d8;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 850;
+  cursor: pointer;
+}
+.billingTabs button.active {
+  background: #1f1b18;
+  color: #fff;
+  border-color: #1f1b18;
+}
+@media (max-width: 1120px) {
+  .planningTaskColumnHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .planningTaskHeaderActions {
+    justify-content: flex-start;
+  }
+}
+
+
+/* Stable always-visible equipment thumbnails */
+.itemImage {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.itemImage .itemImageAsset {
+  inset: 12px !important;
+  width: calc(100% - 24px) !important;
+  height: calc(100% - 24px) !important;
+  max-width: none !important;
+  max-height: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: transparent !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+}
+.itemCard:hover .itemImage .itemImageAsset {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+}
+@media (max-width: 620px) {
+  .itemImage .itemImageAsset {
+    inset: 10px !important;
+    width: calc(100% - 20px) !important;
+    height: calc(100% - 20px) !important;
+  }
+}
+
+
+/* Equipment card image layout: full-height centered image rail */
+.itemCard {
+  grid-template-columns: 150px minmax(0, 1fr) !important;
+  align-items: stretch;
+}
+.itemImage {
+  width: 150px !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  align-self: stretch !important;
+  padding: 0 !important;
+  background: #f7f6f3 !important;
+}
+.itemImage .itemImageAsset {
+  inset: 18px !important;
+  width: calc(100% - 36px) !important;
+  height: calc(100% - 36px) !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+.itemBody {
+  align-self: center;
+  padding: 24px 28px !important;
+}
+@media (max-width: 620px) {
+  .itemCard {
+    grid-template-columns: 105px minmax(0, 1fr) !important;
+  }
+  .itemImage {
+    width: 105px !important;
+  }
+  .itemImage .itemImageAsset {
+    inset: 12px !important;
+    width: calc(100% - 24px) !important;
+    height: calc(100% - 24px) !important;
+  }
+  .itemBody {
+    padding: 18px !important;
+  }
+}

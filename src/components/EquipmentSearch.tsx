@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -85,7 +86,15 @@ export default function EquipmentSearch({
                 return (
                   <Link className="itemCard" key={item.id} href={href}>
                     <div className="itemImage">
-                      {item.image ? <img src={item.image} alt={item.name} /> : <span>Geen afbeelding</span>}
+                      {item.image ? (
+                        <Image
+                          className="itemImageAsset"
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          sizes="(max-width: 760px) 96px, 112px"
+                        />
+                      ) : <span>Geen afbeelding</span>}
                     </div>
                     <div className="itemBody">
                       <span className="badge">{item.code || `#${item.id}`}</span>

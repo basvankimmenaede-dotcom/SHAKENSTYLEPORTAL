@@ -3,6 +3,22 @@
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 
+const PERMISSION_KEYS = ['portal', 'planning', 'tasks', 'billing', 'checklists', 'user_admin'] as const;
+const PERMISSION_LEVELS = ['none', 'own', 'view', 'manage'] as const;
+
+function defaultPermissionsForRole(role: string) {
+  return PERMISSION_KEYS.map((permissionKey) => ({
+    permission_key: permissionKey,
+    access_level: role === 'admin'
+      ? 'manage'
+      : role === 'warehouse' && ['planning', 'tasks', 'checklists'].includes(permissionKey)
+        ? 'manage'
+        : role === 'customer' && permissionKey === 'portal'
+          ? 'view'
+          : 'none',
+  }));
+}
+
 export async function createDistributor(formData: FormData) {
   const { supabase } = await requireAdmin();
   const name = String(formData.get('name') ?? '').trim();
@@ -23,6 +39,7 @@ export async function updateBrandSettings(formData: FormData) {
   revalidatePath('/admin/brands');
   revalidatePath('/admin/users');
   revalidatePath('/portal');
+  revalidatePath('/planning');
 }
 
 export async function assignUserProfile(formData: FormData) {
@@ -34,15 +51,22 @@ export async function assignUserProfile(formData: FormData) {
   const role = String(formData.get('role') ?? 'customer');
   const distributorId = distributorRaw ? Number(distributorRaw) : null;
 
-  if (!userId || !['admin', 'customer'].includes(role)) return;
+  if (!userId || !['admin', 'customer', 'warehouse'].includes(role)) return;
 
   await admin
     .from('profiles')
     .update({
       role,
-      distributor_id: role === 'admin' ? null : distributorId,
+      distributor_id: role === 'customer' ? distributorId : null,
     })
     .eq('id', userId);
+
+  const defaults = defaultPermissionsForRole(role).map((permission) => ({
+    user_id: userId,
+    ...permission,
+    updated_at: new Date().toISOString(),
+  }));
+  await admin.from('user_permissions').upsert(defaults, { onConflict: 'user_id,permission_key' });
 
   revalidatePath('/admin/users');
   revalidatePath('/portal');
@@ -107,11 +131,51 @@ export async function inviteCustomer(formData: FormData) {
       role: 'customer',
       distributor_id: distributorId,
     });
+
+    const defaults = defaultPermissionsForRole('customer').map((permission) => ({
+      user_id: data.user!.id,
+      ...permission,
+      updated_at: new Date().toISOString(),
+    }));
+    await admin.from('user_permissions').upsert(defaults, { onConflict: 'user_id,permission_key' });
   }
 
   revalidatePath('/admin/users');
 }
 
+
+export async function saveUserPermissions(formData: FormData) {
+  await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+
+  const userId = String(formData.get('user_id') ?? '').trim();
+  if (!userId) return;
+
+  const rows = PERMISSION_KEYS.map((permissionKey) => {
+    const raw = String(formData.get(`permission_${permissionKey}`) ?? 'none');
+    const accessLevel = PERMISSION_LEVELS.includes(raw as typeof PERMISSION_LEVELS[number])
+      ? raw
+      : 'none';
+
+    return {
+      user_id: userId,
+      permission_key: permissionKey,
+      access_level: accessLevel,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  const { error } = await admin
+    .from('user_permissions')
+    .upsert(rows, { onConflict: 'user_id,permission_key' });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/admin/users');
+  revalidatePath('/portal');
+  revalidatePath('/planning');
+}
 
 export async function setUserPassword(formData: FormData) {
   const session = await requireAdmin();
@@ -154,6 +218,7 @@ export async function deletePortalUser(formData: FormData) {
   // If the profiles foreign key is not configured with ON DELETE CASCADE,
   // remove that profile and retry once.
   await admin.from('user_brand_access').delete().eq('user_id', userId);
+  await admin.from('user_permissions').delete().eq('user_id', userId);
 
   let { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
