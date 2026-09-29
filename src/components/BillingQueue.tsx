@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
 type BillingStatus = 'open' | 'invoiced' | 'skip';
@@ -32,9 +33,11 @@ function formatDate(value?: string | null) {
 export default function BillingQueue({
   initialItems,
   canManage,
+  children,
 }: {
   initialItems: BillingQueueItem[];
   canManage: boolean;
+  children?: ReactNode;
 }) {
   const [items, setItems] = useState(initialItems);
   const [filter, setFilter] = useState<Filter>('open');
@@ -98,6 +101,8 @@ export default function BillingQueue({
         <button type="button" onClick={() => setFilter('skip')} className={filter === 'skip' ? 'active' : ''}>Niet factureren ({counts.skip})</button>
         <button type="button" onClick={() => setFilter('all')} className={filter === 'all' ? 'active' : ''}>Alles</button>
       </nav>
+
+      {children}
 
       {error ? <div className="notice">{error}</div> : null}
 
