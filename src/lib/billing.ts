@@ -5,6 +5,45 @@ export type BillingStatus = 'open' | 'invoiced' | 'skip';
 
 const BILLING_QUEUE_START_DATE = '2026-09-29';
 
+export function amsterdamBillingDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Amsterdam',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export async function billingSyncNeeded(supabase: SupabaseClient, today = amsterdamBillingDateKey()) {
+  const { data, error } = await supabase
+    .from('billing_sync_state')
+    .select('last_sync_date')
+    .eq('id', 'rentman')
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.last_sync_date !== today;
+}
+
+export async function markBillingSynced(
+  supabase: SupabaseClient,
+  userId: string,
+  today = amsterdamBillingDateKey(),
+) {
+  const { error } = await supabase
+    .from('billing_sync_state')
+    .upsert({
+      id: 'rentman',
+      last_sync_date: today,
+      updated_at: new Date().toISOString(),
+      updated_by: userId,
+    }, { onConflict: 'id' });
+
+  if (error) throw error;
+}
+
 export function billingUsageRange(
   project: RentmanPlanningProject,
   equipmentGroupsByProjectId: Map<number, RentmanPlanningEquipmentGroup[]>,
@@ -92,4 +131,31 @@ export async function syncBillingQueueFromPlanning({
   const { error } = await supabase.from('billing_items').insert(rows);
   if (error) throw error;
   return rows.length;
+}
+
+export async function syncBillingQueueOncePerDay({
+  supabase,
+  projects,
+  equipmentGroups,
+  userId,
+  today = amsterdamBillingDateKey(),
+}: {
+  supabase: SupabaseClient;
+  projects: RentmanPlanningProject[];
+  equipmentGroups: RentmanPlanningEquipmentGroup[];
+  userId: string;
+  today?: string;
+}) {
+  const needed = await billingSyncNeeded(supabase, today);
+  if (!needed) return { ran: false, added: 0 };
+
+  const added = await syncBillingQueueFromPlanning({
+    supabase,
+    projects,
+    equipmentGroups,
+    userId,
+  });
+
+  await markBillingSynced(supabase, userId, today);
+  return { ran: true, added };
 }
