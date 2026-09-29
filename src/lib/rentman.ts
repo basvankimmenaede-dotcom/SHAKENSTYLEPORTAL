@@ -512,6 +512,24 @@ export async function getPlanningCrewAssignments() {
 }
 
 
+export type RentmanPlanningEquipmentGroup = {
+  id: number;
+  project?: string | null;
+  name?: string;
+  displayname?: string;
+  usageperiod_start?: string | null;
+  usageperiod_end?: string | null;
+  planperiod_start?: string | null;
+  planperiod_end?: string | null;
+};
+
+export async function getPlanningProjectEquipmentGroups() {
+  return rentmanFetchAll<RentmanPlanningEquipmentGroup>(
+    '/projectequipmentgroup?fields=id,project,name,displayname,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end&sort=-id&limit=1500',
+  );
+}
+
+
 export type RentmanPlanningProjectVehicle = {
   id: number;
   function?: {
