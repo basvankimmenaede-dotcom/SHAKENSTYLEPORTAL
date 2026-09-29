@@ -460,6 +460,11 @@ export type RentmanPlanningCrewAssignment = {
     displayname?: string;
     name?: string;
     project?: string | null;
+    group?: {
+      id?: number;
+      displayname?: string;
+      name?: string;
+    } | null;
     planperiod_start?: string | null;
     planperiod_end?: string | null;
     usageperiod_start?: string | null;
@@ -478,7 +483,7 @@ export type RentmanPlanningCrewAssignment = {
 export async function getPlanningCrewAssignments() {
   const params = new URLSearchParams({
     fields: 'id,function,crewmember',
-    expand: 'function,crewmember',
+    expand: 'function,function.group,crewmember',
     sort: '-id',
     limit: '1500',
   });
