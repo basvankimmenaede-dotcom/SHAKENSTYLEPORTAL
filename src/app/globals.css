@@ -2852,3 +2852,10 @@ tr:last-child td { border-bottom: 0; }
     grid-column: 1 / -1;
   }
 }
+
+
+.crewPlanningNotesCard p {
+  font-weight: 900;
+  font-size: 13px;
+  color: #161616;
+}
