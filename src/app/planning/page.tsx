@@ -515,7 +515,7 @@ export default async function PlanningPage({
 
   return (
     <>
-      <PlanningAutoRefresh intervalMs={60000} />
+      <PlanningAutoRefresh intervalMs={300000} />
       <main className="container planningPage planningCompactPage">
       <section className="planningCompactHeader">
         <div>
