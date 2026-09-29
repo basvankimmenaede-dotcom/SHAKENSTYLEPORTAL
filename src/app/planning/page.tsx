@@ -341,7 +341,7 @@ export default async function PlanningPage() {
         .sort((a, b) => {
           const aStart = a.usageperiod_start ?? a.planperiod_start ?? '';
           const bStart = b.usageperiod_start ?? b.planperiod_start ?? '';
-          return bStart.localeCompare(aStart);
+          return aStart.localeCompare(bStart);
         }),
     );
   }
@@ -572,7 +572,7 @@ export default async function PlanningPage() {
                     number: String(project.number),
                     name: project.name,
                   }))
-                  .sort((a, b) => a.number.localeCompare(b.number))}
+                  .sort((a, b) => Number(b.number) - Number(a.number))}
               />
             </div>
           </div>
