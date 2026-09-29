@@ -2570,3 +2570,239 @@ tr:last-child td { border-bottom: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Personnel planning popup */
+.planningCrewRowButton {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #efede8;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.planningCrewRowButton:hover {
+  background: #fffaf6;
+}
+.planningCrewRowButton:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: -2px;
+}
+.crewPlanningModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(50, 47, 43, .46);
+  backdrop-filter: blur(3px);
+}
+.crewPlanningModal {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 26px;
+  border: 1px solid #e2ded7;
+  border-radius: 22px;
+  background: #fbfaf7;
+  box-shadow: 0 30px 80px rgba(38, 34, 30, .24);
+}
+.crewPlanningModalClose {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.crewPlanningModalClose:hover {
+  background: #f0ede8;
+}
+.crewPlanningModalPerson {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 46px;
+}
+.crewPlanningModalAvatar {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #ef642f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+.crewPlanningModalPerson h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -.03em;
+}
+.crewPlanningModalPerson span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.crewPlanningProjectCard {
+  display: grid;
+  gap: 4px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningProjectCard > span,
+.crewPlanningInfoCard > span,
+.crewPlanningScheduleHeader > span,
+.crewPlanningField > span {
+  color: #ee5a24;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.crewPlanningProjectCard strong {
+  font-size: 15px;
+}
+.crewPlanningInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.crewPlanningInfoCard {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningInfoCard strong {
+  font-size: 13px;
+}
+.crewPlanningInfoCard small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.crewPlanningSchedule {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crewPlanningScheduleHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ede9e3;
+}
+.crewPlanningScheduleHeader small {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+.crewPlanningScheduleRow {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 14px 16px;
+}
+.crewPlanningScheduleRow strong {
+  font-size: 14px;
+}
+.crewPlanningScheduleRow > span {
+  color: var(--muted);
+}
+.crewPlanningScheduleRow b {
+  justify-self: end;
+  color: var(--ink);
+  font-size: 11px;
+}
+.crewPlanningField {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+.crewPlanningField textarea,
+.crewPlanningField input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dcd6ce;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+.crewPlanningField textarea {
+  min-height: 88px;
+  resize: vertical;
+  padding: 11px 12px;
+}
+.crewPlanningField input {
+  height: 42px;
+  padding: 0 12px;
+}
+.crewPlanningField textarea:focus,
+.crewPlanningField input:focus {
+  outline: 2px solid rgba(239, 100, 47, .18);
+  border-color: #ef642f;
+}
+.crewPlanningModalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-height: 38px;
+  margin-top: 18px;
+}
+.crewPlanningModalFooter > small {
+  margin-right: auto;
+  color: #3d7c4c;
+  font-size: 10px;
+  font-weight: 800;
+}
+@media (max-width: 640px) {
+  .crewPlanningModalBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .crewPlanningModal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 18px 20px;
+  }
+  .crewPlanningInfoGrid {
+    grid-template-columns: 1fr;
+  }
+  .crewPlanningScheduleRow {
+    grid-template-columns: auto auto auto;
+  }
+  .crewPlanningScheduleRow b {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
