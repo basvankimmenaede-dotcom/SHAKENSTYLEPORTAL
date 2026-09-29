@@ -13,6 +13,7 @@ type Props = {
   projectId?: number | null;
   name: string;
   initials: string;
+  people?: Array<{ name: string; initials: string }>;
   functionName: string;
   groupName?: string | null;
   start?: string | null;
@@ -85,6 +86,12 @@ export default function CrewPlanningPopup(props: Props) {
   }, [open]);
 
   const role = [props.functionName, props.groupName].filter(Boolean).join(' · ');
+  const people = props.people?.length ? props.people : [{ name: props.name, initials: props.initials }];
+  const displayName = people.length === 1
+    ? people[0].name
+    : people.length === 2
+      ? `${people[0].name} + ${people[1].name}`
+      : `${people[0].name}, ${people[1].name} +${people.length - 2}`;
   const timeline = props.timeline ?? [];
   const vehicles = props.vehicles ?? [];
 
@@ -95,10 +102,16 @@ export default function CrewPlanningPopup(props: Props) {
         className="planningCrewRow planningCrewRowButton"
         onClick={() => setOpen(true)}
       >
-        <span className="planningCrewAvatar">{props.initials || '—'}</span>
+        <span className="planningCrewAvatarStack" aria-hidden="true">
+          {people.slice(0, 3).map((person, index) => (
+            <span className="planningCrewAvatar" key={`${person.name}-${index}`}>
+              {person.initials || '—'}
+            </span>
+          ))}
+        </span>
         <span className="planningCrewPerson">
-          <strong>{props.name}</strong>
-          <span>{role}</span>
+          <strong>{displayName}</strong>
+          <span>{role}{people.length > 1 ? ` · ${people.length} personen` : ''}</span>
         </span>
         <span className="planningCrewShift">
           <strong>{formatTime(props.start)} – {formatTime(props.end)}</strong>
@@ -122,7 +135,7 @@ export default function CrewPlanningPopup(props: Props) {
             className="crewPlanningModal"
             role="dialog"
             aria-modal="true"
-            aria-label={`Planning van ${props.name}`}
+            aria-label={`Planning van ${displayName}`}
           >
             <button
               type="button"
@@ -134,10 +147,16 @@ export default function CrewPlanningPopup(props: Props) {
             </button>
 
             <div className="crewPlanningModalPerson">
-              <span className="crewPlanningModalAvatar">{props.initials || '—'}</span>
+              <span className="crewPlanningModalAvatarStack">
+                {people.slice(0, 3).map((person, index) => (
+                  <span className="crewPlanningModalAvatar" key={`${person.name}-modal-${index}`}>
+                    {person.initials || '—'}
+                  </span>
+                ))}
+              </span>
               <div>
-                <h2>{props.name}</h2>
-                <span className="crewPlanningModalRole">{role}</span>
+                <h2>{displayName}</h2>
+                <span className="crewPlanningModalRole">{role}{people.length > 1 ? ` · ${people.length} personen` : ''}</span>
               </div>
             </div>
 
