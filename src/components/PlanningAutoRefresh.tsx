@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 function isUserInteracting() {
+  if (document.querySelector('[data-planning-modal-open="true"]')) return true;
   if (document.querySelector('[aria-busy="true"]')) return true;
 
   const active = document.activeElement;
