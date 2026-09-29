@@ -4,6 +4,7 @@ import {
   getPlanningProjectFunctionGroupsForProject,
   getPlanningProjectFunctionsForProject,
   getPlanningProjectVehiclesForProject,
+  getPlanningSubprojectsForProject,
 } from '@/lib/rentman';
 
 export async function GET(
@@ -20,13 +21,14 @@ export async function GET(
   }
 
   try {
-    const [groups, functions, vehicles] = await Promise.all([
+    const [groups, functions, vehicles, subprojects] = await Promise.all([
       getPlanningProjectFunctionGroupsForProject(projectId),
       getPlanningProjectFunctionsForProject(projectId),
       getPlanningProjectVehiclesForProject(projectId),
+      getPlanningSubprojectsForProject(projectId),
     ]);
 
-    return NextResponse.json({ ok: true, groups, functions, vehicles });
+    return NextResponse.json({ ok: true, groups, functions, vehicles, subprojects });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Projectdetails konden niet worden geladen.';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
