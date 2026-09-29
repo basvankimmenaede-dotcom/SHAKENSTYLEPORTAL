@@ -2651,7 +2651,7 @@ tr:last-child td { border-bottom: 0; }
   font-size: 22px;
   letter-spacing: -.03em;
 }
-.crewPlanningModalPerson span {
+.crewPlanningModalRole {
   display: block;
   margin-top: 3px;
   color: var(--muted);
@@ -2740,49 +2740,86 @@ tr:last-child td { border-bottom: 0; }
   color: var(--ink);
   font-size: 11px;
 }
-.crewPlanningField {
+.crewPlanningReadOnlyGrid {
   display: grid;
-  gap: 7px;
-  margin-top: 14px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(160px, .8fr);
+  gap: 12px;
+  margin-top: 12px;
 }
-.crewPlanningField textarea,
-.crewPlanningField input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #dcd6ce;
-  border-radius: 10px;
+.crewPlanningReadOnlyCard {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #e5e0d9;
+  border-radius: 12px;
   background: #fff;
+}
+.crewPlanningReadOnlyCard > span {
+  color: #ee5a24;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.crewPlanningReadOnlyCard p {
+  margin: 7px 0 0;
   color: var(--ink);
-  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.crewPlanningTimeline {
+  display: grid;
+}
+.crewPlanningTimelineRow {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 14px;
+  padding: 13px 16px;
+  border-top: 1px solid #ede9e3;
+}
+.crewPlanningTimelineRow:first-child {
+  border-top: 0;
+}
+.crewPlanningTimelineRow.active {
+  background: #fff1e8;
+  box-shadow: inset 3px 0 0 #ef642f;
+}
+.crewPlanningTimelineTime {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.crewPlanningTimelineTime strong {
+  font-size: 11px;
+}
+.crewPlanningTimelineTime span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.crewPlanningTimelineBody {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.crewPlanningTimelineBody > strong {
   font-size: 12px;
 }
-.crewPlanningField textarea {
-  min-height: 88px;
-  resize: vertical;
-  padding: 11px 12px;
+.crewPlanningTimelineBody > small {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: capitalize;
 }
-.crewPlanningField input {
-  height: 42px;
-  padding: 0 12px;
-}
-.crewPlanningField textarea:focus,
-.crewPlanningField input:focus {
-  outline: 2px solid rgba(239, 100, 47, .18);
-  border-color: #ef642f;
-}
-.crewPlanningModalFooter {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  min-height: 38px;
-  margin-top: 18px;
-}
-.crewPlanningModalFooter > small {
-  margin-right: auto;
-  color: #3d7c4c;
+.crewPlanningTimelineBody p {
+  margin: 3px 0 0;
+  color: var(--muted);
   font-size: 10px;
-  font-weight: 800;
+  line-height: 1.4;
+}
+.crewPlanningTimelineEmpty {
+  padding: 16px;
+  color: var(--muted);
+  font-size: 10px;
 }
 @media (max-width: 640px) {
   .crewPlanningModalBackdrop {
@@ -2795,14 +2832,12 @@ tr:last-child td { border-bottom: 0; }
     border-radius: 20px 20px 0 0;
     padding: 22px 18px 20px;
   }
-  .crewPlanningInfoGrid {
+  .crewPlanningInfoGrid,
+  .crewPlanningReadOnlyGrid {
     grid-template-columns: 1fr;
   }
-  .crewPlanningScheduleRow {
-    grid-template-columns: auto auto auto;
-  }
-  .crewPlanningScheduleRow b {
-    grid-column: 1 / -1;
-    justify-self: start;
+  .crewPlanningTimelineRow {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 }
