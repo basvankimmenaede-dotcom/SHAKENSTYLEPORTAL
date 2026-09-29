@@ -26,7 +26,7 @@ export default function AppShell({
               <Link href="/planning">Planning</Link>
               <Link href="/admin/distributors">Distributeurs</Link>
               <Link href="/admin/brands">Merken</Link>
-              <Link href="/admin/users">Gebruikers</Link>
+              <Link href="/admin/users">Gebruikers & rechten</Link>
               <Link href="/account" className="accountLink">Accountgegevens</Link>
               <Link href="/portal" className="previewLink">Gebruikersweergave</Link>
             </>
