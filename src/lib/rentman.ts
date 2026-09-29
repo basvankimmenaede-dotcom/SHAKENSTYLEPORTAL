@@ -512,6 +512,38 @@ export async function getPlanningCrewAssignments() {
 }
 
 
+export type RentmanPlanningProjectVehicle = {
+  id: number;
+  function?: {
+    id?: number;
+    project?: string | null;
+    displayname?: string;
+    name?: string;
+    planperiod_start?: string | null;
+    planperiod_end?: string | null;
+    usageperiod_start?: string | null;
+    usageperiod_end?: string | null;
+    group?: {
+      id?: number;
+      displayname?: string;
+      name?: string;
+    } | string | null;
+  } | null;
+  vehicle?: {
+    id?: number;
+    displayname?: string;
+    name?: string;
+    licenseplate?: string;
+  } | null;
+};
+
+export async function getPlanningProjectVehicles() {
+  return rentmanFetchAll<RentmanPlanningProjectVehicle>(
+    '/projectvehicles?fields=id,function,vehicle&expand=function,vehicle&sort=-id&limit=1500',
+  );
+}
+
+
 export type RentmanPlanningProjectFunction = {
   id: number;
   name?: string;
