@@ -155,7 +155,7 @@ export default function CrewPlanningPopup(props: Props) {
             </div>
 
             <div className="crewPlanningReadOnlyGrid">
-              <div className="crewPlanningReadOnlyCard">
+              <div className="crewPlanningReadOnlyCard crewPlanningNotesCard">
                 <span>Notities</span>
                 <p>{props.notes || '—'}</p>
               </div>
