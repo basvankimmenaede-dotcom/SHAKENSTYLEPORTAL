@@ -24,6 +24,7 @@ import TodoistTaskItem from '@/components/TodoistTaskItem';
 import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 import CrewPlanningPopup from '@/components/CrewPlanningPopup';
 import PlanningTaskCreateButton from '@/components/PlanningTaskCreateButton';
+import PlanningTaskFilterControls from '@/components/PlanningTaskFilterControls';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -203,14 +204,8 @@ function CompactProjectRow({
   );
 }
 
-export default async function PlanningPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ tasks?: string | string[] }>;
-}) {
+export default async function PlanningPage() {
   const { supabase, user } = await requirePlanningUser();
-  const params = await searchParams;
-  const taskFilter = params?.tasks === 'mine' ? 'mine' : 'all';
 
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
@@ -302,9 +297,7 @@ export default async function PlanningPage({
       row.assignee_profile_id ? String(row.assignee_profile_id) : null,
     ]),
   );
-  const todoistTasks = taskFilter === 'mine'
-    ? allTodoistTasks.filter((task) => taskAssigneeById.get(task.id) === user.id)
-    : allTodoistTasks;
+  const todoistTasks = allTodoistTasks;
 
   const checklistByNumber = new Map(
     checklists
@@ -662,11 +655,8 @@ export default async function PlanningPage({
               <h2>Taken</h2>
             </div>
             <div className="planningTaskHeaderActions">
-              <div className="planningTaskFilters">
-                <Link href="?tasks=mine" className={taskFilter === 'mine' ? 'active' : ''}>Mijn taken</Link>
-                <Link href="?tasks=all" className={taskFilter === 'all' ? 'active' : ''}>Alles</Link>
-              </div>
-              <strong>{todoistTasks.length} open</strong>
+              <PlanningTaskFilterControls />
+              <strong data-open-task-count>{todoistTasks.length} open</strong>
               <PlanningTaskCreateButton
                 assignees={assignees}
                 projects={planning.allProjects
@@ -684,12 +674,12 @@ export default async function PlanningPage({
             </div>
           </div>
 
-          <div className="planningAgendaList">
+          <div className="planningAgendaList" id="planning-task-list">
             {overdueTasks.length ? (
-              <section className="planningAgendaDay planningOverdueDay" id="todo-today">
+              <section className="planningAgendaDay planningOverdueDay" id="todo-today" data-task-section="overdue">
                 <div className="planningAgendaDayHeader">
                   <strong>Te laat</strong>
-                  <span>{overdueTasks.length} taken</span>
+                  <span data-task-count-label>{overdueTasks.length} {overdueTasks.length === 1 ? 'taak' : 'taken'}</span>
                 </div>
                 <div className="compactTaskList">
                   {overdueTasks.map((task) => {
@@ -706,6 +696,7 @@ export default async function PlanningPage({
                         labels={task.labels}
                         assignees={assignees}
                         assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                        currentUserId={user.id}
                         urgent
                       />
                     );
@@ -717,10 +708,10 @@ export default async function PlanningPage({
             {weekDays.map((dateKey) => {
               const tasks = tasksByDay.get(dateKey) ?? [];
               return (
-                <section className="planningAgendaDay" key={dateKey}>
+                <section className="planningAgendaDay" key={dateKey} data-task-section="dated">
                   <div className="planningAgendaDayHeader">
                     <strong>{dayLongLabel(dateKey, planning.today)}</strong>
-                    <span>{tasks.length} taken</span>
+                    <span data-task-count-label>{tasks.length} {tasks.length === 1 ? 'taak' : 'taken'}</span>
                   </div>
                   {tasks.length ? (
                     <div className="compactTaskList">
@@ -738,6 +729,8 @@ export default async function PlanningPage({
                             labels={task.labels}
                             assignees={assignees}
                             assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                            currentUserId={user.id}
+                        currentUserId={user.id}
                             urgent={meta.urgent}
                           />
                         );
@@ -751,10 +744,10 @@ export default async function PlanningPage({
             })}
 
             {noDateTasks.length ? (
-              <section className="planningAgendaDay">
+              <section className="planningAgendaDay" data-task-section="nodate">
                 <div className="planningAgendaDayHeader">
                   <strong>Zonder deadline</strong>
-                  <span>{noDateTasks.length} taken</span>
+                  <span data-task-count-label>{noDateTasks.length} {noDateTasks.length === 1 ? 'taak' : 'taken'}</span>
                 </div>
                 <div className="compactTaskList">
                   {noDateTasks.map((task) => {
@@ -770,6 +763,7 @@ export default async function PlanningPage({
                         labels={task.labels}
                         assignees={assignees}
                         assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                        currentUserId={user.id}
                       />
                     );
                   })}
