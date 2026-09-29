@@ -3,6 +3,8 @@ import type { RentmanPlanningEquipmentGroup, RentmanPlanningProject } from '@/li
 
 export type BillingStatus = 'open' | 'invoiced' | 'skip';
 
+const BILLING_QUEUE_START_DATE = '2026-09-29';
+
 export function billingUsageRange(
   project: RentmanPlanningProject,
   equipmentGroupsByProjectId: Map<number, RentmanPlanningEquipmentGroup[]>,
@@ -54,7 +56,11 @@ export async function syncBillingQueueFromPlanning({
   const candidates = projects
     .filter((project) => !project.is_cancelled)
     .map((project) => ({ project, range: billingUsageRange(project, equipmentGroupsByProjectId) }))
-    .filter(({ range }) => Boolean(range.end) && new Date(String(range.end)).getTime() <= Date.now());
+    .filter(({ range }) =>
+      Boolean(range.end)
+      && String(range.end).slice(0, 10) >= BILLING_QUEUE_START_DATE
+      && new Date(String(range.end)).getTime() <= Date.now()
+    );
 
   if (!candidates.length) return 0;
 
