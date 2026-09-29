@@ -334,22 +334,8 @@ export default async function PlanningPage() {
       return aDate.localeCompare(bDate);
     });
 
-  const activeTodoistIds = new Set(todoistTasks.map((task) => task.id));
-  const checklistActionItems = checklists.flatMap((checklist) =>
-    (checklist.project_checklist_items ?? [])
-      .filter((item) =>
-        !item.completed
-        && Boolean(item.due_date)
-        && Boolean(planning.today)
-        && String(item.due_date) <= planning.today
-        && (!item.todoist_task_id || !activeTodoistIds.has(item.todoist_task_id))
-      )
-      .map((item) => ({
-        ...item,
-        projectNumber: checklist.rentman_project_number,
-      })),
-  );
-  const todayActionCount = todayActionTasks.length + checklistActionItems.length;
+  const todayActionCount = todayActionTasks.length;
+
 
   const noDateTasks = todoistTasks
     .filter((task) => !taskDate(task))
@@ -439,10 +425,10 @@ export default async function PlanningPage() {
             <span>Actie voor vandaag</span>
             <strong>{todayActionCount} {todayActionCount === 1 ? 'actie vraagt' : 'acties vragen'} vandaag aandacht</strong>
             <small>
-              {[
-                ...todayActionTasks.map((task) => displayTaskContent(task, taskProjectNumber.get(task.id))),
-                ...checklistActionItems.map((item) => `#${item.projectNumber ?? '?'} ${item.label}`),
-              ].slice(0, 3).join(' · ')}
+              {todayActionTasks
+                .map((task) => displayTaskContent(task, taskProjectNumber.get(task.id)))
+                .slice(0, 3)
+                .join(' · ')}
               {todayActionCount > 3 ? ` · +${todayActionCount - 3} meer` : ''}
             </small>
           </div>
