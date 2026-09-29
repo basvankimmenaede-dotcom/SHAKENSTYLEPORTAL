@@ -4,6 +4,7 @@ import {
   getPlanningProjects,
   getPlanningProjectPeriod,
   getPlanningCrewAssignments,
+  getOverdueReturnProjects as getRentmanOverdueReturnProjects,
   type RentmanPlanningProject,
   type RentmanPlanningCrewAssignment,
 } from '@/lib/rentman';
@@ -81,14 +82,6 @@ function checklistProgress(checklist?: ChecklistRow) {
   const scope = required.length ? required : items;
   const done = scope.filter((item) => item.completed).length;
   return { done, total: scope.length, percent: Math.round((done / scope.length) * 100) };
-}
-
-function returnComplete(checklist?: ChecklistRow) {
-  return Boolean(
-    checklist?.project_checklist_items?.find(
-      (item) => item.label.trim().toLowerCase() === 'retour volledig',
-    )?.completed,
-  );
 }
 
 function projectOverlapsDate(project: RentmanPlanningProject, dateKey: string) {
@@ -370,23 +363,10 @@ export default async function PlanningPage() {
     .sort((a, b) => (taskDate(a) ?? '').localeCompare(taskDate(b) ?? ''))
     .slice(0, 8);
 
-  const thirtyDaysAgo = planning.today
-    ? new Date(`${planning.today}T12:00:00+02:00`).getTime() - (30 * 24 * 60 * 60 * 1000)
-    : 0;
-
-  const overdueReturnProjects = planning.allProjects
-    .filter((project) => {
-      const period = getPlanningProjectPeriod(project);
-      if (!period.endDate || !planning.today || period.endDate >= planning.today) return false;
-      const endTime = new Date(`${period.endDate}T12:00:00+02:00`).getTime();
-      if (endTime < thirtyDaysAgo) return false;
-      return !returnComplete(getChecklist(project));
-    })
-    .sort((a, b) => {
-      const aEnd = getPlanningProjectPeriod(a).endDate ?? '';
-      const bEnd = getPlanningProjectPeriod(b).endDate ?? '';
-      return bEnd.localeCompare(aEnd);
-    });
+  const rentmanReturnResult = planning.today
+    ? getRentmanOverdueReturnProjects(planning.allProjects, planning.today)
+    : { configured: false, projects: [] as RentmanPlanningProject[] };
+  const overdueReturnProjects = rentmanReturnResult.projects;
 
   const weeklyCrewCount = weekDays.reduce(
     (sum, dateKey) => sum + (crewByDay.get(dateKey)?.length ?? 0),
@@ -714,7 +694,11 @@ export default async function PlanningPage() {
             <div className="planningOpsHeader planningExpiredHeader">
               <div>
                 <span>Verlopen bonnen</span>
-                <small>Projectperiode voorbij en retour nog niet afgerond.</small>
+                <small>
+                  {rentmanReturnResult.configured
+                    ? 'Projectperiode voorbij en retour in Rentman nog niet afgerond.'
+                    : 'Retourstatus in Rentman is nog niet gekoppeld.'}
+                </small>
               </div>
               <strong>{overdueReturnProjects.length}</strong>
             </div>
