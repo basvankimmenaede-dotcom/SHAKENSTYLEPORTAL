@@ -6,6 +6,7 @@ import {
   getPlanningCrewAssignments,
   getPlanningProjectFunctionGroups,
   getPlanningProjectFunctions,
+  getPlanningProjectEquipmentGroups,
   getPlanningProjectVehicles,
   getOverdueReturnProjects as getRentmanOverdueReturnProjects,
   type RentmanPlanningProject,
@@ -95,11 +96,13 @@ function projectOverlapsDate(project: RentmanPlanningProject, dateKey: string) {
   return period.startDate <= dateKey && period.endDate >= dateKey;
 }
 
-function projectOverlapsUsageDate(project: RentmanPlanningProject, dateKey: string) {
-  const startDate = project.usageperiod_start?.slice(0, 10) ?? null;
-  const endDate = project.usageperiod_end?.slice(0, 10) ?? startDate;
-  if (!startDate || !endDate) return false;
-  return startDate <= dateKey && endDate >= dateKey;
+function projectOverlapsUsageDate(
+  project: RentmanPlanningProject,
+  dateKey: string,
+  range: { startDate: string | null; endDate: string | null },
+) {
+  if (!range.startDate || !range.endDate) return false;
+  return range.startDate <= dateKey && range.endDate >= dateKey;
 }
 
 function isLongTermRental(project: RentmanPlanningProject) {
@@ -149,7 +152,12 @@ function CompactProjectRow({
   checklist?: ChecklistRow;
   templates: ChecklistTemplate[];
 }) {
-  const period = getPlanningProjectPeriod(project);
+  const period = {
+    start: project.usageperiod_start ?? project.planperiod_start ?? null,
+    end: project.usageperiod_end ?? project.planperiod_end ?? null,
+    startDate: (project.usageperiod_start ?? project.planperiod_start)?.slice(0, 10) ?? null,
+    endDate: (project.usageperiod_end ?? project.planperiod_end)?.slice(0, 10) ?? null,
+  };
   const start = formatTime(period.start);
   const end = formatTime(period.end);
   const number = String(project.number ?? project.id);
@@ -203,7 +211,7 @@ export default async function PlanningPage() {
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, crewResult, functionGroupsResult, projectFunctionsResult, projectVehiclesResult, checklistResult, templateResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, functionGroupsResult, projectFunctionsResult, equipmentGroupsResult, projectVehiclesResult, checklistResult, templateResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -228,6 +236,9 @@ export default async function PlanningPage() {
     getPlanningProjectFunctions()
       .then((value) => ({ value, error: null as string | null }))
       .catch(() => ({ value: [], error: null as string | null })),
+    getPlanningProjectEquipmentGroups()
+      .then((value) => ({ value, error: null as string | null }))
+      .catch(() => ({ value: [], error: null as string | null })),
     getPlanningProjectVehicles()
       .then((value) => ({ value, error: null as string | null }))
       .catch(() => ({ value: [], error: null as string | null })),
@@ -246,6 +257,7 @@ export default async function PlanningPage() {
   const crewAssignments = crewResult.value;
   const projectFunctionGroups = functionGroupsResult.value;
   const projectFunctions = projectFunctionsResult.value;
+  const equipmentGroups = equipmentGroupsResult.value;
   const projectVehicles = projectVehiclesResult.value;
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
@@ -299,6 +311,52 @@ export default async function PlanningPage() {
     functionsByProjectId.set(projectId, current);
   }
 
+  const equipmentGroupsByProjectId = new Map<number, typeof equipmentGroups>();
+  for (const group of equipmentGroups) {
+    const projectId = Number(group.project?.split('/').pop());
+    if (!Number.isFinite(projectId)) continue;
+    const current = equipmentGroupsByProjectId.get(projectId) ?? [];
+    current.push(group);
+    equipmentGroupsByProjectId.set(projectId, current);
+  }
+
+  function agendaUsageRange(project: RentmanPlanningProject) {
+    const groups = equipmentGroupsByProjectId.get(project.id) ?? [];
+    const usableGroups = groups.filter((group) => group.usageperiod_start && group.usageperiod_end);
+
+    if (usableGroups.length) {
+      const counts = new Map<string, { start: string; end: string; count: number }>();
+      for (const group of usableGroups) {
+        const start = String(group.usageperiod_start);
+        const end = String(group.usageperiod_end);
+        const key = `${start}|${end}`;
+        const current = counts.get(key);
+        counts.set(key, current ? { ...current, count: current.count + 1 } : { start, end, count: 1 });
+      }
+
+      const mostUsed = Array.from(counts.values())
+        .sort((a, b) => b.count - a.count || a.start.localeCompare(b.start))[0];
+
+      if (mostUsed) {
+        return {
+          start: mostUsed.start,
+          end: mostUsed.end,
+          startDate: mostUsed.start.slice(0, 10),
+          endDate: mostUsed.end.slice(0, 10),
+        };
+      }
+    }
+
+    const start = project.usageperiod_start ?? null;
+    const end = project.usageperiod_end ?? start;
+    return {
+      start,
+      end,
+      startDate: start?.slice(0, 10) ?? null,
+      endDate: end?.slice(0, 10) ?? null,
+    };
+  }
+
   const vehiclesByProjectId = new Map<number, typeof projectVehicles>();
   for (const item of projectVehicles) {
     const projectId = Number(item.function?.project?.split('/').pop());
@@ -344,10 +402,10 @@ export default async function PlanningPage() {
     projectsByDay.set(
       dateKey,
       planning.allProjects
-        .filter((project) => !isLongTermRental(project) && projectOverlapsUsageDate(project, dateKey))
+        .filter((project) => !isLongTermRental(project) && projectOverlapsUsageDate(project, dateKey, agendaUsageRange(project)))
         .sort((a, b) => {
-          const aStart = a.usageperiod_start ?? a.planperiod_start ?? '';
-          const bStart = b.usageperiod_start ?? b.planperiod_start ?? '';
+          const aStart = agendaUsageRange(a).start ?? '';
+          const bStart = agendaUsageRange(b).start ?? '';
           return aStart.localeCompare(bStart);
         }),
     );
