@@ -27,6 +27,14 @@ type Props = {
   notes?: string | null;
   bar?: string | null;
   timeline?: TimelineItem[];
+  vehicles?: Array<{
+    id: number;
+    name: string;
+    licensePlate?: string | null;
+    functionName?: string | null;
+    start?: string | null;
+    end?: string | null;
+  }>;
 };
 
 import { useEffect, useState } from 'react';
@@ -78,6 +86,7 @@ export default function CrewPlanningPopup(props: Props) {
 
   const role = [props.functionName, props.groupName].filter(Boolean).join(' · ');
   const timeline = props.timeline ?? [];
+  const vehicles = props.vehicles ?? [];
 
   return (
     <>
@@ -163,6 +172,30 @@ export default function CrewPlanningPopup(props: Props) {
                 <span>Bar</span>
                 <p>{props.bar || '—'}</p>
               </div>
+            </div>
+
+            <div className="crewPlanningVehicleCard">
+              <span>Bus / voertuig</span>
+              {vehicles.length ? (
+                <div className="crewPlanningVehicleList">
+                  {vehicles.map((vehicle) => (
+                    <div className="crewPlanningVehicleRow" key={vehicle.id}>
+                      <div>
+                        <strong>{vehicle.name}</strong>
+                        {vehicle.licensePlate ? <small>{vehicle.licensePlate}</small> : null}
+                      </div>
+                      <div>
+                        {vehicle.functionName ? <span>{vehicle.functionName}</span> : null}
+                        {(vehicle.start || vehicle.end) ? (
+                          <small>{formatShortDate(vehicle.start)} · {formatTime(vehicle.start)} – {formatTime(vehicle.end)}</small>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>Geen bus gepland in Rentman.</p>
+              )}
             </div>
 
             <div className="crewPlanningSchedule">
