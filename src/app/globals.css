@@ -3040,9 +3040,6 @@ tr:last-child td { border-bottom: 0; }
   align-items: center;
   gap: 10px;
 }
-.planningTaskCreate {
-  position: relative;
-}
 .planningTaskCreateButton {
   border: 1px solid #ef642f;
   border-radius: 999px;
@@ -3058,54 +3055,86 @@ tr:last-child td { border-bottom: 0; }
 .planningTaskCreateButton:hover {
   background: #fff5ef;
 }
-.planningTaskCreatePanel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 50;
-  width: min(420px, calc(100vw - 32px));
-  padding: 14px;
-  border: 1px solid #e5e0d9;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 16px 45px rgba(38, 34, 30, .16);
-}
-.planningTaskCreatePanel label {
+.planningTaskCreateBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
   display: grid;
-  gap: 5px;
+  place-items: center;
+  padding: 24px;
+  background: rgba(37, 34, 31, .48);
+  backdrop-filter: blur(3px);
 }
-.planningTaskCreatePanel label > span {
-  color: var(--muted);
-  font-size: 8px;
+.planningTaskCreateModal {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 22px;
+  border: 1px solid #e3ddd5;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgba(38, 34, 30, .22);
+}
+.planningTaskCreateModal h2 {
+  margin: 0 42px 18px 0;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+.planningTaskCreateClose {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+.planningTaskCreateClose:hover {
+  background: #f2efeb;
+}
+.planningTaskCreateModal label {
+  display: grid;
+  gap: 6px;
+}
+.planningTaskCreateModal label > span {
+  color: var(--ink);
+  font-size: 9px;
   font-weight: 900;
-  letter-spacing: .06em;
-  text-transform: uppercase;
 }
-.planningTaskCreatePanel input,
-.planningTaskCreatePanel select {
+.planningTaskCreateModal input,
+.planningTaskCreateModal select {
   width: 100%;
   box-sizing: border-box;
-  height: 38px;
+  height: 44px;
   border: 1px solid #ddd7cf;
-  border-radius: 9px;
+  border-radius: 10px;
   background: #fff;
   color: var(--ink);
-  padding: 0 10px;
+  padding: 0 11px;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
+}
+.planningTaskCreateModal input:focus,
+.planningTaskCreateModal select:focus {
+  border-color: #ef642f;
+  outline: 2px solid rgba(239, 100, 47, .16);
 }
 .planningTaskCreateGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(130px, .8fr);
-  gap: 9px;
-  margin-top: 9px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(150px, .8fr);
+  gap: 10px;
+  margin-top: 12px;
 }
 .planningTaskCreateActions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 11px;
+  margin-top: 18px;
 }
 .planningTaskCreateActions > small {
   margin-right: auto;
@@ -3118,13 +3147,14 @@ tr:last-child td { border-bottom: 0; }
     flex-direction: column;
     gap: 5px;
   }
-  .planningTaskCreatePanel {
-    position: fixed;
-    top: auto;
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
-    width: auto;
+  .planningTaskCreateBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .planningTaskCreateModal {
+    width: 100%;
+    border-radius: 18px 18px 0 0;
+    padding: 20px 16px;
   }
   .planningTaskCreateGrid {
     grid-template-columns: 1fr;
