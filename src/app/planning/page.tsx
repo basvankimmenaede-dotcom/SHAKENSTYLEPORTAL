@@ -5,6 +5,7 @@ import {
   getPlanningProjectPeriod,
   getPlanningCrewAssignments,
   getPlanningProjectFunctionGroups,
+  getPlanningProjectFunctions,
   getOverdueReturnProjects as getRentmanOverdueReturnProjects,
   type RentmanPlanningProject,
   type RentmanPlanningCrewAssignment,
@@ -193,7 +194,7 @@ export default async function PlanningPage() {
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, crewResult, functionGroupsResult, checklistResult, templateResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, functionGroupsResult, projectFunctionsResult, checklistResult, templateResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -215,6 +216,9 @@ export default async function PlanningPage() {
     getPlanningProjectFunctionGroups()
       .then((value) => ({ value, error: null as string | null }))
       .catch(() => ({ value: [], error: null as string | null })),
+    getPlanningProjectFunctions()
+      .then((value) => ({ value, error: null as string | null }))
+      .catch(() => ({ value: [], error: null as string | null })),
     supabase
       .from('project_checklists')
       .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order,deadline_offset_days,due_date,todoist_task_id)'),
@@ -229,6 +233,7 @@ export default async function PlanningPage() {
   const todoistTasks = todoistResult.value;
   const crewAssignments = crewResult.value;
   const projectFunctionGroups = functionGroupsResult.value;
+  const projectFunctions = projectFunctionsResult.value;
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
@@ -270,6 +275,15 @@ export default async function PlanningPage() {
     const current = functionGroupsByProjectId.get(projectId) ?? [];
     current.push(group);
     functionGroupsByProjectId.set(projectId, current);
+  }
+
+  const functionsByProjectId = new Map<number, typeof projectFunctions>();
+  for (const fn of projectFunctions) {
+    const projectId = Number(fn.project?.split('/').pop());
+    if (!Number.isFinite(projectId)) continue;
+    const current = functionsByProjectId.get(projectId) ?? [];
+    current.push(fn);
+    functionsByProjectId.set(projectId, current);
   }
 
   const crewByDay = new Map<string, RentmanPlanningCrewAssignment[]>();
@@ -696,29 +710,73 @@ export default async function PlanningPage() {
                             contactEmail={locationContact?.email || null}
                             notes={typeof project?.custom?.custom_103 === 'string' ? project.custom.custom_103 : null}
                             bar={typeof project?.custom?.custom_38 === 'string' ? project.custom.custom_38 : null}
-                            timeline={project ? [
-                              {
-                                id: -(project.id * 10 + 1),
-                                name: 'Gebruiksperiode',
-                                start: project.usageperiod_start ?? null,
-                                end: project.usageperiod_end ?? null,
-                                remark: null,
-                              },
-                              {
-                                id: -(project.id * 10 + 2),
-                                name: 'Planperiode',
-                                start: project.planperiod_start ?? null,
-                                end: project.planperiod_end ?? null,
-                                remark: null,
-                              },
-                              ...(functionGroupsByProjectId.get(project.id) ?? []).map((group) => ({
-                                id: group.id,
-                                name: group.displayname || group.name || null,
-                                start: group.planperiod_start || group.usageperiod_start || null,
-                                end: group.planperiod_end || group.usageperiod_end || null,
-                                remark: group.remark || null,
-                              })),
-                            ].filter((item) => item.start || item.end) : []}
+                            timeline={project ? (() => {
+                              const groups = functionGroupsByProjectId.get(project.id) ?? [];
+                              const functions = functionsByProjectId.get(project.id) ?? [];
+                              const timelineGroups = new Map<number | string, {
+                                id: number;
+                                name: string | null;
+                                start: string | null;
+                                end: string | null;
+                                remark: string | null;
+                              }>();
+
+                              for (const group of groups) {
+                                timelineGroups.set(group.id, {
+                                  id: group.id,
+                                  name: group.displayname || group.name || null,
+                                  start: group.planperiod_start || group.usageperiod_start || null,
+                                  end: group.planperiod_end || group.usageperiod_end || null,
+                                  remark: group.remark || null,
+                                });
+                              }
+
+                              for (const projectFunction of functions) {
+                                const group = projectFunction.group;
+                                if (group?.id) {
+                                  if (!timelineGroups.has(group.id)) {
+                                    timelineGroups.set(group.id, {
+                                      id: group.id,
+                                      name: group.displayname || group.name || null,
+                                      start: group.planperiod_start || group.usageperiod_start
+                                        || projectFunction.planperiod_start || projectFunction.usageperiod_start || null,
+                                      end: group.planperiod_end || group.usageperiod_end
+                                        || projectFunction.planperiod_end || projectFunction.usageperiod_end || null,
+                                      remark: group.remark || null,
+                                    });
+                                  }
+                                  continue;
+                                }
+
+                                timelineGroups.set(`function-${projectFunction.id}`, {
+                                  id: projectFunction.id,
+                                  name: projectFunction.displayname || projectFunction.name || null,
+                                  start: projectFunction.planperiod_start || projectFunction.usageperiod_start || null,
+                                  end: projectFunction.planperiod_end || projectFunction.usageperiod_end || null,
+                                  remark: null,
+                                });
+                              }
+
+                              return [
+                                {
+                                  id: -(project.id * 10 + 1),
+                                  name: 'Gebruiksperiode',
+                                  start: project.usageperiod_start ?? null,
+                                  end: project.usageperiod_end ?? null,
+                                  remark: null,
+                                },
+                                {
+                                  id: -(project.id * 10 + 2),
+                                  name: 'Planperiode',
+                                  start: project.planperiod_start ?? null,
+                                  end: project.planperiod_end ?? null,
+                                  remark: null,
+                                },
+                                ...Array.from(timelineGroups.values()),
+                              ]
+                                .filter((item) => item.start || item.end)
+                                .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''));
+                            })() : []}
                           />
                         );
                       })}
