@@ -696,13 +696,29 @@ export default async function PlanningPage() {
                             contactEmail={locationContact?.email || null}
                             notes={typeof project?.custom?.custom_103 === 'string' ? project.custom.custom_103 : null}
                             bar={typeof project?.custom?.custom_38 === 'string' ? project.custom.custom_38 : null}
-                            timeline={(project ? functionGroupsByProjectId.get(project.id) ?? [] : []).map((group) => ({
-                              id: group.id,
-                              name: group.displayname || group.name || null,
-                              start: group.planperiod_start || group.usageperiod_start || null,
-                              end: group.planperiod_end || group.usageperiod_end || null,
-                              remark: group.remark || null,
-                            }))}
+                            timeline={project ? [
+                              {
+                                id: -(project.id * 10 + 1),
+                                name: 'Gebruiksperiode',
+                                start: project.usageperiod_start ?? null,
+                                end: project.usageperiod_end ?? null,
+                                remark: null,
+                              },
+                              {
+                                id: -(project.id * 10 + 2),
+                                name: 'Planperiode',
+                                start: project.planperiod_start ?? null,
+                                end: project.planperiod_end ?? null,
+                                remark: null,
+                              },
+                              ...(functionGroupsByProjectId.get(project.id) ?? []).map((group) => ({
+                                id: group.id,
+                                name: group.displayname || group.name || null,
+                                start: group.planperiod_start || group.usageperiod_start || null,
+                                end: group.planperiod_end || group.usageperiod_end || null,
+                                remark: group.remark || null,
+                              })),
+                            ].filter((item) => item.start || item.end) : []}
                           />
                         );
                       })}
