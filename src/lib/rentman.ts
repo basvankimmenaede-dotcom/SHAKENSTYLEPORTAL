@@ -312,7 +312,23 @@ export type RentmanPlanningProject = {
   usageperiod_end?: string | null;
   planperiod_start?: string | null;
   planperiod_end?: string | null;
-  location?: { displayname?: string; name?: string } | null;
+  location?: {
+    displayname?: string;
+    name?: string;
+    visit_street?: string;
+    visit_number?: string;
+    visit_postalcode?: string;
+    visit_city?: string;
+  } | null;
+  loc_contact?: {
+    displayname?: string;
+    firstname?: string;
+    middle_name?: string;
+    lastname?: string;
+    phone?: string;
+    mobilephone?: string;
+    email?: string;
+  } | null;
   customer?: { displayname?: string; name?: string } | null;
   project_type?: { id?: number; displayname?: string; name?: string; color?: string } | null;
   custom?: Record<string, unknown>;
@@ -357,8 +373,8 @@ function overlapsDate(project: RentmanPlanningProject, dateKey: string) {
 
 export async function getPlanningProjects() {
   const params = new URLSearchParams({
-    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,customer,project_type,custom',
-    expand: 'location,customer,project_type',
+    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,loc_contact,customer,project_type,custom',
+    expand: 'location,loc_contact,customer,project_type',
     sort: '-id',
     limit: '500',
   });
