@@ -54,6 +54,16 @@ function sameDate(a?: string | null, b?: string | null) {
   return Boolean(a && b && a.slice(0, 10) === b.slice(0, 10));
 }
 
+function formatShortDate(value?: string | null) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('nl-NL', {
+    timeZone: 'Europe/Amsterdam',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
 export default function CrewPlanningPopup(props: Props) {
   const [open, setOpen] = useState(false);
 
@@ -175,15 +185,19 @@ export default function CrewPlanningPopup(props: Props) {
                         className={active ? 'crewPlanningTimelineRow active' : 'crewPlanningTimelineRow'}
                         key={item.id}
                       >
-                        <div className="crewPlanningTimelineTime">
-                          <strong>{formatTime(item.start)}</strong>
-                          <span>–</span>
-                          <strong>{formatTime(item.end)}</strong>
-                        </div>
                         <div className="crewPlanningTimelineBody">
                           <strong>{item.name || 'Activiteit'}</strong>
-                          <small>{formatDate(item.start)}</small>
                           {item.remark ? <p>{item.remark}</p> : null}
+                        </div>
+                        <div className="crewPlanningTimelineMoment">
+                          <span>Van</span>
+                          <strong>{formatShortDate(item.start)}</strong>
+                          <small>{formatTime(item.start)}</small>
+                        </div>
+                        <div className="crewPlanningTimelineMoment">
+                          <span>Tot</span>
+                          <strong>{formatShortDate(item.end)}</strong>
+                          <small>{formatTime(item.end)}</small>
                         </div>
                       </div>
                     );
