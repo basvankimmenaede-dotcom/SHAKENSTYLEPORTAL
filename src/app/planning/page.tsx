@@ -475,14 +475,6 @@ export default async function PlanningPage() {
     .filter((task) => !taskDate(task))
     .slice(0, 40);
 
-  const laterTasks = todoistTasks
-    .filter((task) => {
-      const date = taskDate(task);
-      return Boolean(date && weekDays.length && date > weekDays[weekDays.length - 1]);
-    })
-    .sort((a, b) => (taskDate(a) ?? '').localeCompare(taskDate(b) ?? ''))
-    .slice(0, 8);
-
   const rentmanReturnResult = planning.today
     ? getRentmanOverdueReturnProjects(planning.allProjects, planning.today)
     : { configured: false, projects: [] as RentmanPlanningProject[] };
@@ -493,18 +485,6 @@ export default async function PlanningPage() {
     0,
   );
 
-  const totalChecklistItems = checklists.reduce(
-    (sum, checklist) => sum + (checklist.project_checklist_items?.length ?? 0),
-    0,
-  );
-  const doneChecklistItems = checklists.reduce(
-    (sum, checklist) =>
-      sum + (checklist.project_checklist_items?.filter((item) => item.completed).length ?? 0),
-    0,
-  );
-  const checklistPercent = totalChecklistItems
-    ? Math.round((doneChecklistItems / totalChecklistItems) * 100)
-    : 0;
 
   return (
     <>
@@ -813,7 +793,6 @@ export default async function PlanningPage() {
 
             <div className="planningCrewDays">
               {weekDays.map((dateKey) => {
-                const assignments = crewByDay.get(dateKey) ?? [];
                 const assignmentGroups = crewGroupsByDay.get(dateKey) ?? [];
                 if (!assignmentGroups.length) return null;
 
