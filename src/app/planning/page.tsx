@@ -748,10 +748,8 @@ export default async function PlanningPage({
                               ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · ${taskDate(task) ? meta.text : 'gekoppeld aan project'}`.replace(' ·  · ', ' · ')
                               : meta.text}
                             labels={task.labels}
-                          assignees={assignees}
-                          assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
-                        assignees={assignees}
-                        assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                            assignees={assignees}
+                            assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                             urgent={meta.urgent}
                           />
                         );
