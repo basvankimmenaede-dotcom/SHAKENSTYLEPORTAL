@@ -730,7 +730,6 @@ export default async function PlanningPage() {
                             assignees={assignees}
                             assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                             currentUserId={user.id}
-                        currentUserId={user.id}
                             urgent={meta.urgent}
                           />
                         );
