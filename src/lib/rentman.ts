@@ -317,6 +317,7 @@ export type RentmanPlanningProject = {
   project_type?: { id?: number; displayname?: string; name?: string; color?: string } | null;
   custom?: Record<string, unknown>;
   is_cancelled?: boolean;
+  return_complete?: boolean | null;
 };
 
 function amsterdamDateKey(date = new Date()) {
@@ -362,25 +363,47 @@ export async function getPlanningProjects() {
     limit: '500',
   });
 
-  const [result, cancelledSubprojects] = await Promise.all([
+  const [result, subprojects] = await Promise.all([
     rentmanFetch<RentmanListResponse<RentmanPlanningProject>>(
       `/projects?${params.toString()}`,
     ),
-    rentmanFetchAll<{ project?: string | null }>(
-      '/subprojects?fields=id,project,status&status=/statuses/2&limit=1500',
+    rentmanFetchAll<{
+      project?: string | null;
+      status?: string | null;
+    }>(
+      '/subprojects?fields=id,project,status&limit=1500',
     ),
   ]);
 
+  const subprojectsByProjectId = new Map<number, Array<{ status?: string | null }>>();
+  for (const subproject of subprojects) {
+    const projectId = Number(subproject.project?.split('/').pop());
+    if (!Number.isFinite(projectId)) continue;
+    const current = subprojectsByProjectId.get(projectId) ?? [];
+    current.push(subproject);
+    subprojectsByProjectId.set(projectId, current);
+  }
+
   const cancelledProjectIds = new Set(
-    cancelledSubprojects
+    subprojects
+      .filter((subproject) => subproject.status === '/statuses/2')
       .map((subproject) => Number(subproject.project?.split('/').pop()))
       .filter(Number.isFinite),
   );
 
-  const projects = (result.data ?? []).map((project) => ({
-    ...project,
-    is_cancelled: cancelledProjectIds.has(project.id),
-  }));
+  const projects = (result.data ?? []).map((project) => {
+    const projectSubprojects = (subprojectsByProjectId.get(project.id) ?? [])
+      .filter((subproject) => subproject.status !== '/statuses/2');
+    const returnComplete = projectSubprojects.length
+      ? projectSubprojects.every((subproject) => subproject.status === '/statuses/6')
+      : null;
+
+    return {
+      ...project,
+      is_cancelled: cancelledProjectIds.has(project.id),
+      return_complete: returnComplete,
+    };
+  });
   const activeProjects = projects.filter((project) => !project.is_cancelled);
   const today = amsterdamDateKey();
   const tomorrow = addDays(today, 1);
@@ -405,34 +428,21 @@ export function getPlanningProjectPeriod(project: RentmanPlanningProject) {
 }
 
 
-function truthyPlanningValue(value: unknown) {
-  if (value === true || value === 1) return true;
-  if (typeof value === 'string') {
-    return ['yes', 'ja', 'true', '1', 'retour', 'compleet', 'complete', 'done'].includes(value.toLowerCase().trim());
-  }
-  return false;
-}
-
 export function getPlanningReturnState(project: RentmanPlanningProject) {
-  const fieldKey = process.env.RENTMAN_RETURN_COMPLETE_FIELD_KEY;
-  if (!fieldKey) return { configured: false, complete: null as boolean | null };
   return {
-    configured: true,
-    complete: truthyPlanningValue(project.custom?.[fieldKey]),
+    configured: project.return_complete !== null && project.return_complete !== undefined,
+    complete: project.return_complete ?? null,
   };
 }
 
 export function getOverdueReturnProjects(projects: RentmanPlanningProject[], today: string) {
-  const fieldKey = process.env.RENTMAN_RETURN_COMPLETE_FIELD_KEY;
-  if (!fieldKey) return { configured: false, projects: [] as RentmanPlanningProject[] };
-
   return {
     configured: true,
     projects: projects
       .filter((project) => {
         const range = projectDateRange(project);
         if (!range.endDate || range.endDate >= today) return false;
-        return !truthyPlanningValue(project.custom?.[fieldKey]);
+        return project.return_complete === false;
       })
       .sort((a, b) => {
         const aEnd = projectDateRange(a).endDate ?? '';
