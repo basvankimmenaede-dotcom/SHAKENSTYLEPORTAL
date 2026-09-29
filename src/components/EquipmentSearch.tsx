@@ -88,10 +88,11 @@ export default function EquipmentSearch({
                     <div className="itemImage">
                       {item.image ? (
                         <Image
+                          className="itemImageAsset"
                           src={item.image}
                           alt={item.name}
                           fill
-                          sizes="(max-width: 760px) 100vw, (max-width: 1120px) 50vw, 33vw"
+                          sizes="(max-width: 760px) 96px, 112px"
                         />
                       ) : <span>Geen afbeelding</span>}
                     </div>
