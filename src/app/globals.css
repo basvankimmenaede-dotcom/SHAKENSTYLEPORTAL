@@ -3208,3 +3208,71 @@ tr:last-child td { border-bottom: 0; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+
+/* Planning task assignees and filters */
+.planningTaskFilters {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid #e3ddd5;
+  border-radius: 999px;
+  background: #f7f5f2;
+}
+.planningTaskFilters a {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.planningTaskFilters a.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(30, 27, 24, .08);
+}
+.planningTaskAssigneeField {
+  margin-top: 12px;
+}
+.todoistAssignee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+.todoistAssignee > span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+.todoistAssignee select {
+  min-width: 0;
+  height: 25px;
+  max-width: 150px;
+  border: 1px solid #ddd7cf;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 22px 0 7px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 800;
+}
+@media (max-width: 760px) {
+  .planningTaskHeaderActions {
+    align-items: flex-end;
+  }
+  .planningTaskFilters {
+    order: 3;
+  }
+  .todoistAssignee {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .todoistAssignee select {
+    max-width: 100%;
+  }
+}
