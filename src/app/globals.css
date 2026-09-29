@@ -3276,3 +3276,53 @@ tr:last-child td { border-bottom: 0; }
     max-width: 100%;
   }
 }
+
+
+/* Central users & permissions */
+.centralPermissionsDetails {
+  margin-top: 14px;
+}
+.permissionsForm {
+  padding-top: 14px;
+}
+.permissionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.permissionControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #ece7df;
+  border-radius: 12px;
+  background: #fbfaf8;
+}
+.permissionControl > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.permissionControl strong {
+  font-size: 11px;
+}
+.permissionControl small {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+.permissionControl .select {
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .permissionsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .permissionControl {
+    grid-template-columns: 1fr;
+  }
+}
