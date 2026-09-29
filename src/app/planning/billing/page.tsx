@@ -5,16 +5,6 @@ import { requireModulePermission } from '@/lib/auth';
 import { amsterdamBillingDateKey, billingSyncNeeded, syncBillingQueueOncePerDay } from '@/lib/billing';
 import { getPlanningProjectEquipmentGroups, getPlanningProjects } from '@/lib/rentman';
 
-function formatDate(value?: string | null) {
-  if (!value) return '—';
-  return new Intl.DateTimeFormat('nl-NL', {
-    timeZone: 'Europe/Amsterdam',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value));
-}
-
 export default async function BillingPage() {
   const { supabase, user, permissionLevel } = await requireModulePermission('billing', 'view');
   const canManage = permissionLevel === 'manage';
