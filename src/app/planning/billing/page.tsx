@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { addManualBillingItem, setBillingItemStatus } from './actions';
 import { requireModulePermission } from '@/lib/auth';
+import { syncBillingQueueFromPlanning } from '@/lib/billing';
+import { getPlanningProjectEquipmentGroups, getPlanningProjects } from '@/lib/rentman';
 
 function formatDate(value?: string | null) {
   if (!value) return '—';
@@ -17,12 +19,25 @@ export default async function BillingPage({
 }: {
   searchParams?: Promise<{ status?: string }>;
 }) {
-  const { supabase, permissionLevel } = await requireModulePermission('billing', 'view');
+  const { supabase, user, permissionLevel } = await requireModulePermission('billing', 'view');
   const params = await searchParams;
   const status = ['open', 'invoiced', 'skip', 'all'].includes(String(params?.status))
     ? String(params?.status)
     : 'open';
   const canManage = permissionLevel === 'manage';
+
+  if (canManage) {
+    const [planningResult, equipmentGroups] = await Promise.all([
+      getPlanningProjects(),
+      getPlanningProjectEquipmentGroups(),
+    ]);
+    await syncBillingQueueFromPlanning({
+      supabase,
+      projects: planningResult.allProjects,
+      equipmentGroups,
+      userId: user.id,
+    });
+  }
 
   let query = supabase
     .from('billing_items')
