@@ -95,6 +95,13 @@ function projectOverlapsDate(project: RentmanPlanningProject, dateKey: string) {
   return period.startDate <= dateKey && period.endDate >= dateKey;
 }
 
+function projectOverlapsUsageDate(project: RentmanPlanningProject, dateKey: string) {
+  const startDate = project.usageperiod_start?.slice(0, 10) ?? null;
+  const endDate = project.usageperiod_end?.slice(0, 10) ?? startDate;
+  if (!startDate || !endDate) return false;
+  return startDate <= dateKey && endDate >= dateKey;
+}
+
 function isLongTermRental(project: RentmanPlanningProject) {
   const typeName = project.project_type?.displayname ?? project.project_type?.name ?? '';
   return typeName.trim().toLowerCase() === 'langdurige verhuur';
@@ -337,7 +344,7 @@ export default async function PlanningPage() {
     projectsByDay.set(
       dateKey,
       planning.allProjects
-        .filter((project) => !isLongTermRental(project) && projectOverlapsDate(project, dateKey))
+        .filter((project) => !isLongTermRental(project) && projectOverlapsUsageDate(project, dateKey))
         .sort((a, b) => {
           const aStart = a.usageperiod_start ?? a.planperiod_start ?? '';
           const bStart = b.usageperiod_start ?? b.planperiod_start ?? '';
@@ -568,11 +575,15 @@ export default async function PlanningPage() {
               <PlanningTaskCreateButton
                 projects={planning.allProjects
                   .filter((project) => project.number)
+                  .sort((a, b) => {
+                    const aDate = a.usageperiod_start ?? a.planperiod_start ?? '';
+                    const bDate = b.usageperiod_start ?? b.planperiod_start ?? '';
+                    return bDate.localeCompare(aDate);
+                  })
                   .map((project) => ({
                     number: String(project.number),
                     name: project.name,
-                  }))
-                  .sort((a, b) => Number(b.number) - Number(a.number))}
+                  }))}
               />
             </div>
           </div>
