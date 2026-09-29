@@ -24,6 +24,7 @@ import ProjectChecklist, {
 import TodoistTaskItem from '@/components/TodoistTaskItem';
 import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 import CrewPlanningPopup from '@/components/CrewPlanningPopup';
+import PlanningTaskCreateButton from '@/components/PlanningTaskCreateButton';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -338,8 +339,8 @@ export default async function PlanningPage() {
       planning.allProjects
         .filter((project) => !isLongTermRental(project) && projectOverlapsDate(project, dateKey))
         .sort((a, b) => {
-          const aStart = getPlanningProjectPeriod(a).start ?? '';
-          const bStart = getPlanningProjectPeriod(b).start ?? '';
+          const aStart = a.usageperiod_start ?? a.planperiod_start ?? '';
+          const bStart = b.usageperiod_start ?? b.planperiod_start ?? '';
           return aStart.localeCompare(bStart);
         }),
     );
@@ -562,7 +563,18 @@ export default async function PlanningPage() {
               <span>To Do</span>
               <h2>Taken</h2>
             </div>
-            <strong>{todoistTasks.length} open</strong>
+            <div className="planningTaskHeaderActions">
+              <strong>{todoistTasks.length} open</strong>
+              <PlanningTaskCreateButton
+                projects={planning.allProjects
+                  .filter((project) => project.number)
+                  .map((project) => ({
+                    number: String(project.number),
+                    name: project.name,
+                  }))
+                  .sort((a, b) => a.number.localeCompare(b.number))}
+              />
+            </div>
           </div>
 
           <div className="planningAgendaList">
