@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { assignUserProfile, deletePortalUser, inviteCustomer, saveUserBrandAccess, setUserPassword } from '@/app/admin/actions';
+import { assignUserProfile, deletePortalUser, inviteCustomer, saveUserBrandAccess, saveUserPermissions, setUserPassword } from '@/app/admin/actions';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -7,7 +7,7 @@ export default async function UsersPage() {
   const session = await requireAdmin();
   const admin = createAdminClient();
 
-  const [{ data: userList }, { data: profiles }, { data: distributors }, { data: brands }, { data: accessRows }, { data: distributorBrandRows }] = await Promise.all([
+  const [{ data: userList }, { data: profiles }, { data: distributors }, { data: brands }, { data: accessRows }, { data: distributorBrandRows }, { data: permissionRows }] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 200 }),
     admin.from('profiles').select('id,full_name,role,distributor_id'),
     admin.from('distributors').select('id,name').order('name'),
@@ -20,11 +20,13 @@ export default async function UsersPage() {
       .order('name'),
     admin.from('user_brand_access').select('user_id,brand_id'),
     admin.from('distributor_brands').select('distributor_id,brand_id'),
+    admin.from('user_permissions').select('user_id,permission_key,access_level'),
   ]);
 
   const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
   const distributorById = new Map((distributors ?? []).map((d) => [d.id, d.name]));
   const accessByUser = new Map<string, Set<number>>();
+  const permissionByUser = new Map<string, Map<string, string>>();
   const brandsByDistributor = new Map<number, Set<number>>();
   for (const row of distributorBrandRows ?? []) {
     const distributorId = Number(row.distributor_id);
@@ -35,13 +37,26 @@ export default async function UsersPage() {
     if (!accessByUser.has(row.user_id)) accessByUser.set(row.user_id, new Set());
     accessByUser.get(row.user_id)?.add(row.brand_id);
   }
+  for (const row of permissionRows ?? []) {
+    if (!permissionByUser.has(row.user_id)) permissionByUser.set(row.user_id, new Map());
+    permissionByUser.get(row.user_id)?.set(row.permission_key, row.access_level);
+  }
+
+  const permissionDefinitions = [
+    { key: 'portal', label: 'Klantenportaal', allowOwn: false },
+    { key: 'planning', label: 'Planning', allowOwn: false },
+    { key: 'tasks', label: 'Taken', allowOwn: true },
+    { key: 'billing', label: 'Facturatie', allowOwn: false },
+    { key: 'checklists', label: 'Checklists', allowOwn: false },
+    { key: 'user_admin', label: 'Gebruikersbeheer', allowOwn: false },
+  ] as const;
 
   return (
     <main className="container">
       <section className="hero">
         <div>
-          <h1>Gebruikers</h1>
-          <p>Koppel gebruikers aan hun organisatie en bepaal per persoon exact welke merken zichtbaar zijn.</p>
+          <h1>Gebruikers & rechten</h1>
+          <p>Beheer centraal wie toegang heeft tot het klantenportaal, interne modules en specifieke merken.</p>
         </div>
       </section>
 
@@ -102,6 +117,53 @@ export default async function UsersPage() {
                 <button className="button secondary" type="submit">Profiel opslaan</button>
               </form>
 
+              <details className="brandAccessDetails centralPermissionsDetails" open>
+                <summary>Toegang & rechten</summary>
+                <form action={saveUserPermissions} className="permissionsForm">
+                  <input type="hidden" name="user_id" value={user.id} />
+                  <div className="permissionsGrid">
+                    {permissionDefinitions.map((permission) => {
+                      const currentLevel = role === 'admin'
+                        ? 'manage'
+                        : permissionByUser.get(user.id)?.get(permission.key) ?? 'none';
+
+                      return (
+                        <label className="permissionControl" key={permission.key}>
+                          <span>
+                            <strong>{permission.label}</strong>
+                            <small>
+                              {permission.key === 'portal'
+                                ? 'Toegang tot het klantgedeelte; merktoegang beheer je hieronder.'
+                                : permission.key === 'billing'
+                                  ? 'Toegang tot financiële facturatiewerkvoorraad.'
+                                  : 'Moduletoegang voor deze gebruiker.'}
+                            </small>
+                          </span>
+                          <select
+                            name={`permission_${permission.key}`}
+                            className="select"
+                            defaultValue={currentLevel}
+                            disabled={role === 'admin'}
+                          >
+                            <option value="none">Geen toegang</option>
+                            {permission.allowOwn ? <option value="own">Alleen eigen</option> : null}
+                            <option value="view">Bekijken</option>
+                            <option value="manage">Beheren</option>
+                          </select>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {role === 'admin' ? (
+                    <p className="muted" style={{ marginTop: 12 }}>Admins hebben automatisch volledige toegang tot alle modules.</p>
+                  ) : (
+                    <div style={{ marginTop: 16 }}>
+                      <button className="button orange" type="submit">Rechten opslaan</button>
+                    </div>
+                  )}
+                </form>
+              </details>
+
               <details className="brandAccessDetails accountAdminDetails">
                 <summary>Accountbeheer</summary>
                 <div className="accountAdminGrid">
@@ -147,7 +209,7 @@ export default async function UsersPage() {
 
               {role === 'customer' ? (
                 <details className="brandAccessDetails" open={assigned.size === 0}>
-                  <summary>Merken beheren</summary>
+                  <summary>Klantenportaal · merken beheren</summary>
                   <form action={saveUserBrandAccess}>
                     <input type="hidden" name="user_id" value={user.id} />
                     <div className="brandAccessGrid">
