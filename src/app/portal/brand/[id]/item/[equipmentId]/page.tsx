@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
@@ -83,7 +84,15 @@ export default async function EquipmentDetailPage({
 
       <section className="itemDetailGrid">
         <div className="detailImagePanel">
-          {item.image ? <img src={item.image} alt={item.name} /> : <div className="noImageLarge">Geen afbeelding beschikbaar</div>}
+          {item.image ? (
+            <Image
+              src={item.image}
+              alt={item.name}
+              fill
+              sizes="(max-width: 760px) 100vw, 52vw"
+              priority
+            />
+          ) : <div className="noImageLarge">Geen afbeelding beschikbaar</div>}
         </div>
 
         <div className="detailContent">
@@ -132,7 +141,9 @@ export default async function EquipmentDetailPage({
                   return (
                     <a key={file.id} className={isImage ? 'attachmentCard attachmentImageCard' : 'attachmentCard'} href={href} target="_blank" rel="noreferrer">
                       {isImage ? (
-                        <div className="attachmentThumb"><img src={href} alt={file.name} /></div>
+                        <div className="attachmentThumb">
+                          <Image src={href} alt={file.name} fill sizes="88px" />
+                        </div>
                       ) : (
                         <div className="attachmentFileIcon" aria-hidden="true">{extension}</div>
                       )}
