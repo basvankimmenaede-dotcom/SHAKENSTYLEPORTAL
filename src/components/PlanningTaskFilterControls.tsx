@@ -38,9 +38,12 @@ export default function PlanningTaskFilterControls() {
     const initial: Filter = saved === 'mine' ? 'mine' : 'all';
     setFilter(initial);
     applyFilter(initial);
+  }, []);
 
+  useEffect(() => {
+    applyFilter(filter);
     function handleTaskChange() {
-      applyFilter(initial === filter ? filter : filter);
+      window.setTimeout(() => applyFilter(filter), 0);
     }
     window.addEventListener('planning-task-state-changed', handleTaskChange);
     return () => window.removeEventListener('planning-task-state-changed', handleTaskChange);
