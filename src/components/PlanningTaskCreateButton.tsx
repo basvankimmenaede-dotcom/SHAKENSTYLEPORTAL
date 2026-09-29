@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type ProjectOption = {
@@ -18,6 +18,15 @@ export default function PlanningTaskCreateButton({ projects }: { projects: Proje
   const [error, setError] = useState('');
 
   const selectedProject = projects.find((project) => project.number === projectNumber);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [open]);
 
   async function submit() {
     if (!content.trim() || saving) return;
@@ -61,49 +70,73 @@ export default function PlanningTaskCreateButton({ projects }: { projects: Proje
       </button>
 
       {open ? (
-        <div className="planningTaskCreatePanel">
-          <label>
-            <span>Taak</span>
-            <input
-              autoFocus
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder="Bijv. glaswerk controleren"
-            />
-          </label>
+        <div
+          className="planningTaskCreateBackdrop"
+          data-planning-modal-open="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setOpen(false);
+          }}
+        >
+          <section
+            className="planningTaskCreateModal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Nieuwe taak toevoegen"
+          >
+            <button
+              type="button"
+              className="planningTaskCreateClose"
+              aria-label="Sluiten"
+              onClick={() => setOpen(false)}
+            >
+              ×
+            </button>
 
-          <div className="planningTaskCreateGrid">
-            <label>
-              <span>Project</span>
-              <select value={projectNumber} onChange={(event) => setProjectNumber(event.target.value)}>
-                <option value="">Geen project</option>
-                {projects.map((project) => (
-                  <option value={project.number} key={project.number}>
-                    #{project.number} · {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <h2>Nieuwe taak toevoegen</h2>
 
             <label>
-              <span>Deadline</span>
+              <span>Taak</span>
               <input
-                type="date"
-                value={dueDate}
-                onChange={(event) => setDueDate(event.target.value)}
+                autoFocus
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                placeholder="Bijv. glaswerk controleren"
               />
             </label>
-          </div>
 
-          <div className="planningTaskCreateActions">
-            {error ? <small>{error}</small> : <span />}
-            <button type="button" className="button secondary" onClick={() => setOpen(false)}>
-              Annuleren
-            </button>
-            <button type="button" className="button orange" onClick={submit} disabled={saving || !content.trim()}>
-              {saving ? 'Toevoegen…' : 'Toevoegen'}
-            </button>
-          </div>
+            <div className="planningTaskCreateGrid">
+              <label>
+                <span>Project</span>
+                <select value={projectNumber} onChange={(event) => setProjectNumber(event.target.value)}>
+                  <option value="">Geen project</option>
+                  {projects.map((project) => (
+                    <option value={project.number} key={project.number}>
+                      #{project.number} · {project.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Deadline</span>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="planningTaskCreateActions">
+              {error ? <small>{error}</small> : <span />}
+              <button type="button" className="button secondary" onClick={() => setOpen(false)}>
+                Annuleren
+              </button>
+              <button type="button" className="button orange" onClick={submit} disabled={saving || !content.trim()}>
+                {saving ? 'Toevoegen…' : 'Toevoegen'}
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
     </div>
