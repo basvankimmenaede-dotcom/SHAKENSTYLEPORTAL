@@ -205,13 +205,19 @@ function CompactProjectRow({
   );
 }
 
-export default async function PlanningPage() {
-  const { supabase } = await requirePlanningUser();
+export default async function PlanningPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tasks?: string | string[] }>;
+}) {
+  const { supabase, user } = await requirePlanningUser();
+  const params = await searchParams;
+  const taskFilter = params?.tasks === 'mine' ? 'mine' : 'all';
 
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, crewResult, functionGroupsResult, projectFunctionsResult, equipmentGroupsResult, projectVehiclesResult, checklistResult, templateResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, functionGroupsResult, projectFunctionsResult, equipmentGroupsResult, projectVehiclesResult, checklistResult, templateResult, profilesResult, taskAssignmentsResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -250,10 +256,18 @@ export default async function PlanningPage() {
       .select('id,name,rentman_project_type_id')
       .eq('is_active', true)
       .order('name'),
+    supabase
+      .from('profiles')
+      .select('id,full_name,role')
+      .in('role', ['admin', 'warehouse'])
+      .order('full_name'),
+    supabase
+      .from('planning_task_assignments')
+      .select('todoist_task_id,assignee_profile_id'),
   ]);
 
   const planning = planningResult.value;
-  const todoistTasks = todoistResult.value;
+  const allTodoistTasks = todoistResult.value;
   const crewAssignments = crewResult.value;
   const projectFunctionGroups = functionGroupsResult.value;
   const projectFunctions = projectFunctionsResult.value;
@@ -264,6 +278,19 @@ export default async function PlanningPage() {
 
   const checklists = (checklistResult.data ?? []) as ChecklistRow[];
   const templates = (templateResult.data ?? []) as ChecklistTemplate[];
+  const assignees = (profilesResult.data ?? []).map((profile) => ({
+    id: String(profile.id),
+    name: String(profile.full_name || 'Onbekend').replace(/@shakenstyle\.com$/i, ''),
+  }));
+  const taskAssigneeById = new Map(
+    (taskAssignmentsResult.data ?? []).map((row) => [
+      String(row.todoist_task_id),
+      row.assignee_profile_id ? String(row.assignee_profile_id) : null,
+    ]),
+  );
+  const todoistTasks = taskFilter === 'mine'
+    ? allTodoistTasks.filter((task) => taskAssigneeById.get(task.id) === user.id)
+    : allTodoistTasks;
 
   const checklistByNumber = new Map(
     checklists
@@ -647,8 +674,13 @@ export default async function PlanningPage() {
               <h2>Taken</h2>
             </div>
             <div className="planningTaskHeaderActions">
+              <div className="planningTaskFilters">
+                <Link href="?tasks=mine" className={taskFilter === 'mine' ? 'active' : ''}>Mijn taken</Link>
+                <Link href="?tasks=all" className={taskFilter === 'all' ? 'active' : ''}>Alles</Link>
+              </div>
               <strong>{todoistTasks.length} open</strong>
               <PlanningTaskCreateButton
+                assignees={assignees}
                 projects={planning.allProjects
                   .filter((project) => project.number)
                   .sort((a, b) => {
@@ -684,6 +716,8 @@ export default async function PlanningPage() {
                           ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · ${meta.text}`.replace(' ·  · ', ' · ')
                           : meta.text}
                         labels={task.labels}
+                        assignees={assignees}
+                        assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                         urgent
                       />
                     );
@@ -714,6 +748,10 @@ export default async function PlanningPage() {
                               ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · ${taskDate(task) ? meta.text : 'gekoppeld aan project'}`.replace(' ·  · ', ' · ')
                               : meta.text}
                             labels={task.labels}
+                          assignees={assignees}
+                          assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                        assignees={assignees}
+                        assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                             urgent={meta.urgent}
                           />
                         );
@@ -744,6 +782,8 @@ export default async function PlanningPage() {
                           ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · Geen deadline`.replace(' ·  · ', ' · ')
                           : 'Geen deadline'}
                         labels={task.labels}
+                        assignees={assignees}
+                        assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                       />
                     );
                   })}
