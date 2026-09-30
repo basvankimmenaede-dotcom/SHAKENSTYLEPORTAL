@@ -7,16 +7,18 @@ export default async function AccountPage() {
   let portalLabel = profile.role === 'admin' ? 'Alle merken' : 'Portaal';
   let distributorName = '';
 
-  const [portalLevel, planningLevel, billingLevel] = profile.role === 'admin'
-    ? ['manage', 'manage', 'manage'] as const
+  const [portalLevel, planningLevel, billingLevel, checklistLevel] = profile.role === 'admin'
+    ? ['manage', 'manage', 'manage', 'manage'] as const
     : await Promise.all([
         getUserPermissionLevel(supabase, user.id, 'portal'),
         getUserPermissionLevel(supabase, user.id, 'planning'),
         getUserPermissionLevel(supabase, user.id, 'billing'),
+        getUserPermissionLevel(supabase, user.id, 'checklists'),
       ]);
   const canViewPortal = profile.role === 'admin' || permissionAtLeast(portalLevel, 'view');
   const canViewPlanning = profile.role === 'admin' || permissionAtLeast(planningLevel, 'view');
   const canViewBilling = profile.role === 'admin' || permissionAtLeast(billingLevel, 'view');
+  const canViewChecklists = profile.role === 'admin' || permissionAtLeast(checklistLevel, 'view');
 
   if (profile.role !== 'admin' && profile.distributor_id) {
     const { data: distributor } = await supabase
@@ -41,6 +43,7 @@ export default async function AccountPage() {
       canViewPortal={canViewPortal}
       canViewPlanning={canViewPlanning}
       canViewBilling={canViewBilling}
+      canViewChecklists={canViewChecklists}
     >
       <main className="accountPage">
         <section className="hero accountHero">
