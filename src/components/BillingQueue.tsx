@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type BillingStatus = 'open' | 'invoiced' | 'skip';
 type Filter = BillingStatus | 'all';
@@ -43,6 +43,10 @@ export default function BillingQueue({
   const [filter, setFilter] = useState<Filter>('open');
   const [pending, setPending] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   const counts = useMemo(() => items.reduce<Record<BillingStatus, number>>((acc, item) => {
     acc[item.status] += 1;
