@@ -672,6 +672,9 @@ export default async function PlanningPage() {
                         key={task.id}
                         id={task.id}
                         content={displayTaskContent(task, projectNumber)}
+                        rawContent={task.content}
+                        dueDate={taskDate(task) ?? ''}
+                        useDeadline={Boolean(task.deadline?.date)}
                         meta={projectNumber
                           ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · ${meta.text}`.replace(' ·  · ', ' · ')
                           : meta.text}
@@ -705,6 +708,9 @@ export default async function PlanningPage() {
                             key={task.id}
                             id={task.id}
                             content={displayTaskContent(task, projectNumber)}
+                        rawContent={task.content}
+                        dueDate={taskDate(task) ?? ''}
+                        useDeadline={Boolean(task.deadline?.date)}
                             meta={projectNumber
                               ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · ${taskDate(task) ? meta.text : 'gekoppeld aan project'}`.replace(' ·  · ', ' · ')
                               : meta.text}
@@ -738,6 +744,9 @@ export default async function PlanningPage() {
                         key={task.id}
                         id={task.id}
                         content={displayTaskContent(task, projectNumber)}
+                        rawContent={task.content}
+                        dueDate={taskDate(task) ?? ''}
+                        useDeadline={Boolean(task.deadline?.date)}
                         meta={projectNumber
                           ? `#${projectNumber} · ${projectByNumber.get(projectNumber)?.name ?? ''} · Geen deadline`.replace(' ·  · ', ' · ')
                           : 'Geen deadline'}
