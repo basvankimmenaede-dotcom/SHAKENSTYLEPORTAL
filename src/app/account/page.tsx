@@ -1,11 +1,22 @@
 import AppShell from '@/components/AppShell';
 import PasswordChangeForm from './PasswordChangeForm';
-import { requireUser } from '@/lib/auth';
+import { getUserPermissionLevel, permissionAtLeast, requireUser } from '@/lib/auth';
 
 export default async function AccountPage() {
   const { user, profile, supabase } = await requireUser();
   let portalLabel = profile.role === 'admin' ? 'Alle merken' : 'Portaal';
   let distributorName = '';
+
+  const [portalLevel, planningLevel, billingLevel] = profile.role === 'admin'
+    ? ['manage', 'manage', 'manage'] as const
+    : await Promise.all([
+        getUserPermissionLevel(supabase, user.id, 'portal'),
+        getUserPermissionLevel(supabase, user.id, 'planning'),
+        getUserPermissionLevel(supabase, user.id, 'billing'),
+      ]);
+  const canViewPortal = profile.role === 'admin' || permissionAtLeast(portalLevel, 'view');
+  const canViewPlanning = profile.role === 'admin' || permissionAtLeast(planningLevel, 'view');
+  const canViewBilling = profile.role === 'admin' || permissionAtLeast(billingLevel, 'view');
 
   if (profile.role !== 'admin' && profile.distributor_id) {
     const { data: distributor } = await supabase
@@ -22,10 +33,14 @@ export default async function AccountPage() {
 
   return (
     <AppShell
+      role={profile.role}
       admin={profile.role === 'admin'}
       adminPreview={false}
       portalLabel={portalLabel}
       userLabel={profile.full_name}
+      canViewPortal={canViewPortal}
+      canViewPlanning={canViewPlanning}
+      canViewBilling={canViewBilling}
     >
       <main className="accountPage">
         <section className="hero accountHero">
