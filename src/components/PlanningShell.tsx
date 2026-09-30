@@ -7,11 +7,13 @@ export default function PlanningShell({
   children,
   role,
   canViewPortal = false,
+  canViewBilling = false,
   userLabel,
 }: {
   children: React.ReactNode;
   role: 'admin' | 'warehouse' | 'customer';
   canViewPortal?: boolean;
+  canViewBilling?: boolean;
   userLabel?: string | null;
 }) {
   const pathname = usePathname();
@@ -24,8 +26,11 @@ export default function PlanningShell({
     <div className="uiAppShell">
       <UnifiedSidebar
         mode={role === 'admin' ? 'admin' : 'planning'}
+        role={role}
         userLabel={userLabel}
+        canViewPlanning
         canViewPortal={canViewPortal}
+        canViewBilling={canViewBilling}
       />
       <div className="uiAppMain">{children}</div>
     </div>
