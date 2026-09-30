@@ -509,7 +509,9 @@ export default async function PlanningPage() {
           <h1>Planning</h1>
         </div>
         <div className="planningCompactActions">
-          <Link href="/planning/templates" className="button secondary">Checklist-templates</Link>
+          {profile.role === 'admin' ? (
+            <Link href="/planning/templates" className="button secondary">Checklist-templates</Link>
+          ) : null}
           <Link href="/planning/tv" className="button secondary">TV-weergave</Link>
         </div>
       </section>
