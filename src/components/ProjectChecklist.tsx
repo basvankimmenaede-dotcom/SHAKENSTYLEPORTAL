@@ -12,6 +12,7 @@ export type PlanningChecklistItem = {
   deadline_offset_days?: number | null;
   due_date?: string | null;
   todoist_task_id?: string | null;
+  task_area?: 'office' | 'warehouse' | 'both';
 };
 
 export type PlanningChecklist = {
@@ -196,6 +197,11 @@ export default function ProjectChecklist({
             >
               <span className="projectChecklistBox">{item.completed ? '✓' : ''}</span>
               <span>{item.label}</span>
+              {item.task_area ? (
+                <span className={`projectChecklistArea ${item.task_area}`}>
+                  {item.task_area === 'office' ? 'Kantoor' : item.task_area === 'warehouse' ? 'Magazijn' : 'Beide'}
+                </span>
+              ) : null}
               {pending ? (
                 <small>opslaan…</small>
               ) : item.due_date ? (
