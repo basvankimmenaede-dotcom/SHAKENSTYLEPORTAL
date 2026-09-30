@@ -151,7 +151,7 @@ export async function inviteCustomer(formData: FormData) {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.shakenstyle.com').replace(/\/$/, '');
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: email },
-    redirectTo: `${appUrl}/accept-invite`,
+    redirectTo: `${appUrl}/activate`,
   });
   if (error) throw new Error(error.message);
 
