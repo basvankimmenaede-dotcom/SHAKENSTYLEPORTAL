@@ -27,6 +27,7 @@ import PlanningTaskCreateButton from '@/components/PlanningTaskCreateButton';
 import PlanningTaskFilterControls from '@/components/PlanningTaskFilterControls';
 import PlanningTaskDragManager from '@/components/PlanningTaskDragManager';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { amsterdamDateKey, isWeekend } from '@/lib/closingChecklist';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -260,9 +261,41 @@ export default async function PlanningPage() {
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
-  const billingLevel = await getUserPermissionLevel(supabase, user.id, 'billing');
+  const [billingLevel, checklistLevel] = profile.role === 'admin'
+    ? ['manage', 'manage'] as const
+    : await Promise.all([
+        getUserPermissionLevel(supabase, user.id, 'billing'),
+        getUserPermissionLevel(supabase, user.id, 'checklists'),
+      ]);
   const canSeeBilling = permissionAtLeast(billingLevel, 'view');
   const canManageBilling = permissionAtLeast(billingLevel, 'manage');
+  const canSeeClosing = permissionAtLeast(checklistLevel, 'view');
+
+  const closingTodayDate = amsterdamDateKey();
+  const [{ data: closingSettings }, { data: closingExemption }] = await Promise.all([
+    supabase.from('closing_checklist_settings').select('required_from_date').eq('id', 1).maybeSingle(),
+    supabase.from('closing_checklist_exemptions').select('reason').eq('checklist_date', closingTodayDate).maybeSingle(),
+  ]);
+  const closingRequired = canSeeClosing
+    && !isWeekend(closingTodayDate)
+    && !closingExemption
+    && closingTodayDate >= String(closingSettings?.required_from_date ?? closingTodayDate);
+
+  if (closingRequired) {
+    await supabase.rpc('ensure_closing_checklist', { p_date: closingTodayDate }).catch(() => undefined);
+  }
+
+  const { data: closingToday } = closingRequired
+    ? await supabase
+        .from('closing_checklists')
+        .select('id,status,closing_checklist_items(id,completed)')
+        .eq('checklist_date', closingTodayDate)
+        .maybeSingle()
+    : { data: null };
+
+  const closingTodayItems = closingToday?.closing_checklist_items ?? [];
+  const closingTodayDone = closingTodayItems.filter((item) => item.completed).length;
+  const closingTodayTotal = closingTodayItems.length;
 
   if (canManageBilling && planning.allProjects.length) {
     await syncBillingQueueOncePerDay({
@@ -546,6 +579,26 @@ export default async function PlanningPage() {
           );
         })}
       </section>
+
+      {closingRequired ? (
+        <Link
+          href="/planning/afsluitlijst"
+          className={closingToday?.status === 'completed' ? 'planningClosingBanner complete' : 'planningClosingBanner'}
+        >
+          <div>
+            <span>Dagelijkse afsluitlijst</span>
+            <strong>
+              {closingToday?.status === 'completed'
+                ? 'Afsluitlijst van vandaag is afgerond'
+                : `${closingTodayDone}/${closingTodayTotal} punten afgerond`}
+            </strong>
+            <small>Moet vandaag worden afgerond voordat we naar huis gaan.</small>
+          </div>
+          <div className="planningClosingCta">
+            {closingToday?.status === 'completed' ? '✓ Klaar' : 'Open lijst →'}
+          </div>
+        </Link>
+      ) : null}
 
       {todayActionCount ? (
         <a
