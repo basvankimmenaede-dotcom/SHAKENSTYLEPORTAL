@@ -3828,3 +3828,611 @@ tr:last-child td { border-bottom: 0; }
     padding: 18px !important;
   }
 }
+
+
+/* Users & permissions workspace */
+.usersAdminPage {
+  padding-top: 26px;
+  padding-bottom: 56px;
+}
+.usersAdminHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.usersAdminEyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--orange);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.usersAdminHeader h1 {
+  margin: 0;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: .98;
+  letter-spacing: -.05em;
+}
+.usersAdminHeader p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.usersInvitePanel {
+  position: relative;
+  flex: 0 0 auto;
+}
+.usersInvitePanel > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.usersInvitePanel > summary::-webkit-details-marker {
+  display: none;
+}
+.usersInviteForm {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 40;
+  width: min(420px, calc(100vw - 40px));
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #e6e0d8;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 55px rgba(40, 34, 28, .16);
+}
+.usersMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.usersMetricCard {
+  position: relative;
+  min-height: 104px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 18px 20px;
+  overflow: hidden;
+  border: 1px solid #e9e4dd;
+  border-radius: 16px;
+  background: #fff;
+}
+.usersMetricCard::after {
+  content: '';
+  position: absolute;
+  width: 74px;
+  height: 74px;
+  right: -18px;
+  top: -18px;
+  border-radius: 50%;
+  background: rgba(239, 100, 47, .08);
+}
+.usersMetricCard.active::after { background: rgba(38, 146, 91, .09); }
+.usersMetricCard.invited::after { background: rgba(211, 139, 34, .10); }
+.usersMetricCard.inactive::after { background: rgba(174, 64, 64, .08); }
+.usersMetricCard > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.usersMetricCard > strong {
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+.usersMetricCard > small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.usersWorkspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.usersDirectory,
+.usersDetail {
+  border: 1px solid #e8e3dc;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(39, 33, 28, .045);
+}
+.usersDirectory {
+  position: sticky;
+  top: 18px;
+  overflow: hidden;
+}
+.usersDirectoryTabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px;
+  border-bottom: 1px solid #eee9e3;
+  overflow-x: auto;
+}
+.usersDirectoryTabs button {
+  appearance: none;
+  border: 0;
+  border-radius: 9px;
+  background: #f7f5f2;
+  color: var(--muted);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.usersDirectoryTabs button b {
+  margin-left: 2px;
+  font-size: 9px;
+}
+.usersDirectoryTabs button.active {
+  background: #1f1b18;
+  color: #fff;
+}
+.usersDirectorySearch {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 6px;
+  align-items: center;
+  margin: 10px;
+  padding: 0 10px;
+  border: 1px solid #e6e0d8;
+  border-radius: 10px;
+  background: #fbfaf8;
+}
+.usersDirectorySearch > span {
+  color: var(--muted);
+  font-size: 15px;
+}
+.usersDirectorySearch input {
+  width: 100%;
+  height: 38px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+}
+.usersDirectoryList {
+  max-height: min(680px, calc(100vh - 300px));
+  overflow: auto;
+  padding: 0 8px 8px;
+}
+.usersDirectoryRow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto 8px;
+  gap: 9px;
+  align-items: center;
+  padding: 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.usersDirectoryRow:hover {
+  background: #faf8f5;
+}
+.usersDirectoryRow.active {
+  background: #fff3eb;
+  box-shadow: inset 3px 0 0 var(--orange);
+}
+.usersAvatar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e9e7e2;
+  color: #38322d;
+  font-size: 10px;
+  font-weight: 900;
+}
+.usersAvatar.large {
+  width: 54px;
+  height: 54px;
+  background: #f0ebe6;
+  font-size: 15px;
+}
+.usersDirectoryIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.usersDirectoryIdentity strong,
+.usersDirectoryIdentity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.usersDirectoryIdentity strong {
+  font-size: 11px;
+}
+.usersDirectoryIdentity small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.usersRoleBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f0efec;
+  color: #605950;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.usersRoleBadge.admin { background: #1f1b18; color: #fff; }
+.usersRoleBadge.warehouse { background: #fff0e6; color: #b64d20; }
+.usersRoleBadge.customer { background: #f1f2f3; color: #60656b; }
+.usersStatusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b4ada5;
+}
+.usersStatusDot.active { background: #2d9b61; }
+.usersStatusDot.invited,
+.usersStatusDot.confirmed { background: #d88928; }
+.usersStatusDot.inactive { background: #bd4d4d; }
+.usersDirectoryEmpty {
+  padding: 18px 12px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.usersDetail {
+  overflow: hidden;
+}
+.usersDetailHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 20px 22px;
+  border-bottom: 1px solid #eee9e3;
+}
+.usersDetailIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.usersDetailIdentity > div {
+  min-width: 0;
+}
+.usersDetailTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.usersDetailTitle h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: -.03em;
+}
+.usersDetailIdentity p {
+  margin: 4px 0 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.usersDetailIdentity small {
+  display: block;
+  color: #918980;
+  font-size: 9px;
+}
+.usersStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f0efec;
+  color: #665e55;
+  font-size: 8px;
+  font-weight: 900;
+}
+.usersStatusBadge.active { background: #e8f7ef; color: #237c4d; }
+.usersStatusBadge.invited,
+.usersStatusBadge.confirmed { background: #fff3df; color: #a76518; }
+.usersStatusBadge.inactive { background: #f9e9e9; color: #9b3f3f; }
+.usersDetailActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.usersDetailTabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #eee9e3;
+  background: #fcfbf9;
+  overflow-x: auto;
+}
+.usersDetailTabs button {
+  appearance: none;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.usersDetailTabs button.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 5px rgba(32, 27, 22, .08);
+}
+.usersDetailPanel {
+  padding: 22px;
+}
+.usersDetailSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.usersDetailSectionHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -.025em;
+}
+.usersDetailSectionHeader p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.usersGeneralGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, .7fr);
+  gap: 14px;
+}
+.usersProfilePanel,
+.usersAccountStatusCard,
+.usersAccountPanel {
+  border: 1px solid #e9e4dd;
+  border-radius: 14px;
+  background: #fff;
+}
+.usersProfilePanel {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 12px;
+  padding: 16px;
+}
+.usersProfilePanel .field:first-of-type {
+  grid-column: 1 / -1;
+}
+.usersPanelFooter {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #eee9e3;
+}
+.usersAccountStatusCard {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 18px;
+  background: #fffaf5;
+}
+.usersAccountStatusCard > span {
+  color: var(--orange);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.usersAccountStatusCard > strong {
+  margin-top: 6px;
+  font-size: 18px;
+}
+.usersAccountStatusCard p {
+  margin: 2px 0 8px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.usersAccountStatusCard small {
+  color: #8a8179;
+  font-size: 9px;
+}
+.usersPermissionsTable {
+  overflow: hidden;
+  border: 1px solid #e9e4dd;
+  border-radius: 14px;
+}
+.usersPermissionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 20px;
+  align-items: center;
+  padding: 13px 15px;
+  border-top: 1px solid #eee9e3;
+}
+.usersPermissionRow:first-child {
+  border-top: 0;
+}
+.usersPermissionRow > div {
+  display: grid;
+  gap: 3px;
+}
+.usersPermissionRow strong {
+  font-size: 11px;
+}
+.usersPermissionRow small {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.usersPermissionRow .select {
+  min-height: 38px;
+}
+.usersBrandGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.usersBrandOption {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 13px;
+  border: 1px solid #e8e2da;
+  border-radius: 12px;
+  background: #fbfaf8;
+}
+.usersBrandOption input {
+  margin-top: 2px;
+}
+.usersBrandOption > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.usersBrandOption strong {
+  font-size: 10px;
+}
+.usersBrandOption small {
+  color: var(--muted);
+  font-size: 8px;
+}
+.usersAccountGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.usersAccountPanel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.usersAccountPanel > div:first-child strong {
+  font-size: 13px;
+}
+.usersAccountPanel > div:first-child p,
+.usersAccountPanel > p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.usersAccountPanel.danger {
+  border-color: #f0d8d4;
+  background: #fffafa;
+}
+.usersAdminPage .field label {
+  font-size: 9px;
+  font-weight: 850;
+}
+.usersAdminPage .input,
+.usersAdminPage .select {
+  min-height: 40px;
+  font-size: 11px;
+}
+.usersAdminPage .button {
+  min-height: 38px;
+}
+@media (max-width: 1100px) {
+  .usersMetricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .usersWorkspace {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+  .usersGeneralGrid,
+  .usersAccountGrid {
+    grid-template-columns: 1fr;
+  }
+  .usersBrandGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 860px) {
+  .usersAdminHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .usersWorkspace {
+    grid-template-columns: 1fr;
+  }
+  .usersDirectory {
+    position: static;
+  }
+  .usersDirectoryList {
+    max-height: 340px;
+  }
+}
+@media (max-width: 620px) {
+  .usersAdminPage {
+    padding-top: 16px;
+  }
+  .usersMetricGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .usersMetricCard {
+    min-height: 92px;
+    padding: 14px;
+  }
+  .usersDirectoryTabs {
+    padding-bottom: 8px;
+  }
+  .usersDirectoryRow {
+    grid-template-columns: 34px minmax(0, 1fr) 7px;
+  }
+  .usersRoleBadge {
+    display: none;
+  }
+  .usersDetailHeader {
+    flex-direction: column;
+    padding: 16px;
+  }
+  .usersDetailPanel {
+    padding: 16px;
+  }
+  .usersDetailTabs {
+    padding-inline: 10px;
+  }
+  .usersProfilePanel {
+    grid-template-columns: 1fr;
+  }
+  .usersProfilePanel .field:first-of-type,
+  .usersPanelFooter {
+    grid-column: auto;
+  }
+  .usersPermissionRow {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .usersBrandGrid {
+    grid-template-columns: 1fr;
+  }
+}
