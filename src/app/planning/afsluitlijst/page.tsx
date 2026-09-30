@@ -1,0 +1,230 @@
+import Link from 'next/link';
+import ClosingChecklist from '@/components/ClosingChecklist';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { permissionAtLeast, requireModulePermission } from '@/lib/auth';
+import {
+  addDateDays,
+  amsterdamDateKey,
+  eachDate,
+  formatClosingDate,
+  isWeekend,
+  monthStart,
+} from '@/lib/closingChecklist';
+import {
+  addClosingTemplateItem,
+  deleteClosingTemplateItem,
+  setClosingExemption,
+  updateClosingTemplateItem,
+} from './actions';
+
+type SearchParams = Promise<{ date?: string }>;
+
+export default async function ClosingChecklistPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const { supabase, user, profile, permissionLevel } = await requireModulePermission('checklists', 'view');
+  const admin = createAdminClient();
+  const params = await searchParams;
+  const today = amsterdamDateKey();
+  const requestedDate = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : today;
+  const selectedDate = requestedDate > today ? today : requestedDate;
+  const weekend = isWeekend(selectedDate);
+  const canManage = profile.role === 'admin' || permissionAtLeast(permissionLevel, 'manage');
+
+  const [{ data: settings }, { data: exemptions }] = await Promise.all([
+    supabase.from('closing_checklist_settings').select('required_from_date').eq('id', 1).single(),
+    supabase
+      .from('closing_checklist_exemptions')
+      .select('checklist_date,reason')
+      .gte('checklist_date', monthStart(today))
+      .lte('checklist_date', today),
+  ]);
+
+  const requiredFrom = String(settings?.required_from_date ?? today);
+  const exemptionMap = new Map((exemptions ?? []).map((row) => [String(row.checklist_date), String(row.reason ?? 'Vrije dag')]));
+  const selectedExemption = exemptionMap.get(selectedDate) ?? null;
+  const selectedRequired = selectedDate >= requiredFrom && !weekend && !selectedExemption;
+
+  if (selectedDate === today && selectedRequired) {
+    await supabase.rpc('ensure_closing_checklist', { p_date: selectedDate });
+  }
+
+  const { data: list } = await supabase
+    .from('closing_checklists')
+    .select('id,checklist_date,status,completed_at,completed_by,closing_checklist_items(id,label,sort_order,completed,completed_at,completed_by)')
+    .eq('checklist_date', selectedDate)
+    .maybeSingle();
+
+  const itemRows = [...(list?.closing_checklist_items ?? [])]
+    .sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || Number(a.id) - Number(b.id));
+
+  const completedByIds = Array.from(new Set(itemRows.map((item) => item.completed_by).filter(Boolean).map(String)));
+  const { data: people } = completedByIds.length
+    ? await admin.from('profiles').select('id,full_name').in('id', completedByIds)
+    : { data: [] as Array<{ id: string; full_name: string | null }> };
+  const personById = new Map((people ?? []).map((person) => [
+    String(person.id),
+    String(person.full_name || '').replace(/@shakenstyle\.com$/i, ''),
+  ]));
+
+  const items = itemRows.map((item) => ({
+    id: Number(item.id),
+    label: String(item.label),
+    completed: Boolean(item.completed),
+    completed_at: item.completed_at ? String(item.completed_at) : null,
+    completed_by_name: item.completed_by ? personById.get(String(item.completed_by)) ?? null : null,
+  }));
+
+  const statStart = requiredFrom > monthStart(today) ? requiredFrom : monthStart(today);
+  const statDates = statStart <= today ? eachDate(statStart, today) : [];
+  const requiredDates = statDates.filter((date) => !isWeekend(date) && !exemptionMap.has(date));
+
+  const { data: monthLists } = requiredDates.length
+    ? await supabase
+        .from('closing_checklists')
+        .select('checklist_date,status,completed_at')
+        .in('checklist_date', requiredDates)
+    : { data: [] as Array<{ checklist_date: string; status: string; completed_at: string | null }> };
+
+  const listByDate = new Map((monthLists ?? []).map((row) => [String(row.checklist_date), row]));
+  const successfulDates = requiredDates.filter((date) => {
+    const row = listByDate.get(date);
+    if (!row || row.status !== 'completed' || !row.completed_at) return false;
+    return amsterdamDateKey(new Date(String(row.completed_at))) === date;
+  });
+  const successPercent = requiredDates.length ? Math.round((successfulDates.length / requiredDates.length) * 100) : 100;
+
+  const { data: templateItems } = profile.role === 'admin'
+    ? await supabase
+        .from('closing_checklist_template_items')
+        .select('id,label,sort_order,is_active')
+        .order('sort_order')
+    : { data: [] as Array<{ id: number; label: string; sort_order: number; is_active: boolean }> };
+
+  return (
+    <main className="container closingPage">
+      <section className="closingPageHeader">
+        <div>
+          <span className="usersAdminEyebrow">Dagelijkse routine</span>
+          <h1>Afsluitlijst</h1>
+          <p>De vaste checklist voor het einde van iedere werkdag.</p>
+        </div>
+        {profile.role === 'admin' ? (
+          <Link className="button secondary" href="#beheer">Beheer lijst</Link>
+        ) : null}
+      </section>
+
+      <section className="closingSuccessCard">
+        <div className="closingSuccessCopy">
+          <span>Succes deze maand</span>
+          <strong>{successfulDates.length} van {requiredDates.length} werkdagen</strong>
+          <small>Alleen op tijd afgeronde werkdagen tellen mee. Weekenden en vrije dagen zijn uitgesloten.</small>
+        </div>
+        <div className="closingSuccessScore">{successPercent}%</div>
+        <div className="closingSuccessTrack"><span style={{ width: `${successPercent}%` }} /></div>
+      </section>
+
+      <section className="closingDateNav">
+        <Link className="button secondary" href={`/planning/afsluitlijst?date=${addDateDays(selectedDate, -1)}`}>← Vorige dag</Link>
+        <div>
+          <strong>{selectedDate === today ? 'Vandaag' : formatClosingDate(selectedDate)}</strong>
+          <span>{selectedDate}</span>
+        </div>
+        {selectedDate < today ? (
+          <Link className="button secondary" href={`/planning/afsluitlijst?date=${addDateDays(selectedDate, 1)}`}>Volgende dag →</Link>
+        ) : <span />}
+      </section>
+
+      {weekend ? (
+        <section className="closingDayState free">
+          <strong>Weekend</strong>
+          <span>Vandaag is de afsluitlijst niet verplicht.</span>
+        </section>
+      ) : selectedExemption ? (
+        <section className="closingDayState free">
+          <strong>Vrije dag</strong>
+          <span>{selectedExemption} · telt niet mee in het succespercentage.</span>
+        </section>
+      ) : selectedDate < requiredFrom ? (
+        <section className="closingDayState free">
+          <strong>Nog niet van toepassing</strong>
+          <span>De afsluitlijstverplichting start vanaf {requiredFrom}.</span>
+        </section>
+      ) : list ? (
+        <ClosingChecklist items={items} canManage={canManage} />
+      ) : (
+        <section className="closingDayState missed">
+          <strong>Niet afgerond</strong>
+          <span>Voor deze verplichte werkdag is geen afgeronde afsluitlijst geregistreerd.</span>
+        </section>
+      )}
+
+      {profile.role === 'admin' && !weekend ? (
+        <section className="card closingExemptionCard">
+          <div>
+            <span className="usersAdminEyebrow">Daginstelling</span>
+            <h2>Vrije dag</h2>
+            <p>Markeer een doordeweekse dag als vrij. Deze dag telt dan niet mee voor de afsluitlijst of het succespercentage.</p>
+          </div>
+          <form action={setClosingExemption} className="closingExemptionForm">
+            <input type="hidden" name="date" value={selectedDate} />
+            <label>
+              <input type="checkbox" name="exempt" defaultChecked={Boolean(selectedExemption)} />
+              <span>Niet verplicht op {selectedDate}</span>
+            </label>
+            <input className="input" name="reason" defaultValue={selectedExemption ?? ''} placeholder="Reden, bijv. feestdag / kantoor gesloten" />
+            <button className="button orange" type="submit">Daginstelling opslaan</button>
+          </form>
+        </section>
+      ) : null}
+
+      {profile.role === 'admin' ? (
+        <section className="usersDetail closingAdminPanel" id="beheer">
+          <header className="usersDetailHeader">
+            <div className="usersDetailIdentity">
+              <span className="usersAvatar large">✓</span>
+              <div>
+                <div className="usersDetailTitle"><h2>Standaard afsluitlijst</h2></div>
+                <p>Deze items worden gebruikt voor nieuwe werkdagen. Wijzigingen veranderen bestaande daglijsten niet.</p>
+              </div>
+            </div>
+          </header>
+
+          <div className="usersDetailPanel">
+            <form action={addClosingTemplateItem} className="closingTemplateAdd">
+              <div className="field">
+                <label>Nieuw afsluitpunt</label>
+                <input className="input" name="label" placeholder="Bijv. vaatwasser uitzetten" required />
+              </div>
+              <button className="button orange" type="submit">Toevoegen</button>
+            </form>
+
+            <div className="closingTemplateList">
+              {(templateItems ?? []).map((item) => (
+                <div className="closingTemplateRow" key={item.id}>
+                  <form action={updateClosingTemplateItem} className="closingTemplateEdit">
+                    <input type="hidden" name="item_id" value={item.id} />
+                    <input className="input closingTemplateOrder" type="number" name="sort_order" defaultValue={item.sort_order} />
+                    <input className="input" name="label" defaultValue={item.label} required />
+                    <label className="closingTemplateActive">
+                      <input type="checkbox" name="is_active" defaultChecked={item.is_active} />
+                      <span>Actief</span>
+                    </label>
+                    <button className="button secondary" type="submit">Opslaan</button>
+                  </form>
+                  <form action={deleteClosingTemplateItem}>
+                    <input type="hidden" name="item_id" value={item.id} />
+                    <button className="templateDeleteButton" type="submit">Verwijderen</button>
+                  </form>
+                </div>
+              ))}
+              {!(templateItems ?? []).length ? <div className="compactEmpty">Nog geen standaard afsluitpunten ingesteld.</div> : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+    </main>
+  );
+}
