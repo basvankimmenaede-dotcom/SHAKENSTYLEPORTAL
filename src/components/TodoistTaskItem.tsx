@@ -1,7 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+type AssigneeOption = {
+  id: string;
+  name: string;
+  role: 'admin' | 'warehouse';
+};
+
+function priorityLabel(priority: number) {
+  if (priority === 4) return 'P1';
+  if (priority === 3) return 'P2';
+  if (priority === 2) return 'P3';
+  return 'P4';
+}
 
 export default function TodoistTaskItem({
   id,
@@ -10,6 +23,9 @@ export default function TodoistTaskItem({
   meta,
   dueDate = '',
   useDeadline = false,
+  priority = 1,
+  taskArea = 'office',
+  canChooseOffice = false,
   labels = [],
   urgent = false,
   assignees = [],
@@ -22,9 +38,12 @@ export default function TodoistTaskItem({
   meta?: string | null;
   dueDate?: string | null;
   useDeadline?: boolean;
+  priority?: number;
+  taskArea?: 'office' | 'warehouse';
+  canChooseOffice?: boolean;
   labels?: string[];
   urgent?: boolean;
-  assignees?: Array<{ id: string; name: string }>;
+  assignees?: AssigneeOption[];
   assigneeProfileId?: string | null;
   currentUserId: string;
 }) {
@@ -39,16 +58,26 @@ export default function TodoistTaskItem({
   const [currentContent, setCurrentContent] = useState(content);
   const [editContent, setEditContent] = useState(rawContent ?? content);
   const [editDueDate, setEditDueDate] = useState(dueDate ?? '');
+  const [editPriority, setEditPriority] = useState(String(priority));
+  const [editArea, setEditArea] = useState<'office' | 'warehouse'>(taskArea);
 
   useEffect(() => {
     setCurrentContent(content);
     setEditContent(rawContent ?? content);
     setEditDueDate(dueDate ?? '');
-  }, [content, rawContent, dueDate]);
+    setEditPriority(String(priority));
+    setEditArea(taskArea);
+  }, [content, rawContent, dueDate, priority, taskArea]);
+
+  const visibleAssignees = useMemo(
+    () => editArea === 'office'
+      ? assignees.filter((assignee) => assignee.role === 'admin')
+      : assignees,
+    [assignees, editArea],
+  );
 
   async function completeTask() {
     if (saving || completed) return;
-
     setSaving(true);
     setCompleted(true);
     setError('');
@@ -59,10 +88,8 @@ export default function TodoistTaskItem({
 
     if (!response.ok) {
       setCompleted(false);
-      setSaving(false);
       const result = await response.json().catch(() => ({}));
       setError(result.error || 'Taak kon niet worden afgerond.');
-      return;
     }
 
     setSaving(false);
@@ -89,8 +116,6 @@ export default function TodoistTaskItem({
       setAssignedTo(previous);
       const result = await response.json().catch(() => ({}));
       setError(result.error || 'Toewijzing kon niet worden opgeslagen.');
-      setAssignmentSaving(false);
-      return;
     }
 
     setAssignmentSaving(false);
@@ -115,6 +140,8 @@ export default function TodoistTaskItem({
         content: nextContent,
         dueDate: editDueDate || null,
         useDeadline,
+        priority: Number(editPriority),
+        taskArea: editArea,
       }),
     });
 
@@ -132,9 +159,25 @@ export default function TodoistTaskItem({
     router.refresh();
   }
 
+  function startDrag(event: React.DragEvent<HTMLDivElement>) {
+    if (editing) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('application/x-shakenstyle-task', JSON.stringify({
+      id,
+      useDeadline,
+    }));
+  }
+
   if (completed) {
     return (
-      <div className="todoistTask todoistTaskCompleted" data-task-mine={assignedTo === currentUserId ? 'true' : 'false'}>
+      <div
+        className="todoistTask todoistTaskCompleted"
+        data-task-mine={assignedTo === currentUserId ? 'true' : 'false'}
+        data-task-area={taskArea}
+      >
         <span className="todoistCheck todoistCheckDone">✓</span>
         <div className="todoistTaskBody">
           <strong>{currentContent}</strong>
@@ -148,6 +191,9 @@ export default function TodoistTaskItem({
     <div
       className={urgent ? 'todoistTask todoistTaskUrgent' : 'todoistTask'}
       data-task-mine={assignedTo === currentUserId ? 'true' : 'false'}
+      data-task-area={taskArea}
+      draggable={!editing}
+      onDragStart={startDrag}
     >
       <button
         type="button"
@@ -171,6 +217,7 @@ export default function TodoistTaskItem({
                 disabled={editSaving}
               />
             </label>
+
             <label>
               <span>Datum</span>
               <input
@@ -181,6 +228,39 @@ export default function TodoistTaskItem({
                 disabled={editSaving}
               />
             </label>
+
+            <label>
+              <span>Prioriteit</span>
+              <select className="select" value={editPriority} onChange={(event) => setEditPriority(event.target.value)} disabled={editSaving}>
+                <option value="4">P1 · Hoog</option>
+                <option value="3">P2</option>
+                <option value="2">P3</option>
+                <option value="1">P4 · Normaal</option>
+              </select>
+            </label>
+
+            {canChooseOffice ? (
+              <label>
+                <span>Type taak</span>
+                <select
+                  className="select"
+                  value={editArea}
+                  onChange={(event) => {
+                    const next = event.target.value === 'warehouse' ? 'warehouse' : 'office';
+                    setEditArea(next);
+                    if (next === 'office') {
+                      const selected = assignees.find((assignee) => assignee.id === assignedTo);
+                      if (selected?.role === 'warehouse') setAssignedTo('');
+                    }
+                  }}
+                  disabled={editSaving}
+                >
+                  <option value="office">Kantoor</option>
+                  <option value="warehouse">Magazijn</option>
+                </select>
+              </label>
+            ) : null}
+
             <div className="todoistEditActions">
               <button className="button orange" type="button" onClick={saveEdit} disabled={editSaving}>
                 {editSaving ? 'Opslaan…' : 'Opslaan'}
@@ -191,6 +271,8 @@ export default function TodoistTaskItem({
                 onClick={() => {
                   setEditContent(rawContent ?? content);
                   setEditDueDate(dueDate ?? '');
+                  setEditPriority(String(priority));
+                  setEditArea(taskArea);
                   setEditing(false);
                   setError('');
                 }}
@@ -204,9 +286,15 @@ export default function TodoistTaskItem({
           <>
             <div className="todoistTaskTitleRow">
               <strong>{currentContent}</strong>
-              <button className="todoistEditButton" type="button" onClick={() => setEditing(true)}>
-                Wijzigen
-              </button>
+              <div className="todoistTaskTitleActions">
+                <span className={`todoistPriority p${priorityLabel(priority).slice(1)}`}>{priorityLabel(priority)}</span>
+                <span className={taskArea === 'warehouse' ? 'todoistArea warehouse' : 'todoistArea office'}>
+                  {taskArea === 'warehouse' ? 'Magazijn' : 'Kantoor'}
+                </span>
+                <button className="todoistEditButton" type="button" onClick={() => setEditing(true)}>
+                  Wijzigen
+                </button>
+              </div>
             </div>
             {meta ? <span>{meta}</span> : null}
           </>
@@ -227,7 +315,7 @@ export default function TodoistTaskItem({
               disabled={assignmentSaving}
             >
               <option value="">Niemand</option>
-              {assignees.map((assignee) => (
+              {visibleAssignees.map((assignee) => (
                 <option value={assignee.id} key={assignee.id}>{assignee.name}</option>
               ))}
             </select>
