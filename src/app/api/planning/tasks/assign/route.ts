@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requirePlanningUser } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: Request) {
   const { supabase, user } = await requirePlanningUser();
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, assigneeProfileId: null });
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const admin = createAdminClient();
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('id,full_name,role')
       .eq('id', assigneeProfileId)
