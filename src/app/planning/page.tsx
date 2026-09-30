@@ -237,7 +237,7 @@ export default async function PlanningPage() {
       .catch(() => ({ value: [], error: null as string | null })),
     supabase
       .from('project_checklists')
-      .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order,deadline_offset_days,due_date,todoist_task_id)'),
+      .select('id,rentman_project_id,rentman_project_number,status,template_id,project_checklist_items(id,label,completed,is_required,sort_order,deadline_offset_days,due_date,todoist_task_id,task_area)'),
     supabase
       .from('checklist_templates')
       .select('id,name,rentman_project_type_id')
@@ -304,11 +304,14 @@ export default async function PlanningPage() {
   const taskAreaById = new Map(
     (taskAssignmentsResult.data ?? []).map((row) => [
       String(row.todoist_task_id),
-      row.task_area === 'warehouse' ? 'warehouse' : 'office',
+      row.task_area === 'warehouse' ? 'warehouse' : row.task_area === 'both' ? 'both' : 'office',
     ] as const),
   );
   const todoistTasks = profile.role === 'warehouse'
-    ? allTodoistTasks.filter((task) => taskAreaById.get(task.id) === 'warehouse')
+    ? allTodoistTasks.filter((task) => {
+        const area = taskAreaById.get(task.id);
+        return area === 'warehouse' || area === 'both';
+      })
     : allTodoistTasks;
 
   const checklistByNumber = new Map(
