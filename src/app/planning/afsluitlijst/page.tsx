@@ -10,12 +10,7 @@ import {
   isWeekend,
   monthStart,
 } from '@/lib/closingChecklist';
-import {
-  addClosingTemplateItem,
-  deleteClosingTemplateItem,
-  setClosingExemption,
-  updateClosingTemplateItem,
-} from './actions';
+import { setClosingExemption } from './actions';
 
 type SearchParams = Promise<{ date?: string }>;
 
@@ -97,13 +92,6 @@ export default async function ClosingChecklistPage({
   });
   const successPercent = requiredDates.length ? Math.round((successfulDates.length / requiredDates.length) * 100) : 100;
 
-  const { data: templateItems } = profile.role === 'admin'
-    ? await supabase
-        .from('closing_checklist_template_items')
-        .select('id,label,sort_order,is_active,item_type')
-        .order('sort_order')
-    : { data: [] as Array<{ id: number; label: string; sort_order: number; is_active: boolean; item_type: string }> };
-
   return (
     <main className="container closingPage">
       <section className="closingPageHeader">
@@ -113,7 +101,7 @@ export default async function ClosingChecklistPage({
           <p>De vaste checklist voor het einde van iedere werkdag.</p>
         </div>
         {profile.role === 'admin' ? (
-          <Link className="button secondary" href="#beheer">Beheer lijst</Link>
+          <Link className="button secondary" href="/planning/afsluitlijst/beheer">Beheer lijst</Link>
         ) : null}
       </section>
 
@@ -181,62 +169,6 @@ export default async function ClosingChecklistPage({
         </section>
       ) : null}
 
-      {profile.role === 'admin' ? (
-        <section className="usersDetail closingAdminPanel" id="beheer">
-          <header className="usersDetailHeader">
-            <div className="usersDetailIdentity">
-              <span className="usersAvatar large">✓</span>
-              <div>
-                <div className="usersDetailTitle"><h2>Standaard afsluitlijst</h2></div>
-                <p>Deze items worden gebruikt voor nieuwe werkdagen. Wijzigingen veranderen bestaande daglijsten niet.</p>
-              </div>
-            </div>
-          </header>
-
-          <div className="usersDetailPanel">
-            <form action={addClosingTemplateItem} className="closingTemplateAdd">
-              <div className="field">
-                <label>Type</label>
-                <select className="input" name="item_type" defaultValue="item">
-                  <option value="item">Checklistpunt</option>
-                  <option value="heading">Kop</option>
-                </select>
-              </div>
-              <div className="field">
-                <label>Naam</label>
-                <input className="input" name="label" placeholder="Bijv. Spoel of vaatwasser uitzetten" required />
-              </div>
-              <button className="button orange" type="submit">Toevoegen</button>
-            </form>
-
-            <div className="closingTemplateList">
-              {(templateItems ?? []).map((item) => (
-                <div className="closingTemplateRow" key={item.id}>
-                  <form action={updateClosingTemplateItem} className="closingTemplateEdit">
-                    <input type="hidden" name="item_id" value={item.id} />
-                    <input className="input closingTemplateOrder" type="number" name="sort_order" defaultValue={item.sort_order} />
-                    <select className="input" name="item_type" defaultValue={item.item_type === 'heading' ? 'heading' : 'item'}>
-                      <option value="item">Checklistpunt</option>
-                      <option value="heading">Kop</option>
-                    </select>
-                    <input className="input" name="label" defaultValue={item.label} required />
-                    <label className="closingTemplateActive">
-                      <input type="checkbox" name="is_active" defaultChecked={item.is_active} />
-                      <span>Actief</span>
-                    </label>
-                    <button className="button secondary" type="submit">Opslaan</button>
-                  </form>
-                  <form action={deleteClosingTemplateItem}>
-                    <input type="hidden" name="item_id" value={item.id} />
-                    <button className="templateDeleteButton" type="submit">Verwijderen</button>
-                  </form>
-                </div>
-              ))}
-              {!(templateItems ?? []).length ? <div className="compactEmpty">Nog geen standaard afsluitpunten ingesteld.</div> : null}
-            </div>
-          </div>
-        </section>
-      ) : null}
     </main>
   );
 }
