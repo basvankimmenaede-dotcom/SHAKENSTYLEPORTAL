@@ -182,10 +182,12 @@ export async function createPlanningTodoistTask({
   content,
   dueDate,
   description,
+  priority = 1,
 }: {
   content: string;
   dueDate?: string | null;
   description?: string;
+  priority?: number;
 }) {
   const projectId = process.env.TODOIST_PLANNING_PROJECT_ID || DEFAULT_PLANNING_PROJECT_ID;
   const response = await fetch(`${TODOIST_API_BASE}/tasks`, {
@@ -199,6 +201,7 @@ export async function createPlanningTodoistTask({
       content,
       description: description ?? '',
       project_id: projectId,
+      priority,
       ...(dueDate ? { due_date: dueDate } : {}),
     }),
     cache: 'no-store',
@@ -222,11 +225,13 @@ export async function updatePlanningTodoistTask({
   content,
   dueDate,
   useDeadline = false,
+  priority,
 }: {
   taskId: string;
   content: string;
   dueDate?: string | null;
   useDeadline?: boolean;
+  priority?: number;
 }) {
   const response = await fetch(`${TODOIST_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
     method: 'POST',
@@ -237,6 +242,7 @@ export async function updatePlanningTodoistTask({
     },
     body: JSON.stringify({
       content,
+      ...(priority ? { priority } : {}),
       ...(useDeadline
         ? { deadline_date: dueDate || null }
         : { due_date: dueDate || null }),
@@ -248,6 +254,43 @@ export async function updatePlanningTodoistTask({
     const detail = await response.text().catch(() => '');
     throw new Error(
       `Todoist-taak kon niet worden gewijzigd (${response.status})${detail ? `: ${detail.slice(0, 180)}` : ''}.`,
+    );
+  }
+
+  const task = await response.json() as TodoistTask;
+  revalidateTag('todoist-planning');
+  return task;
+}
+
+
+export async function reschedulePlanningTodoistTask({
+  taskId,
+  dueDate,
+  useDeadline = false,
+}: {
+  taskId: string;
+  dueDate?: string | null;
+  useDeadline?: boolean;
+}) {
+  const response = await fetch(`${TODOIST_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${todoistToken()}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(
+      useDeadline
+        ? { deadline_date: dueDate || null }
+        : { due_date: dueDate || null },
+    ),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(
+      `Todoist-taak kon niet worden verplaatst (${response.status})${detail ? `: ${detail.slice(0, 180)}` : ''}.`,
     );
   }
 
