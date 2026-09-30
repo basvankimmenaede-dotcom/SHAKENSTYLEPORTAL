@@ -13,3 +13,5 @@ De afsluitlijst is de dagelijkse SHAKENSTYLE-eindroutine.
 - Alleen admins kunnen de standaardlijst en vrije dagen beheren.
 
 Integrated with checklist editor v2.
+
+Deployment integration verified on 2026-09-30.
