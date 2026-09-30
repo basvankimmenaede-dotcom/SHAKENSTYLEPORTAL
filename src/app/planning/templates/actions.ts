@@ -75,6 +75,8 @@ export async function addChecklistTemplateItem(formData: FormData) {
   const isRequired = formData.get('is_required') === 'on';
   const deadlineRaw = String(formData.get('deadline_offset_days') ?? '').trim();
   const deadlineOffsetDays = deadlineRaw === '' ? null : Number(deadlineRaw);
+  const taskAreaRaw = String(formData.get('task_area') ?? 'both').trim();
+  const taskArea = ['office', 'warehouse', 'both'].includes(taskAreaRaw) ? taskAreaRaw : 'both';
 
   if (
     !Number.isFinite(templateId)
@@ -101,6 +103,7 @@ export async function addChecklistTemplateItem(formData: FormData) {
       is_required: isRequired,
       sort_order: nextOrder,
       deadline_offset_days: deadlineOffsetDays,
+      task_area: taskArea,
     });
 
   if (error) throw new Error(error.message);
@@ -115,6 +118,8 @@ export async function updateChecklistTemplateItem(formData: FormData) {
   const isRequired = formData.get('is_required') === 'on';
   const deadlineRaw = String(formData.get('deadline_offset_days') ?? '').trim();
   const deadlineOffsetDays = deadlineRaw === '' ? null : Number(deadlineRaw);
+  const taskAreaRaw = String(formData.get('task_area') ?? 'both').trim();
+  const taskArea = ['office', 'warehouse', 'both'].includes(taskAreaRaw) ? taskAreaRaw : 'both';
 
   if (
     !Number.isFinite(itemId)
@@ -130,6 +135,7 @@ export async function updateChecklistTemplateItem(formData: FormData) {
       sort_order: sortOrder,
       is_required: isRequired,
       deadline_offset_days: deadlineOffsetDays,
+      task_area: taskArea,
     })
     .eq('id', itemId);
 
