@@ -25,6 +25,7 @@ export default async function AccountPage() {
       admin={profile.role === 'admin'}
       adminPreview={false}
       portalLabel={portalLabel}
+      userLabel={profile.full_name}
     >
       <main className="accountPage">
         <section className="hero accountHero">
