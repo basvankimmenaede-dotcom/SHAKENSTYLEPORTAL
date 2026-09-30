@@ -353,6 +353,9 @@ export default function CrewPlanningPopup(props: Props) {
       window.clearTimeout(timeout);
       controller.abort();
     };
+    // detailsLoaded/detailsLoading are intentionally guards, not dependencies:
+    // adding them here cancels the in-flight Rentman request when loading starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     props.projectId,

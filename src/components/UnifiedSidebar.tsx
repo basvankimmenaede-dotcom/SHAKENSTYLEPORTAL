@@ -13,16 +13,30 @@ type NavItem = {
 
 export default function UnifiedSidebar({
   mode,
+  role,
   userLabel,
   canViewPortal = false,
+  canViewPlanning = false,
+  canViewBilling = false,
 }: {
   mode: 'admin' | 'planning' | 'portal';
+  role: 'admin' | 'warehouse' | 'customer';
   userLabel?: string | null;
   canViewPortal?: boolean;
+  canViewPlanning?: boolean;
+  canViewBilling?: boolean;
 }) {
   const pathname = usePathname();
 
-  const items: NavItem[] = mode === 'admin'
+  const portalLabel = role === 'warehouse' ? 'POS Portaal' : 'Klantenportaal';
+
+  const internalItems: NavItem[] = [
+    ...(canViewPlanning ? [{ href: '/planning', label: 'Planning', match: ['/planning'] }] : []),
+    ...(canViewBilling ? [{ href: '/planning/billing', label: 'Facturatie', match: ['/planning/billing'] }] : []),
+    ...(canViewPortal ? [{ href: '/portal', label: portalLabel, match: ['/portal'] }] : []),
+  ];
+
+  const items: NavItem[] = role === 'admin'
     ? [
         { href: '/admin', label: 'Dashboard', match: ['/admin'] },
         { href: '/planning', label: 'Planning', match: ['/planning'] },
@@ -32,26 +46,28 @@ export default function UnifiedSidebar({
         { href: '/admin/users', label: 'Gebruikers & rechten', match: ['/admin/users'] },
         { href: '/portal', label: 'Klantenportaal', match: ['/portal'] },
       ]
-    : mode === 'planning'
-      ? [
-          { href: '/planning', label: 'Planning', match: ['/planning'] },
-          { href: '/planning/billing', label: 'Facturatie', match: ['/planning/billing'] },
-          ...(canViewPortal ? [{ href: '/portal', label: 'Klantenportaal', match: ['/portal'] }] : []),
-        ]
-      : [
-          { href: '/portal', label: 'Klantenportaal', match: ['/portal'] },
-        ];
+    : internalItems.length
+      ? internalItems
+      : [{ href: '/account', label: 'Account', match: ['/account'] }];
 
   function isActive(item: NavItem) {
     if (item.href === '/admin') return pathname === '/admin';
-    if (item.href === '/planning') return pathname === '/planning' || pathname === '/planning/templates';
+    if (item.href === '/planning') return pathname === '/planning' || pathname === '/planning/templates' || pathname === '/planning/tv';
     return item.match?.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/')) ?? false;
   }
+
+  const homeHref = role === 'admin'
+    ? '/admin'
+    : canViewPlanning
+      ? '/planning'
+      : canViewPortal
+        ? '/portal'
+        : '/account';
 
   return (
     <aside className="uiSidebar">
       <div className="uiSidebarBrand">
-        <Link href={mode === 'admin' ? '/admin' : mode === 'planning' ? '/planning' : '/portal'} aria-label="SHAKENSTYLE home">
+        <Link href={homeHref} aria-label="SHAKENSTYLE home">
           <BrandLogo compact />
         </Link>
       </div>

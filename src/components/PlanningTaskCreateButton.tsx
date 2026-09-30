@@ -11,14 +11,17 @@ type ProjectOption = {
 type AssigneeOption = {
   id: string;
   name: string;
+  role: 'admin' | 'warehouse';
 };
 
 export default function PlanningTaskCreateButton({
   projects,
   assignees,
+  canChooseOffice = false,
 }: {
   projects: ProjectOption[];
   assignees: AssigneeOption[];
+  canChooseOffice?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -26,10 +29,15 @@ export default function PlanningTaskCreateButton({
   const [dueDate, setDueDate] = useState('');
   const [projectNumber, setProjectNumber] = useState('');
   const [assigneeProfileId, setAssigneeProfileId] = useState('');
+  const [taskArea, setTaskArea] = useState<'office' | 'warehouse'>(canChooseOffice ? 'office' : 'warehouse');
+  const [priority, setPriority] = useState('1');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const selectedProject = projects.find((project) => project.number === projectNumber);
+  const visibleAssignees = taskArea === 'office'
+    ? assignees.filter((assignee) => assignee.role === 'admin')
+    : assignees;
 
   useEffect(() => {
     if (!open) return;
@@ -54,6 +62,8 @@ export default function PlanningTaskCreateButton({
         projectNumber: projectNumber || null,
         projectName: selectedProject?.name || null,
         assigneeProfileId: assigneeProfileId || null,
+        taskArea,
+        priority: Number(priority),
       }),
     });
 
@@ -68,6 +78,8 @@ export default function PlanningTaskCreateButton({
     setDueDate('');
     setProjectNumber('');
     setAssigneeProfileId('');
+    setTaskArea(canChooseOffice ? 'office' : 'warehouse');
+    setPriority('1');
     setSaving(false);
     setOpen(false);
     router.refresh();
@@ -141,11 +153,42 @@ export default function PlanningTaskCreateButton({
               </label>
             </div>
 
+            <div className="planningTaskCreateGrid">
+              {canChooseOffice ? (
+                <label>
+                  <span>Type taak</span>
+                  <select
+                    value={taskArea}
+                    onChange={(event) => {
+                      const nextArea = event.target.value === 'warehouse' ? 'warehouse' : 'office';
+                      setTaskArea(nextArea);
+                      if (nextArea === 'office') {
+                        const selected = assignees.find((assignee) => assignee.id === assigneeProfileId);
+                        if (selected?.role === 'warehouse') setAssigneeProfileId('');
+                      }
+                    }}
+                  >
+                    <option value="office">Kantoor</option>
+                    <option value="warehouse">Magazijn</option>
+                  </select>
+                </label>
+              ) : null}
+              <label>
+                <span>Prioriteit</span>
+                <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+                  <option value="4">P1 · Hoog</option>
+                  <option value="3">P2</option>
+                  <option value="2">P3</option>
+                  <option value="1">P4 · Normaal</option>
+                </select>
+              </label>
+            </div>
+
             <label className="planningTaskAssigneeField">
               <span>Toewijzen aan</span>
               <select value={assigneeProfileId} onChange={(event) => setAssigneeProfileId(event.target.value)}>
                 <option value="">Niemand</option>
-                {assignees.map((assignee) => (
+                {visibleAssignees.map((assignee) => (
                   <option value={assignee.id} key={assignee.id}>{assignee.name}</option>
                 ))}
               </select>
