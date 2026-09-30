@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 type Item = {
   id: number;
   label: string;
+  item_type: 'item' | 'heading';
   completed: boolean;
   completed_at: string | null;
   completed_by_name: string | null;
@@ -23,7 +24,8 @@ export default function ClosingChecklist({
   const [pending, setPending] = useState<Set<number>>(() => new Set());
   const [error, setError] = useState('');
 
-  const done = rows.filter((row) => row.completed).length;
+  const actionableRows = rows.filter((row) => row.item_type !== 'heading');
+  const done = actionableRows.filter((row) => row.completed).length;
 
   async function toggle(item: Item) {
     if (!canManage || pending.has(item.id)) return;
@@ -60,15 +62,18 @@ export default function ClosingChecklist({
           <span>Vandaag afronden</span>
           <h2>Afsluitlijst</h2>
         </div>
-        <strong>{done}/{rows.length}</strong>
+        <strong>{done}/{actionableRows.length}</strong>
       </div>
 
       <div className="closingProgressTrack">
-        <span style={{ width: rows.length ? `${Math.round((done / rows.length) * 100)}%` : '0%' }} />
+        <span style={{ width: actionableRows.length ? `${Math.round((done / actionableRows.length) * 100)}%` : '0%' }} />
       </div>
 
       <div className="closingChecklistItems">
         {rows.map((item) => {
+          if (item.item_type === 'heading') {
+            return <div className="closingChecklistHeading" key={item.id}>{item.label}</div>;
+          }
           const busy = pending.has(item.id);
           return (
             <button
@@ -92,7 +97,7 @@ export default function ClosingChecklist({
             </button>
           );
         })}
-        {!rows.length ? <div className="compactEmpty">Nog geen afsluitpunten ingesteld.</div> : null}
+        {!actionableRows.length ? <div className="compactEmpty">Nog geen afsluitpunten ingesteld.</div> : null}
       </div>
 
       {error ? <div className="planningInlineError">{error}</div> : null}
