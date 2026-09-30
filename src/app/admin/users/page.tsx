@@ -87,7 +87,13 @@ export default async function UsersPage() {
           const email = user.email ?? profile?.full_name ?? user.id;
           const distributorName = profile?.distributor_id ? distributorById.get(profile.distributor_id) : null;
           const distributorBrandIds = profile?.distributor_id ? (brandsByDistributor.get(Number(profile.distributor_id)) ?? new Set<number>()) : new Set<number>();
-          const availableBrands = (brands ?? []).filter((brand) => distributorBrandIds.has(Number(brand.id)) || assigned.has(Number(brand.id)));
+          const portalLevel = role === 'admin'
+            ? 'manage'
+            : permissionByUser.get(user.id)?.get('portal') ?? 'none';
+          const hasPortalAccess = ['view', 'manage'].includes(portalLevel);
+          const availableBrands = role === 'customer'
+            ? (brands ?? []).filter((brand) => distributorBrandIds.has(Number(brand.id)) || assigned.has(Number(brand.id)))
+            : (brands ?? []);
 
           return (
             <section className="card userAccessCard" key={user.id}>
@@ -207,7 +213,7 @@ export default async function UsersPage() {
                 </div>
               </details>
 
-              {role === 'customer' ? (
+              {role !== 'admin' && hasPortalAccess ? (
                 <details className="brandAccessDetails" open={assigned.size === 0}>
                   <summary>Klantenportaal · merken beheren</summary>
                   <form action={saveUserBrandAccess}>
@@ -224,7 +230,11 @@ export default async function UsersPage() {
                       ))}
                     </div>
                     {availableBrands.length === 0 ? (
-                      <p className="muted" style={{ marginTop: 12 }}>Er zijn nog geen merken aan deze distributeur gekoppeld. Koppel die eerst via <strong>Distributeurs</strong>.</p>
+                      <p className="muted" style={{ marginTop: 12 }}>
+                        {role === 'customer'
+                          ? <>Er zijn nog geen merken aan deze distributeur gekoppeld. Koppel die eerst via <strong>Distributeurs</strong>.</>
+                          : 'Er zijn nog geen actieve merken beschikbaar in het klantenportaal.'}
+                      </p>
                     ) : null}
                     <div style={{ marginTop: 16 }}>
                       <button className="button orange" type="submit">Merktoegang opslaan</button>
