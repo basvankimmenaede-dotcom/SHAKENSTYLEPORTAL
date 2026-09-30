@@ -53,7 +53,7 @@ export default async function ClosingChecklistPage({
 
   const { data: list } = await supabase
     .from('closing_checklists')
-    .select('id,checklist_date,status,completed_at,completed_by,closing_checklist_items(id,label,sort_order,completed,completed_at,completed_by)')
+    .select('id,checklist_date,status,completed_at,completed_by,todoist_task_id,closing_checklist_items(id,label,sort_order,item_type,completed,completed_at,completed_by)')
     .eq('checklist_date', selectedDate)
     .maybeSingle();
 
@@ -72,6 +72,7 @@ export default async function ClosingChecklistPage({
   const items = itemRows.map((item) => ({
     id: Number(item.id),
     label: String(item.label),
+    item_type: item.item_type === 'heading' ? 'heading' : 'item',
     completed: Boolean(item.completed),
     completed_at: item.completed_at ? String(item.completed_at) : null,
     completed_by_name: item.completed_by ? personById.get(String(item.completed_by)) ?? null : null,
@@ -99,9 +100,9 @@ export default async function ClosingChecklistPage({
   const { data: templateItems } = profile.role === 'admin'
     ? await supabase
         .from('closing_checklist_template_items')
-        .select('id,label,sort_order,is_active')
+        .select('id,label,sort_order,is_active,item_type')
         .order('sort_order')
-    : { data: [] as Array<{ id: number; label: string; sort_order: number; is_active: boolean }> };
+    : { data: [] as Array<{ id: number; label: string; sort_order: number; is_active: boolean; item_type: string }> };
 
   return (
     <main className="container closingPage">
@@ -195,8 +196,15 @@ export default async function ClosingChecklistPage({
           <div className="usersDetailPanel">
             <form action={addClosingTemplateItem} className="closingTemplateAdd">
               <div className="field">
-                <label>Nieuw afsluitpunt</label>
-                <input className="input" name="label" placeholder="Bijv. vaatwasser uitzetten" required />
+                <label>Type</label>
+                <select className="input" name="item_type" defaultValue="item">
+                  <option value="item">Checklistpunt</option>
+                  <option value="heading">Kop</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Naam</label>
+                <input className="input" name="label" placeholder="Bijv. Spoel of vaatwasser uitzetten" required />
               </div>
               <button className="button orange" type="submit">Toevoegen</button>
             </form>
@@ -207,6 +215,10 @@ export default async function ClosingChecklistPage({
                   <form action={updateClosingTemplateItem} className="closingTemplateEdit">
                     <input type="hidden" name="item_id" value={item.id} />
                     <input className="input closingTemplateOrder" type="number" name="sort_order" defaultValue={item.sort_order} />
+                    <select className="input" name="item_type" defaultValue={item.item_type === 'heading' ? 'heading' : 'item'}>
+                      <option value="item">Checklistpunt</option>
+                      <option value="heading">Kop</option>
+                    </select>
                     <input className="input" name="label" defaultValue={item.label} required />
                     <label className="closingTemplateActive">
                       <input type="checkbox" name="is_active" defaultChecked={item.is_active} />
