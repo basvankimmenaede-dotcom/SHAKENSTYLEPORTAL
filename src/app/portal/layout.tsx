@@ -5,10 +5,19 @@ import { redirect } from 'next/navigation';
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { supabase, profile, user } = await requireUser();
 
-  if (profile.role !== 'admin') {
-    const portalLevel = await getUserPermissionLevel(supabase, user.id, 'portal');
-    if (!permissionAtLeast(portalLevel, 'view')) redirect('/');
-  }
+  const [portalLevel, planningLevel, billingLevel] = profile.role === 'admin'
+    ? ['manage', 'manage', 'manage'] as const
+    : await Promise.all([
+        getUserPermissionLevel(supabase, user.id, 'portal'),
+        getUserPermissionLevel(supabase, user.id, 'planning'),
+        getUserPermissionLevel(supabase, user.id, 'billing'),
+      ]);
+
+  const canViewPortal = profile.role === 'admin' || permissionAtLeast(portalLevel, 'view');
+  const canViewPlanning = profile.role === 'admin' || permissionAtLeast(planningLevel, 'view');
+  const canViewBilling = profile.role === 'admin' || permissionAtLeast(billingLevel, 'view');
+
+  if (!canViewPortal) redirect('/');
 
   let portalLabel = profile.role === 'admin' ? 'Alle merken' : 'Portaal';
 
@@ -21,5 +30,18 @@ export default async function PortalLayout({ children }: { children: React.React
     if (distributor?.name) portalLabel = distributor.name;
   }
 
-  return <AppShell adminPreview={profile.role === 'admin'} portalLabel={portalLabel} userLabel={profile.full_name}>{children}</AppShell>;
+  return (
+    <AppShell
+      role={profile.role}
+      admin={profile.role === 'admin'}
+      adminPreview={profile.role === 'admin'}
+      portalLabel={portalLabel}
+      userLabel={profile.full_name}
+      canViewPortal={canViewPortal}
+      canViewPlanning={canViewPlanning}
+      canViewBilling={canViewBilling}
+    >
+      {children}
+    </AppShell>
+  );
 }
