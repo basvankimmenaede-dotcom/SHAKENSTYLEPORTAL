@@ -69,6 +69,18 @@ export default function TodoistTaskItem({
     setEditArea(taskArea);
   }, [content, rawContent, dueDate, priority, taskArea]);
 
+  useEffect(() => {
+    if (!editing) return;
+    function handleKeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !editSaving) {
+        setEditing(false);
+        setError('');
+      }
+    }
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [editing, editSaving]);
+
   const visibleAssignees = useMemo(
     () => editArea === 'office'
       ? assignees.filter((assignee) => assignee.role === 'admin')
@@ -206,112 +218,27 @@ export default function TodoistTaskItem({
       </button>
 
       <div className="todoistTaskBody">
-        {editing ? (
-          <div className="todoistEditForm">
-            <label>
-              <span>Taak</span>
-              <input
-                className="input"
-                value={editContent}
-                onChange={(event) => setEditContent(event.target.value)}
-                disabled={editSaving}
-              />
-            </label>
-
-            <label>
-              <span>Datum</span>
-              <input
-                className="input"
-                type="date"
-                value={editDueDate}
-                onChange={(event) => setEditDueDate(event.target.value)}
-                disabled={editSaving}
-              />
-            </label>
-
-            <label>
-              <span>Prioriteit</span>
-              <select className="select" value={editPriority} onChange={(event) => setEditPriority(event.target.value)} disabled={editSaving}>
-                <option value="4">P1 · Hoog</option>
-                <option value="3">P2</option>
-                <option value="2">P3</option>
-                <option value="1">P4 · Normaal</option>
-              </select>
-            </label>
-
-            {canChooseOffice ? (
-              <label>
-                <span>Type taak</span>
-                <select
-                  className="select"
-                  value={editArea}
-                  onChange={(event) => {
-                    const next = event.target.value === 'warehouse'
-                      ? 'warehouse'
-                      : event.target.value === 'both'
-                        ? 'both'
-                        : 'office';
-                    setEditArea(next);
-                    if (next === 'office') {
-                      const selected = assignees.find((assignee) => assignee.id === assignedTo);
-                      if (selected?.role === 'warehouse') setAssignedTo('');
-                    }
-                  }}
-                  disabled={editSaving}
-                >
-                  <option value="office">Kantoor</option>
-                  <option value="warehouse">Magazijn</option>
-                  <option value="both">Beide</option>
-                </select>
-              </label>
-            ) : null}
-
-            <div className="todoistEditActions">
-              <button className="button orange" type="button" onClick={saveEdit} disabled={editSaving}>
-                {editSaving ? 'Opslaan…' : 'Opslaan'}
-              </button>
-              <button
-                className="button secondary"
-                type="button"
-                onClick={() => {
-                  setEditContent(rawContent ?? content);
-                  setEditDueDate(dueDate ?? '');
-                  setEditPriority(String(priority));
-                  setEditArea(taskArea);
-                  setEditing(false);
-                  setError('');
-                }}
-                disabled={editSaving}
-              >
-                Annuleren
-              </button>
-            </div>
+        <div className="todoistTaskTitleRow">
+          <strong>{currentContent}</strong>
+          <div className="todoistTaskTitleActions">
+            <span className={`todoistPriority p${priorityLabel(priority).slice(1)}`}>{priorityLabel(priority)}</span>
+            <span className={`todoistArea ${taskArea}`}>
+              {taskArea === 'warehouse' ? 'Magazijn' : taskArea === 'both' ? 'Beide' : 'Kantoor'}
+            </span>
+            <button className="todoistEditButton" type="button" onClick={() => setEditing(true)}>
+              Wijzigen
+            </button>
           </div>
-        ) : (
-          <>
-            <div className="todoistTaskTitleRow">
-              <strong>{currentContent}</strong>
-              <div className="todoistTaskTitleActions">
-                <span className={`todoistPriority p${priorityLabel(priority).slice(1)}`}>{priorityLabel(priority)}</span>
-                <span className={`todoistArea ${taskArea}`}>
-                  {taskArea === 'warehouse' ? 'Magazijn' : taskArea === 'both' ? 'Beide' : 'Kantoor'}
-                </span>
-                <button className="todoistEditButton" type="button" onClick={() => setEditing(true)}>
-                  Wijzigen
-                </button>
-              </div>
-            </div>
-            {meta ? <span>{meta}</span> : null}
-          </>
-        )}
+        </div>
+        {meta ? <span>{meta}</span> : null}
 
-        {!editing && labels.length ? (
+        {labels.length ? (
           <div className="todoistLabels">
             {labels.map((label) => <small key={label}>{label}</small>)}
           </div>
         ) : null}
 
-        {!editing && assignees.length ? (
+        {assignees.length ? (
           <div className="todoistAssignee">
             <span>Toegewezen aan</span>
             <select
@@ -327,8 +254,136 @@ export default function TodoistTaskItem({
           </div>
         ) : null}
 
-        {error ? <small className="planningInlineError">{error}</small> : null}
+        {error && !editing ? <small className="planningInlineError">{error}</small> : null}
       </div>
+
+      {editing ? (
+        <div
+          className="planningTaskCreateBackdrop"
+          data-planning-modal-open="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !editSaving) {
+              setEditing(false);
+              setError('');
+            }
+          }}
+        >
+          <section
+            className="planningTaskCreateModal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Taak wijzigen"
+          >
+            <button
+              type="button"
+              className="planningTaskCreateClose"
+              aria-label="Sluiten"
+              onClick={() => {
+                if (!editSaving) {
+                  setEditing(false);
+                  setError('');
+                }
+              }}
+            >
+              ×
+            </button>
+
+            <h2>Taak wijzigen</h2>
+
+            <label>
+              <span>Taak</span>
+              <input
+                autoFocus
+                value={editContent}
+                onChange={(event) => setEditContent(event.target.value)}
+                disabled={editSaving}
+              />
+            </label>
+
+            <div className="planningTaskCreateGrid">
+              <label>
+                <span>Deadline</span>
+                <input
+                  type="date"
+                  value={editDueDate}
+                  onChange={(event) => setEditDueDate(event.target.value)}
+                  disabled={editSaving}
+                />
+              </label>
+
+              <label>
+                <span>Prioriteit</span>
+                <select
+                  value={editPriority}
+                  onChange={(event) => setEditPriority(event.target.value)}
+                  disabled={editSaving}
+                >
+                  <option value="4">P1 · Hoog</option>
+                  <option value="3">P2</option>
+                  <option value="2">P3</option>
+                  <option value="1">P4 · Normaal</option>
+                </select>
+              </label>
+            </div>
+
+            {canChooseOffice ? (
+              <div className="planningTaskCreateGrid">
+                <label>
+                  <span>Type taak</span>
+                  <select
+                    value={editArea}
+                    onChange={(event) => {
+                      const next = event.target.value === 'warehouse'
+                        ? 'warehouse'
+                        : event.target.value === 'both'
+                          ? 'both'
+                          : 'office';
+                      setEditArea(next);
+                      if (next === 'office') {
+                        const selected = assignees.find((assignee) => assignee.id === assignedTo);
+                        if (selected?.role === 'warehouse') setAssignedTo('');
+                      }
+                    }}
+                    disabled={editSaving}
+                  >
+                    <option value="office">Kantoor</option>
+                    <option value="warehouse">Magazijn</option>
+                    <option value="both">Beide</option>
+                  </select>
+                </label>
+                <div />
+              </div>
+            ) : null}
+
+            <div className="planningTaskCreateActions">
+              {error ? <small>{error}</small> : <span />}
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  setEditContent(rawContent ?? content);
+                  setEditDueDate(dueDate ?? '');
+                  setEditPriority(String(priority));
+                  setEditArea(taskArea);
+                  setEditing(false);
+                  setError('');
+                }}
+                disabled={editSaving}
+              >
+                Annuleren
+              </button>
+              <button
+                type="button"
+                className="button orange"
+                onClick={saveEdit}
+                disabled={editSaving || !editContent.trim()}
+              >
+                {editSaving ? 'Opslaan…' : 'Opslaan'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
