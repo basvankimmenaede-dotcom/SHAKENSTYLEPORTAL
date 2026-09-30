@@ -47,6 +47,7 @@ export async function assignUserProfile(formData: FormData) {
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const admin = createAdminClient();
   const userId = String(formData.get('user_id') ?? '');
+  const displayName = String(formData.get('display_name') ?? '').trim();
   const distributorRaw = String(formData.get('distributor_id') ?? '');
   const role = String(formData.get('role') ?? 'customer');
   const distributorId = distributorRaw ? Number(distributorRaw) : null;
@@ -64,6 +65,7 @@ export async function assignUserProfile(formData: FormData) {
     .update({
       role,
       distributor_id: role === 'customer' ? distributorId : null,
+      ...(displayName ? { full_name: displayName } : {}),
     })
     .eq('id', userId);
 
