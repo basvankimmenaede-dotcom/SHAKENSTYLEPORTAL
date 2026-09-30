@@ -5098,7 +5098,7 @@ tr:last-child td { border-bottom: 0; }
 }
 @media (min-width: 760px) {
   .todoistEditForm {
-    grid-template-columns: minmax(0, 1.3fr) 130px 110px 120px;
+    grid-template-columns: minmax(220px, 2fr) minmax(170px, 1.6fr) minmax(150px, 1.4fr) minmax(170px, 1.5fr);
   }
 }
 @media (max-width: 640px) {
