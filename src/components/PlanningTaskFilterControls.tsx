@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 type Filter = 'mine' | 'all';
 
-function applyFilter(filter: Filter) {
+function applyFilter(filter: Filter, canSeeOffice: boolean, showWarehouse: boolean) {
   const list = document.getElementById('planning-task-list');
   if (!list) return;
 
@@ -14,9 +14,26 @@ function applyFilter(filter: Filter) {
   list.querySelectorAll<HTMLElement>('[data-task-section]').forEach((section) => {
     const tasks = Array.from(section.querySelectorAll<HTMLElement>('.todoistTask'))
       .filter((task) => !task.classList.contains('todoistTaskCompleted'));
-    const visible = filter === 'mine'
-      ? tasks.filter((task) => task.dataset.taskMine === 'true')
-      : tasks;
+
+    const visible = tasks.filter((task) => {
+      const mine = task.dataset.taskMine === 'true';
+      const area = task.dataset.taskArea || 'office';
+      const areaVisible = canSeeOffice
+        ? area === 'office' || showWarehouse
+        : area === 'warehouse';
+
+      if (!areaVisible) return false;
+      return filter === 'mine' ? mine : true;
+    });
+
+    tasks.forEach((task) => {
+      const area = task.dataset.taskArea || 'office';
+      const areaVisible = canSeeOffice
+        ? area === 'office' || showWarehouse
+        : area === 'warehouse';
+      const mineVisible = filter === 'all' || task.dataset.taskMine === 'true';
+      task.hidden = !(areaVisible && mineVisible);
+    });
 
     total += visible.length;
 
@@ -30,29 +47,42 @@ function applyFilter(filter: Filter) {
   if (openCount) openCount.textContent = `${total} open`;
 }
 
-export default function PlanningTaskFilterControls() {
+export default function PlanningTaskFilterControls({
+  canSeeOffice = false,
+}: {
+  canSeeOffice?: boolean;
+}) {
   const [filter, setFilter] = useState<Filter>('all');
+  const [showWarehouse, setShowWarehouse] = useState(!canSeeOffice);
 
   useEffect(() => {
     const saved = window.localStorage.getItem('planning-task-filter');
     const initial: Filter = saved === 'mine' ? 'mine' : 'all';
+    const savedWarehouse = window.localStorage.getItem('planning-show-warehouse') === 'true';
     setFilter(initial);
-    applyFilter(initial);
-  }, []);
+    setShowWarehouse(canSeeOffice ? savedWarehouse : true);
+    applyFilter(initial, canSeeOffice, canSeeOffice ? savedWarehouse : true);
+  }, [canSeeOffice]);
 
   useEffect(() => {
-    applyFilter(filter);
+    applyFilter(filter, canSeeOffice, showWarehouse);
     function handleTaskChange() {
-      window.setTimeout(() => applyFilter(filter), 0);
+      window.setTimeout(() => applyFilter(filter, canSeeOffice, showWarehouse), 0);
     }
     window.addEventListener('planning-task-state-changed', handleTaskChange);
     return () => window.removeEventListener('planning-task-state-changed', handleTaskChange);
-  }, [filter]);
+  }, [filter, canSeeOffice, showWarehouse]);
 
   function choose(next: Filter) {
     setFilter(next);
     window.localStorage.setItem('planning-task-filter', next);
-    applyFilter(next);
+  }
+
+  function toggleWarehouse() {
+    if (!canSeeOffice) return;
+    const next = !showWarehouse;
+    setShowWarehouse(next);
+    window.localStorage.setItem('planning-show-warehouse', String(next));
   }
 
   return (
@@ -61,8 +91,13 @@ export default function PlanningTaskFilterControls() {
         Mijn taken
       </button>
       <button type="button" className={filter === 'all' ? 'active' : ''} onClick={() => choose('all')}>
-        Alles
+        {canSeeOffice ? 'Kantoor' : 'Alle magazijn'}
       </button>
+      {canSeeOffice ? (
+        <button type="button" className={showWarehouse ? 'active' : ''} onClick={toggleWarehouse}>
+          + Magazijn
+        </button>
+      ) : null}
     </div>
   );
 }
