@@ -53,6 +53,12 @@ export async function assignUserProfile(formData: FormData) {
 
   if (!userId || !['admin', 'customer', 'warehouse'].includes(role)) return;
 
+  const { data: currentProfile } = await admin
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
+
   await admin
     .from('profiles')
     .update({
@@ -61,12 +67,14 @@ export async function assignUserProfile(formData: FormData) {
     })
     .eq('id', userId);
 
-  const defaults = defaultPermissionsForRole(role).map((permission) => ({
-    user_id: userId,
-    ...permission,
-    updated_at: new Date().toISOString(),
-  }));
-  await admin.from('user_permissions').upsert(defaults, { onConflict: 'user_id,permission_key' });
+  if (!currentProfile || currentProfile.role !== role) {
+    const defaults = defaultPermissionsForRole(role).map((permission) => ({
+      user_id: userId,
+      ...permission,
+      updated_at: new Date().toISOString(),
+    }));
+    await admin.from('user_permissions').upsert(defaults, { onConflict: 'user_id,permission_key' });
+  }
 
   revalidatePath('/admin/users');
   revalidatePath('/portal');
@@ -86,14 +94,37 @@ export async function saveUserBrandAccess(formData: FormData) {
   if (!userId) return;
 
   const { data: profile } = await admin.from('profiles').select('role,distributor_id').eq('id', userId).maybeSingle();
-  if (!profile || profile.role === 'admin' || !profile.distributor_id) return;
+  if (!profile || profile.role === 'admin') return;
 
-  const { data: allowedRows } = await admin
-    .from('distributor_brands')
-    .select('brand_id')
-    .eq('distributor_id', profile.distributor_id);
-  const allowedBrandIds = new Set((allowedRows ?? []).map((row) => Number(row.brand_id)));
-  const validSelectedBrandIds = selectedBrandIds.filter((brandId) => allowedBrandIds.has(brandId));
+  const { data: portalPermission } = await admin
+    .from('user_permissions')
+    .select('access_level')
+    .eq('user_id', userId)
+    .eq('permission_key', 'portal')
+    .maybeSingle();
+
+  if (!portalPermission || !['view', 'manage'].includes(String(portalPermission.access_level))) return;
+
+  let validSelectedBrandIds: number[] = [];
+
+  if (profile.role === 'customer') {
+    if (!profile.distributor_id) return;
+    const { data: allowedRows } = await admin
+      .from('distributor_brands')
+      .select('brand_id')
+      .eq('distributor_id', profile.distributor_id);
+    const allowedBrandIds = new Set((allowedRows ?? []).map((row) => Number(row.brand_id)));
+    validSelectedBrandIds = selectedBrandIds.filter((brandId) => allowedBrandIds.has(brandId));
+  } else {
+    const { data: allowedRows } = await admin
+      .from('brands')
+      .select('id')
+      .eq('portal_enabled', true)
+      .eq('is_brand', true)
+      .eq('rentman_active', true);
+    const allowedBrandIds = new Set((allowedRows ?? []).map((row) => Number(row.id)));
+    validSelectedBrandIds = selectedBrandIds.filter((brandId) => allowedBrandIds.has(brandId));
+  }
 
   const { error: deleteError } = await admin.from('user_brand_access').delete().eq('user_id', userId);
   if (deleteError) throw new Error(deleteError.message);
@@ -120,7 +151,7 @@ export async function inviteCustomer(formData: FormData) {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.shakenstyle.com').replace(/\/$/, '');
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: email },
-    redirectTo: `${appUrl}/accept-invite`,
+    redirectTo: `${appUrl}/activate`,
   });
   if (error) throw new Error(error.message);
 

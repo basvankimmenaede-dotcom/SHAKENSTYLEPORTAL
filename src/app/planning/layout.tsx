@@ -1,7 +1,12 @@
 import PlanningShell from '@/components/PlanningShell';
-import { requirePlanningUser } from '@/lib/auth';
+import { getUserPermissionLevel, permissionAtLeast, requirePlanningUser } from '@/lib/auth';
 
 export default async function PlanningLayout({ children }: { children: React.ReactNode }) {
-  const { profile } = await requirePlanningUser();
-  return <PlanningShell role={profile.role}>{children}</PlanningShell>;
+  const { profile, supabase, user } = await requirePlanningUser();
+  const portalLevel = profile.role === 'admin'
+    ? 'manage'
+    : await getUserPermissionLevel(supabase, user.id, 'portal');
+  const canViewPortal = profile.role === 'admin' || permissionAtLeast(portalLevel, 'view');
+
+  return <PlanningShell role={profile.role} canViewPortal={canViewPortal}>{children}</PlanningShell>;
 }

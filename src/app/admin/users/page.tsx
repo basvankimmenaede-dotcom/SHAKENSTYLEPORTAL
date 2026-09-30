@@ -1,13 +1,24 @@
-import Link from 'next/link';
-import { assignUserProfile, deletePortalUser, inviteCustomer, saveUserBrandAccess, saveUserPermissions, setUserPassword } from '@/app/admin/actions';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import UsersManager from '@/components/UsersManager';
+
+const permissionKeys = ['portal', 'planning', 'tasks', 'billing', 'checklists', 'user_admin'] as const;
+type PermissionKey = typeof permissionKeys[number];
+type PermissionLevel = 'none' | 'own' | 'view' | 'manage';
 
 export default async function UsersPage() {
   const session = await requireAdmin();
   const admin = createAdminClient();
 
-  const [{ data: userList }, { data: profiles }, { data: distributors }, { data: brands }, { data: accessRows }, { data: distributorBrandRows }, { data: permissionRows }] = await Promise.all([
+  const [
+    { data: userList },
+    { data: profiles },
+    { data: distributors },
+    { data: brands },
+    { data: accessRows },
+    { data: distributorBrandRows },
+    { data: permissionRows },
+  ] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 200 }),
     admin.from('profiles').select('id,full_name,role,distributor_id'),
     admin.from('distributors').select('id,name').order('name'),
@@ -23,219 +34,96 @@ export default async function UsersPage() {
     admin.from('user_permissions').select('user_id,permission_key,access_level'),
   ]);
 
-  const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
-  const distributorById = new Map((distributors ?? []).map((d) => [d.id, d.name]));
+  const profileById = new Map((profiles ?? []).map((profile) => [String(profile.id), profile]));
+  const distributorById = new Map((distributors ?? []).map((distributor) => [Number(distributor.id), String(distributor.name)]));
   const accessByUser = new Map<string, Set<number>>();
-  const permissionByUser = new Map<string, Map<string, string>>();
+  const permissionByUser = new Map<string, Map<PermissionKey, PermissionLevel>>();
   const brandsByDistributor = new Map<number, Set<number>>();
+
   for (const row of distributorBrandRows ?? []) {
     const distributorId = Number(row.distributor_id);
     if (!brandsByDistributor.has(distributorId)) brandsByDistributor.set(distributorId, new Set());
     brandsByDistributor.get(distributorId)?.add(Number(row.brand_id));
   }
+
   for (const row of accessRows ?? []) {
-    if (!accessByUser.has(row.user_id)) accessByUser.set(row.user_id, new Set());
-    accessByUser.get(row.user_id)?.add(row.brand_id);
-  }
-  for (const row of permissionRows ?? []) {
-    if (!permissionByUser.has(row.user_id)) permissionByUser.set(row.user_id, new Map());
-    permissionByUser.get(row.user_id)?.set(row.permission_key, row.access_level);
+    const userId = String(row.user_id);
+    if (!accessByUser.has(userId)) accessByUser.set(userId, new Set());
+    accessByUser.get(userId)?.add(Number(row.brand_id));
   }
 
-  const permissionDefinitions = [
-    { key: 'portal', label: 'Klantenportaal', allowOwn: false },
-    { key: 'planning', label: 'Planning', allowOwn: false },
-    { key: 'tasks', label: 'Taken', allowOwn: true },
-    { key: 'billing', label: 'Facturatie', allowOwn: false },
-    { key: 'checklists', label: 'Checklists', allowOwn: false },
-    { key: 'user_admin', label: 'Gebruikersbeheer', allowOwn: false },
-  ] as const;
+  for (const row of permissionRows ?? []) {
+    const key = String(row.permission_key) as PermissionKey;
+    const level = String(row.access_level) as PermissionLevel;
+    if (!permissionKeys.includes(key) || !['none', 'own', 'view', 'manage'].includes(level)) continue;
+    const userId = String(row.user_id);
+    if (!permissionByUser.has(userId)) permissionByUser.set(userId, new Map());
+    permissionByUser.get(userId)?.set(key, level);
+  }
+
+  const activeBrands = (brands ?? []).map((brand) => ({
+    id: Number(brand.id),
+    name: String(brand.name),
+    rentman_name: brand.rentman_name ? String(brand.rentman_name) : null,
+    portal_enabled: Boolean(brand.portal_enabled),
+  }));
+
+  const users = (userList?.users ?? []).map((authUser) => {
+    const id = String(authUser.id);
+    const profile = profileById.get(id);
+    const role = profile?.role === 'admin' || profile?.role === 'warehouse' ? profile.role : 'customer';
+    const distributorId = profile?.distributor_id ? Number(profile.distributor_id) : null;
+    const assigned = Array.from(accessByUser.get(id) ?? []);
+    const assignedSet = new Set(assigned);
+    const distributorBrandIds = distributorId ? (brandsByDistributor.get(distributorId) ?? new Set<number>()) : new Set<number>();
+    const availableBrandIds = role === 'customer'
+      ? activeBrands
+          .filter((brand) => distributorBrandIds.has(brand.id) || assignedSet.has(brand.id))
+          .map((brand) => brand.id)
+      : activeBrands.map((brand) => brand.id);
+
+    const permissions = Object.fromEntries(
+      permissionKeys.map((key) => [
+        key,
+        role === 'admin'
+          ? 'manage'
+          : permissionByUser.get(id)?.get(key) ?? 'none',
+      ]),
+    ) as Record<PermissionKey, PermissionLevel>;
+
+    return {
+      id,
+      email: authUser.email ?? profile?.full_name ?? id,
+      fullName: profile?.full_name ? String(profile.full_name) : null,
+      role,
+      distributorId,
+      distributorName: distributorId ? distributorById.get(distributorId) ?? null : null,
+      assignedBrandIds: assigned,
+      availableBrandIds,
+      permissions,
+      invitedAt: authUser.invited_at ?? null,
+      confirmedAt: authUser.confirmed_at ?? null,
+      lastSignInAt: authUser.last_sign_in_at ?? null,
+    };
+  });
+
+  users.sort((a, b) => {
+    if (a.id === session.user.id) return -1;
+    if (b.id === session.user.id) return 1;
+    if (a.role === 'admin' && b.role !== 'admin') return -1;
+    if (b.role === 'admin' && a.role !== 'admin') return 1;
+    return a.email.localeCompare(b.email, 'nl');
+  });
 
   return (
-    <main className="container">
-      <section className="hero">
-        <div>
-          <h1>Gebruikers & rechten</h1>
-          <p>Beheer centraal wie toegang heeft tot het klantenportaal, interne modules en specifieke merken.</p>
-        </div>
-      </section>
-
-      <section className="card" style={{ marginBottom: 18 }}>
-        <h2>Klant uitnodigen</h2>
-        <form action={inviteCustomer} className="grid grid2">
-          <div className="field">
-            <label htmlFor="email">E-mailadres</label>
-            <input id="email" name="email" className="input" type="email" required placeholder="naam@klant.nl" />
-          </div>
-          <div className="field">
-            <label htmlFor="distributor_id">Organisatie</label>
-            <select id="distributor_id" name="distributor_id" className="select" required defaultValue="">
-              <option value="" disabled>Kies organisatie</option>
-              {(distributors ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          </div>
-          <div><button className="button orange" type="submit">Uitnodiging sturen</button></div>
-        </form>
-        <p className="muted" style={{ marginTop: 12 }}>Na uitnodigen wijs je hieronder de juiste merken aan. Nieuwe gebruikers krijgen niet automatisch toegang tot alle merken van hun organisatie.</p>
-      </section>
-
-      <div className="stack">
-        {(userList?.users ?? []).map((user) => {
-          const profile = profileById.get(user.id);
-          const role = profile?.role ?? 'customer';
-          const assigned = accessByUser.get(user.id) ?? new Set<number>();
-          const email = user.email ?? profile?.full_name ?? user.id;
-          const distributorName = profile?.distributor_id ? distributorById.get(profile.distributor_id) : null;
-          const distributorBrandIds = profile?.distributor_id ? (brandsByDistributor.get(Number(profile.distributor_id)) ?? new Set<number>()) : new Set<number>();
-          const availableBrands = (brands ?? []).filter((brand) => distributorBrandIds.has(Number(brand.id)) || assigned.has(Number(brand.id)));
-
-          return (
-            <section className="card userAccessCard" key={user.id}>
-              <div className="userAccessHeader">
-                <div>
-                  <h2 style={{ marginBottom: 4 }}>{email}</h2>
-                  <span className="muted">{role === 'admin' ? 'Admin · toegang tot alles' : role === 'warehouse' ? 'Magazijn · toegang tot planning' : `${distributorName ?? 'Geen organisatie'} · ${assigned.size} merk${assigned.size === 1 ? '' : 'en'}`}</span>
-                </div>
-                {role === 'customer' ? (
-                  <Link className="button secondary" href={`/portal?as=${encodeURIComponent(user.id)}`}>Bekijk als gebruiker</Link>
-                ) : role === 'warehouse' ? (
-                  <Link className="button secondary" href="/planning">Open planning</Link>
-                ) : null}
-              </div>
-
-              <form action={assignUserProfile} className="inline userProfileForm">
-                <input type="hidden" name="user_id" value={user.id} />
-                <select name="role" className="select" defaultValue={role} style={{ width: 140 }}>
-                  <option value="customer">Customer</option>
-                  <option value="warehouse">Magazijn</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <select name="distributor_id" className="select" defaultValue={profile?.distributor_id ?? ''} style={{ width: 220 }}>
-                  <option value="">Geen organisatie</option>
-                  {(distributors ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-                <button className="button secondary" type="submit">Profiel opslaan</button>
-              </form>
-
-              <details className="brandAccessDetails centralPermissionsDetails" open>
-                <summary>Toegang & rechten</summary>
-                <form action={saveUserPermissions} className="permissionsForm">
-                  <input type="hidden" name="user_id" value={user.id} />
-                  <div className="permissionsGrid">
-                    {permissionDefinitions.map((permission) => {
-                      const currentLevel = role === 'admin'
-                        ? 'manage'
-                        : permissionByUser.get(user.id)?.get(permission.key) ?? 'none';
-
-                      return (
-                        <label className="permissionControl" key={permission.key}>
-                          <span>
-                            <strong>{permission.label}</strong>
-                            <small>
-                              {permission.key === 'portal'
-                                ? 'Toegang tot het klantgedeelte; merktoegang beheer je hieronder.'
-                                : permission.key === 'billing'
-                                  ? 'Toegang tot financiële facturatiewerkvoorraad.'
-                                  : 'Moduletoegang voor deze gebruiker.'}
-                            </small>
-                          </span>
-                          <select
-                            name={`permission_${permission.key}`}
-                            className="select"
-                            defaultValue={currentLevel}
-                            disabled={role === 'admin'}
-                          >
-                            <option value="none">Geen toegang</option>
-                            {permission.allowOwn ? <option value="own">Alleen eigen</option> : null}
-                            <option value="view">Bekijken</option>
-                            <option value="manage">Beheren</option>
-                          </select>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {role === 'admin' ? (
-                    <p className="muted" style={{ marginTop: 12 }}>Admins hebben automatisch volledige toegang tot alle modules.</p>
-                  ) : (
-                    <div style={{ marginTop: 16 }}>
-                      <button className="button orange" type="submit">Rechten opslaan</button>
-                    </div>
-                  )}
-                </form>
-              </details>
-
-              <details className="brandAccessDetails accountAdminDetails">
-                <summary>Accountbeheer</summary>
-                <div className="accountAdminGrid">
-                  <form action={setUserPassword} className="accountAdminPanel">
-                    <input type="hidden" name="user_id" value={user.id} />
-                    <div>
-                      <strong>Wachtwoord wijzigen</strong>
-                      <p className="muted" style={{ marginTop: 4 }}>Stel direct een nieuw wachtwoord in. De gebruiker hoeft hiervoor geen resetmail te openen.</p>
-                    </div>
-                    <div className="field">
-                      <label htmlFor={`password-${user.id}`}>Nieuw wachtwoord</label>
-                      <input id={`password-${user.id}`} name="password" className="input" type="password" minLength={8} autoComplete="new-password" required />
-                    </div>
-                    <div className="field">
-                      <label htmlFor={`password-confirm-${user.id}`}>Herhaal wachtwoord</label>
-                      <input id={`password-confirm-${user.id}`} name="password_confirm" className="input" type="password" minLength={8} autoComplete="new-password" required />
-                    </div>
-                    <div><button className="button orange" type="submit">Wachtwoord opslaan</button></div>
-                  </form>
-
-                  {user.id !== session.user.id ? (
-                    <form action={deletePortalUser} className="accountAdminPanel dangerPanel">
-                      <input type="hidden" name="user_id" value={user.id} />
-                      <input type="hidden" name="expected_email" value={email} />
-                      <div>
-                        <strong>Gebruiker verwijderen</strong>
-                        <p className="muted" style={{ marginTop: 4 }}>Verwijdert het account en de gekoppelde portalrechten definitief.</p>
-                      </div>
-                      <div className="field">
-                        <label htmlFor={`delete-${user.id}`}>Typ het e-mailadres ter bevestiging</label>
-                        <input id={`delete-${user.id}`} name="confirm_email" className="input" type="email" placeholder={email} required />
-                      </div>
-                      <div><button className="button dangerButton" type="submit">Gebruiker verwijderen</button></div>
-                    </form>
-                  ) : (
-                    <div className="accountAdminPanel dangerPanel">
-                      <strong>Eigen adminaccount</strong>
-                      <p className="muted" style={{ marginTop: 4 }}>Je eigen adminaccount kan hier niet worden verwijderd.</p>
-                    </div>
-                  )}
-                </div>
-              </details>
-
-              {role === 'customer' ? (
-                <details className="brandAccessDetails" open={assigned.size === 0}>
-                  <summary>Klantenportaal · merken beheren</summary>
-                  <form action={saveUserBrandAccess}>
-                    <input type="hidden" name="user_id" value={user.id} />
-                    <div className="brandAccessGrid">
-                      {availableBrands.map((brand) => (
-                        <label className="brandAccessOption" key={brand.id}>
-                          <input type="checkbox" name="brand_ids" value={brand.id} defaultChecked={assigned.has(brand.id)} />
-                          <span>
-                            <strong>{brand.rentman_name ?? brand.name}</strong>
-                            <small>{brand.portal_enabled ? 'Actief in portaal' : 'Niet actief'}</small>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {availableBrands.length === 0 ? (
-                      <p className="muted" style={{ marginTop: 12 }}>Er zijn nog geen merken aan deze distributeur gekoppeld. Koppel die eerst via <strong>Distributeurs</strong>.</p>
-                    ) : null}
-                    <div style={{ marginTop: 16 }}>
-                      <button className="button orange" type="submit">Merktoegang opslaan</button>
-                    </div>
-                  </form>
-                </details>
-              ) : null}
-            </section>
-          );
-        })}
-      </div>
-    </main>
+    <UsersManager
+      users={users}
+      distributors={(distributors ?? []).map((distributor) => ({
+        id: Number(distributor.id),
+        name: String(distributor.name),
+      }))}
+      brands={activeBrands}
+      currentUserId={session.user.id}
+    />
   );
 }
