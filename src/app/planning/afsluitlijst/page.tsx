@@ -67,7 +67,7 @@ export default async function ClosingChecklistPage({
   const items = itemRows.map((item) => ({
     id: Number(item.id),
     label: String(item.label),
-    item_type: item.item_type === 'heading' ? 'heading' : 'item',
+    item_type: (item.item_type === 'heading' ? 'heading' : 'item') as 'heading' | 'item',
     completed: Boolean(item.completed),
     completed_at: item.completed_at ? String(item.completed_at) : null,
     completed_by_name: item.completed_by ? personById.get(String(item.completed_by)) ?? null : null,
