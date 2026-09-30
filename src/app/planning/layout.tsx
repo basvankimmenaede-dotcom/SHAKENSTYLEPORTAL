@@ -8,5 +8,5 @@ export default async function PlanningLayout({ children }: { children: React.Rea
     : await getUserPermissionLevel(supabase, user.id, 'portal');
   const canViewPortal = profile.role === 'admin' || permissionAtLeast(portalLevel, 'view');
 
-  return <PlanningShell role={profile.role} canViewPortal={canViewPortal}>{children}</PlanningShell>;
+  return <PlanningShell role={profile.role} canViewPortal={canViewPortal} userLabel={profile.full_name}>{children}</PlanningShell>;
 }
