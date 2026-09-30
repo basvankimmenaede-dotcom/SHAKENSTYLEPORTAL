@@ -21,5 +21,5 @@ export default async function PortalLayout({ children }: { children: React.React
     if (distributor?.name) portalLabel = distributor.name;
   }
 
-  return <AppShell adminPreview={profile.role === 'admin'} portalLabel={portalLabel}>{children}</AppShell>;
+  return <AppShell adminPreview={profile.role === 'admin'} portalLabel={portalLabel} userLabel={profile.full_name}>{children}</AppShell>;
 }
