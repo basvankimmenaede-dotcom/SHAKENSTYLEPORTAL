@@ -11,3 +11,5 @@ De afsluitlijst is de dagelijkse SHAKENSTYLE-eindroutine.
 - Wijzigingen aan de standaardlijst veranderen bestaande daglijsten niet.
 - Medewerkers met checklist-beheerrechten kunnen dagelijkse punten afvinken.
 - Alleen admins kunnen de standaardlijst en vrije dagen beheren.
+
+Integrated with checklist editor v2.
