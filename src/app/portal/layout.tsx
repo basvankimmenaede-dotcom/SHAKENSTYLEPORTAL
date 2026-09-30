@@ -5,17 +5,19 @@ import { redirect } from 'next/navigation';
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { supabase, profile, user } = await requireUser();
 
-  const [portalLevel, planningLevel, billingLevel] = profile.role === 'admin'
-    ? ['manage', 'manage', 'manage'] as const
+  const [portalLevel, planningLevel, billingLevel, checklistLevel] = profile.role === 'admin'
+    ? ['manage', 'manage', 'manage', 'manage'] as const
     : await Promise.all([
         getUserPermissionLevel(supabase, user.id, 'portal'),
         getUserPermissionLevel(supabase, user.id, 'planning'),
         getUserPermissionLevel(supabase, user.id, 'billing'),
+        getUserPermissionLevel(supabase, user.id, 'checklists'),
       ]);
 
   const canViewPortal = profile.role === 'admin' || permissionAtLeast(portalLevel, 'view');
   const canViewPlanning = profile.role === 'admin' || permissionAtLeast(planningLevel, 'view');
   const canViewBilling = profile.role === 'admin' || permissionAtLeast(billingLevel, 'view');
+  const canViewChecklists = profile.role === 'admin' || permissionAtLeast(checklistLevel, 'view');
 
   if (!canViewPortal) redirect('/');
 
@@ -40,6 +42,7 @@ export default async function PortalLayout({ children }: { children: React.React
       canViewPortal={canViewPortal}
       canViewPlanning={canViewPlanning}
       canViewBilling={canViewBilling}
+      canViewChecklists={canViewChecklists}
     >
       {children}
     </AppShell>
