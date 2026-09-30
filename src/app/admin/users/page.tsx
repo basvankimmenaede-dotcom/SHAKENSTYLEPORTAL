@@ -3,6 +3,17 @@ import { assignUserProfile, deletePortalUser, inviteCustomer, saveUserBrandAcces
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+function authStatus(user: {
+  invited_at?: string | null;
+  confirmed_at?: string | null;
+  last_sign_in_at?: string | null;
+}) {
+  if (user.last_sign_in_at) return { label: 'Actief', className: 'badge green' };
+  if (user.confirmed_at) return { label: 'Bevestigd · wachtwoord nog niet gebruikt', className: 'badge' };
+  if (user.invited_at) return { label: 'Uitgenodigd · nog niet geactiveerd', className: 'badge' };
+  return { label: 'Account aangemaakt', className: 'badge' };
+}
+
 export default async function UsersPage() {
   const session = await requireAdmin();
   const admin = createAdminClient();
@@ -94,12 +105,16 @@ export default async function UsersPage() {
           const availableBrands = role === 'customer'
             ? (brands ?? []).filter((brand) => distributorBrandIds.has(Number(brand.id)) || assigned.has(Number(brand.id)))
             : (brands ?? []);
+          const status = authStatus(user);
 
           return (
             <section className="card userAccessCard" key={user.id}>
               <div className="userAccessHeader">
                 <div>
                   <h2 style={{ marginBottom: 4 }}>{email}</h2>
+                  <div className="inline" style={{ marginBottom: 6 }}>
+                    <span className={status.className}>{status.label}</span>
+                  </div>
                   <span className="muted">{role === 'admin' ? 'Admin · toegang tot alles' : role === 'warehouse' ? 'Magazijn · toegang tot planning' : `${distributorName ?? 'Geen organisatie'} · ${assigned.size} merk${assigned.size === 1 ? '' : 'en'}`}</span>
                 </div>
                 {role === 'customer' ? (
