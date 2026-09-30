@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import { requirePlanningUser } from '@/lib/auth';
 import { updatePlanningTodoistTask } from '@/lib/todoist';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+function normalizePriority(value: unknown) {
+  const priority = Number(value);
+  return [1, 2, 3, 4].includes(priority) ? priority : 1;
+}
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requirePlanningUser();
+  const { supabase, profile } = await requirePlanningUser();
 
   try {
     const { id } = await params;
@@ -14,6 +20,13 @@ export async function PATCH(
     const content = String(body.content ?? '').trim();
     const dueDate = body.dueDate ? String(body.dueDate) : null;
     const useDeadline = Boolean(body.useDeadline);
+    const priority = normalizePriority(body.priority);
+    const requestedArea = String(body.taskArea ?? '').trim();
+    const taskArea = profile.role === 'warehouse'
+      ? 'warehouse'
+      : requestedArea === 'warehouse'
+        ? 'warehouse'
+        : 'office';
 
     if (!id) {
       return NextResponse.json({ ok: false, error: 'Taak ontbreekt.' }, { status: 400 });
@@ -22,14 +35,47 @@ export async function PATCH(
       return NextResponse.json({ ok: false, error: 'Vul een taaknaam in.' }, { status: 400 });
     }
 
+    const { data: existing } = await supabase
+      .from('planning_task_assignments')
+      .select('assignee_profile_id')
+      .eq('todoist_task_id', id)
+      .maybeSingle();
+
+    if (taskArea === 'office' && existing?.assignee_profile_id) {
+      const admin = createAdminClient();
+      const { data: assignee } = await admin
+        .from('profiles')
+        .select('role')
+        .eq('id', existing.assignee_profile_id)
+        .maybeSingle();
+
+      if (assignee?.role === 'warehouse') {
+        return NextResponse.json({
+          ok: false,
+          error: 'Deze taak staat nog op een magazijngebruiker. Wijzig eerst de toewijzing.',
+        }, { status: 400 });
+      }
+    }
+
     const task = await updatePlanningTodoistTask({
       taskId: id,
       content,
       dueDate,
       useDeadline,
+      priority,
     });
 
-    return NextResponse.json({ ok: true, task });
+    const { error: metadataError } = await supabase
+      .from('planning_task_assignments')
+      .upsert({
+        todoist_task_id: id,
+        task_area: taskArea,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'todoist_task_id' });
+
+    if (metadataError) throw metadataError;
+
+    return NextResponse.json({ ok: true, task, taskArea });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Taak kon niet worden gewijzigd.';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
