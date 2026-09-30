@@ -5511,6 +5511,16 @@ tr:last-child td { border-bottom: 0; }
 .closingChecklistItems {
   border-top: 1px solid #eee9e3;
 }
+.closingChecklistHeading {
+  padding: 16px 20px 9px;
+  border-bottom: 1px solid #eee9e3;
+  background: #f7f4f0;
+  color: #3e3934;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
 .closingChecklistRow {
   width: 100%;
   display: grid;
@@ -5617,7 +5627,7 @@ tr:last-child td { border-bottom: 0; }
 }
 .closingTemplateAdd {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: end;
   margin-bottom: 14px;
@@ -5644,7 +5654,7 @@ tr:last-child td { border-bottom: 0; }
 }
 .closingTemplateEdit {
   display: grid;
-  grid-template-columns: 76px minmax(180px, 1fr) 90px 86px;
+  grid-template-columns: 76px 140px minmax(180px, 1fr) 90px 86px;
   gap: 10px;
   align-items: center;
 }
