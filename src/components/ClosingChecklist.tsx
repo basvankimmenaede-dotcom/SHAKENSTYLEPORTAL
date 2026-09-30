@@ -1,0 +1,101 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+type Item = {
+  id: number;
+  label: string;
+  completed: boolean;
+  completed_at: string | null;
+  completed_by_name: string | null;
+};
+
+export default function ClosingChecklist({
+  items,
+  canManage,
+}: {
+  items: Item[];
+  canManage: boolean;
+}) {
+  const router = useRouter();
+  const [rows, setRows] = useState(items);
+  const [pending, setPending] = useState<Set<number>>(() => new Set());
+  const [error, setError] = useState('');
+
+  const done = rows.filter((row) => row.completed).length;
+
+  async function toggle(item: Item) {
+    if (!canManage || pending.has(item.id)) return;
+    const nextCompleted = !item.completed;
+    setError('');
+    setRows((current) => current.map((row) => row.id === item.id ? { ...row, completed: nextCompleted } : row));
+    setPending((current) => new Set(current).add(item.id));
+
+    const response = await fetch(`/api/planning/closing-checklist/items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: nextCompleted }),
+    });
+
+    if (!response.ok) {
+      setRows((current) => current.map((row) => row.id === item.id ? item : row));
+      const result = await response.json().catch(() => ({}));
+      setError(result.error || 'Afsluitlijst kon niet worden bijgewerkt.');
+    } else {
+      router.refresh();
+    }
+
+    setPending((current) => {
+      const next = new Set(current);
+      next.delete(item.id);
+      return next;
+    });
+  }
+
+  return (
+    <section className="closingChecklistCard">
+      <div className="closingChecklistCardHeader">
+        <div>
+          <span>Vandaag afronden</span>
+          <h2>Afsluitlijst</h2>
+        </div>
+        <strong>{done}/{rows.length}</strong>
+      </div>
+
+      <div className="closingProgressTrack">
+        <span style={{ width: rows.length ? `${Math.round((done / rows.length) * 100)}%` : '0%' }} />
+      </div>
+
+      <div className="closingChecklistItems">
+        {rows.map((item) => {
+          const busy = pending.has(item.id);
+          return (
+            <button
+              type="button"
+              className={item.completed ? 'closingChecklistRow complete' : 'closingChecklistRow'}
+              key={item.id}
+              onClick={() => toggle(item)}
+              disabled={!canManage || busy}
+            >
+              <span className="closingCheckBox">{item.completed ? '✓' : ''}</span>
+              <span className="closingChecklistLabel">{item.label}</span>
+              <small>
+                {busy
+                  ? 'opslaan…'
+                  : item.completed
+                    ? item.completed_by_name
+                      ? `Afgevinkt door ${item.completed_by_name}`
+                      : 'Afgerond'
+                    : 'Nog open'}
+              </small>
+            </button>
+          );
+        })}
+        {!rows.length ? <div className="compactEmpty">Nog geen afsluitpunten ingesteld.</div> : null}
+      </div>
+
+      {error ? <div className="planningInlineError">{error}</div> : null}
+    </section>
+  );
+}
