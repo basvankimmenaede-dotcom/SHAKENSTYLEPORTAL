@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireModulePermission } from '@/lib/auth';
+import { completePlanningTodoistTask } from '@/lib/todoist';
 
 export async function PATCH(
   request: Request,
@@ -15,10 +16,14 @@ export async function PATCH(
 
     const { data: item, error: readError } = await supabase
       .from('closing_checklist_items')
-      .select('id,closing_checklist_id')
+      .select('id,closing_checklist_id,item_type')
       .eq('id', itemId)
       .single();
     if (readError) throw readError;
+
+    if (item.item_type === 'heading') {
+      return NextResponse.json({ ok: false, error: 'Een kop kan niet worden afgevinkt.' }, { status: 400 });
+    }
 
     const now = new Date().toISOString();
     const { error: updateError } = await supabase
@@ -34,17 +39,30 @@ export async function PATCH(
 
     const { data: siblings, error: siblingsError } = await supabase
       .from('closing_checklist_items')
-      .select('completed')
+      .select('completed,item_type')
       .eq('closing_checklist_id', item.closing_checklist_id);
     if (siblingsError) throw siblingsError;
 
-    const allDone = Boolean(siblings?.length) && siblings.every((row) => row.completed);
+    const actionableSiblings = (siblings ?? []).filter((row) => row.item_type !== 'heading');
+    const allDone = Boolean(actionableSiblings.length) && actionableSiblings.every((row) => row.completed);
+    const { data: list, error: listReadError } = await supabase
+      .from('closing_checklists')
+      .select('todoist_task_id')
+      .eq('id', item.closing_checklist_id)
+      .single();
+    if (listReadError) throw listReadError;
+
+    if (allDone && list?.todoist_task_id) {
+      await completePlanningTodoistTask(String(list.todoist_task_id)).catch(() => undefined);
+    }
+
     const { error: listError } = await supabase
       .from('closing_checklists')
       .update({
         status: allDone ? 'completed' : 'open',
         completed_at: allDone ? now : null,
         completed_by: allDone ? user.id : null,
+        todoist_task_id: allDone ? null : list?.todoist_task_id ?? null,
       })
       .eq('id', item.closing_checklist_id);
     if (listError) throw listError;
