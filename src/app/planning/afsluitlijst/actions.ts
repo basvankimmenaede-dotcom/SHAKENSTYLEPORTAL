@@ -11,6 +11,7 @@ function revalidateClosing() {
 export async function addClosingTemplateItem(formData: FormData) {
   const { supabase } = await requireAdmin();
   const label = String(formData.get('label') ?? '').trim();
+  const itemType = formData.get('item_type') === 'heading' ? 'heading' : 'item';
   if (!label) return;
 
   const { data: lastItem, error: orderError } = await supabase
@@ -28,6 +29,7 @@ export async function addClosingTemplateItem(formData: FormData) {
       label,
       sort_order: Number(lastItem?.sort_order ?? 0) + 10,
       is_active: true,
+      item_type: itemType,
     });
 
   if (error) throw new Error(error.message);
@@ -40,6 +42,7 @@ export async function updateClosingTemplateItem(formData: FormData) {
   const label = String(formData.get('label') ?? '').trim();
   const sortOrder = Number(formData.get('sort_order'));
   const isActive = formData.get('is_active') === 'on';
+  const itemType = formData.get('item_type') === 'heading' ? 'heading' : 'item';
 
   if (!Number.isFinite(id) || !Number.isFinite(sortOrder) || !label) return;
 
@@ -49,6 +52,7 @@ export async function updateClosingTemplateItem(formData: FormData) {
       label,
       sort_order: sortOrder,
       is_active: isActive,
+      item_type: itemType,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id);
