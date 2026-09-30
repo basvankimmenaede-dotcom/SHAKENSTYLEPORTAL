@@ -22,11 +22,10 @@ export async function PATCH(
     const useDeadline = Boolean(body.useDeadline);
     const priority = normalizePriority(body.priority);
     const requestedArea = String(body.taskArea ?? '').trim();
+    const existingArea = requestedArea === 'warehouse' || requestedArea === 'both' ? requestedArea : 'office';
     const taskArea = profile.role === 'warehouse'
-      ? 'warehouse'
-      : requestedArea === 'warehouse'
-        ? 'warehouse'
-        : 'office';
+      ? (existingArea === 'both' ? 'both' : 'warehouse')
+      : existingArea;
 
     if (!id) {
       return NextResponse.json({ ok: false, error: 'Taak ontbreekt.' }, { status: 400 });
@@ -41,7 +40,7 @@ export async function PATCH(
       .eq('todoist_task_id', id)
       .maybeSingle();
 
-    if (profile.role === 'warehouse' && existing?.task_area !== 'warehouse') {
+    if (profile.role === 'warehouse' && existing?.task_area !== 'warehouse' && existing?.task_area !== 'both') {
       return NextResponse.json({ ok: false, error: 'Geen toegang tot deze kantoortaak.' }, { status: 403 });
     }
 
