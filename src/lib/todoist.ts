@@ -215,3 +215,43 @@ export async function createPlanningTodoistTask({
   revalidateTag('todoist-planning');
   return task;
 }
+
+
+export async function updatePlanningTodoistTask({
+  taskId,
+  content,
+  dueDate,
+  useDeadline = false,
+}: {
+  taskId: string;
+  content: string;
+  dueDate?: string | null;
+  useDeadline?: boolean;
+}) {
+  const response = await fetch(`${TODOIST_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${todoistToken()}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      content,
+      ...(useDeadline
+        ? { deadline_date: dueDate || null }
+        : { due_date: dueDate || null }),
+    }),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(
+      `Todoist-taak kon niet worden gewijzigd (${response.status})${detail ? `: ${detail.slice(0, 180)}` : ''}.`,
+    );
+  }
+
+  const task = await response.json() as TodoistTask;
+  revalidateTag('todoist-planning');
+  return task;
+}
