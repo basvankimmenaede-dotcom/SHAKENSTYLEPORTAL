@@ -37,9 +37,13 @@ export async function PATCH(
 
     const { data: existing } = await supabase
       .from('planning_task_assignments')
-      .select('assignee_profile_id')
+      .select('assignee_profile_id,task_area')
       .eq('todoist_task_id', id)
       .maybeSingle();
+
+    if (profile.role === 'warehouse' && existing?.task_area !== 'warehouse') {
+      return NextResponse.json({ ok: false, error: 'Geen toegang tot deze kantoortaak.' }, { status: 403 });
+    }
 
     if (taskArea === 'office' && existing?.assignee_profile_id) {
       const admin = createAdminClient();
