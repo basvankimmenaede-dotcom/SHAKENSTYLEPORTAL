@@ -52,8 +52,14 @@ export async function PATCH(
       .single();
     if (listReadError) throw listReadError;
 
-    if (allDone && list?.todoist_task_id) {
-      await completePlanningTodoistTask(String(list.todoist_task_id)).catch(() => undefined);
+    let todoistTaskId = list?.todoist_task_id ?? null;
+    if (allDone && todoistTaskId) {
+      try {
+        await completePlanningTodoistTask(String(todoistTaskId));
+        todoistTaskId = null;
+      } catch {
+        // Keep the link so the planning page can retry if Todoist is temporarily unavailable.
+      }
     }
 
     const { error: listError } = await supabase
@@ -62,7 +68,7 @@ export async function PATCH(
         status: allDone ? 'completed' : 'open',
         completed_at: allDone ? now : null,
         completed_by: allDone ? user.id : null,
-        todoist_task_id: allDone ? null : list?.todoist_task_id ?? null,
+        todoist_task_id: todoistTaskId,
       })
       .eq('id', item.closing_checklist_id);
     if (listError) throw listError;
