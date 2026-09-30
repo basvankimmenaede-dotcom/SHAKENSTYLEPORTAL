@@ -25,6 +25,7 @@ import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 import CrewPlanningPopup from '@/components/CrewPlanningPopup';
 import PlanningTaskCreateButton from '@/components/PlanningTaskCreateButton';
 import PlanningTaskFilterControls from '@/components/PlanningTaskFilterControls';
+import PlanningTaskDragManager from '@/components/PlanningTaskDragManager';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 type ChecklistRow = PlanningChecklist & {
@@ -138,7 +139,7 @@ function taskMeta(task: TodoistTask, today: string) {
       : isToday
         ? `${prefix} vandaag`
         : `${prefix} ${shortDate(date)}`,
-    urgent: overdue || isToday || task.priority === 1,
+    urgent: overdue || isToday || task.priority === 4,
     sort: dateOnly,
   };
 }
@@ -206,7 +207,7 @@ function CompactProjectRow({
 }
 
 export default async function PlanningPage() {
-  const { supabase, user } = await requirePlanningUser();
+  const { supabase, user, profile } = await requirePlanningUser();
   const admin = createAdminClient();
 
   let rentmanError: string | null = null;
@@ -249,7 +250,7 @@ export default async function PlanningPage() {
       .order('full_name'),
     supabase
       .from('planning_task_assignments')
-      .select('todoist_task_id,assignee_profile_id'),
+      .select('todoist_task_id,assignee_profile_id,task_area'),
   ]);
 
   const planning = planningResult.value;
@@ -292,6 +293,7 @@ export default async function PlanningPage() {
   const assignees = (profilesResult.data ?? []).map((profile) => ({
     id: String(profile.id),
     name: String(profile.full_name || 'Onbekend').replace(/@shakenstyle\.com$/i, ''),
+    role: profile.role as 'admin' | 'warehouse',
   }));
   const taskAssigneeById = new Map(
     (taskAssignmentsResult.data ?? []).map((row) => [
@@ -299,7 +301,15 @@ export default async function PlanningPage() {
       row.assignee_profile_id ? String(row.assignee_profile_id) : null,
     ]),
   );
-  const todoistTasks = allTodoistTasks;
+  const taskAreaById = new Map(
+    (taskAssignmentsResult.data ?? []).map((row) => [
+      String(row.todoist_task_id),
+      row.task_area === 'warehouse' ? 'warehouse' : 'office',
+    ] as const),
+  );
+  const todoistTasks = profile.role === 'warehouse'
+    ? allTodoistTasks.filter((task) => taskAreaById.get(task.id) === 'warehouse')
+    : allTodoistTasks;
 
   const checklistByNumber = new Map(
     checklists
@@ -448,7 +458,7 @@ export default async function PlanningPage() {
       dateKey,
       todoistTasks
         .filter((task) => effectiveTaskDate(task) === dateKey)
-        .sort((a, b) => taskMeta(a, planning.today).sort.localeCompare(taskMeta(b, planning.today).sort)),
+        .sort((a, b) => (b.priority ?? 1) - (a.priority ?? 1) || taskMeta(a, planning.today).sort.localeCompare(taskMeta(b, planning.today).sort)),
     );
   }
 
@@ -457,7 +467,7 @@ export default async function PlanningPage() {
       const date = taskDate(task);
       return Boolean(date && planning.today && date < planning.today);
     })
-    .sort((a, b) => (taskDate(a) ?? '').localeCompare(taskDate(b) ?? ''));
+    .sort((a, b) => (taskDate(a) ?? '').localeCompare(taskDate(b) ?? '') || (b.priority ?? 1) - (a.priority ?? 1));
 
   const todayActionTasks = todoistTasks
     .filter((task) => {
@@ -491,6 +501,7 @@ export default async function PlanningPage() {
   return (
     <>
       <PlanningAutoRefresh intervalMs={300000} />
+      <PlanningTaskDragManager />
       <main className="container planningPage planningCompactPage">
       <section className="planningCompactHeader">
         <div>
@@ -637,10 +648,11 @@ export default async function PlanningPage() {
               <h2>Taken</h2>
             </div>
             <div className="planningTaskHeaderActions">
-              <PlanningTaskFilterControls />
+              <PlanningTaskFilterControls canSeeOffice={profile.role === 'admin'} />
               <strong data-open-task-count>{todoistTasks.length} open</strong>
               <PlanningTaskCreateButton
                 assignees={assignees}
+                canChooseOffice={profile.role === 'admin'}
                 projects={planning.allProjects
                   .filter((project) => project.number)
                   .sort((a, b) => {
@@ -682,6 +694,9 @@ export default async function PlanningPage() {
                         assignees={assignees}
                         assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                         currentUserId={user.id}
+                        priority={task.priority ?? 1}
+                        taskArea={taskAreaById.get(task.id) ?? 'office'}
+                        canChooseOffice={profile.role === 'admin'}
                         urgent
                       />
                     );
@@ -693,7 +708,7 @@ export default async function PlanningPage() {
             {weekDays.map((dateKey) => {
               const tasks = tasksByDay.get(dateKey) ?? [];
               return (
-                <section className="planningAgendaDay" key={dateKey} data-task-section="dated">
+                <section className="planningAgendaDay" key={dateKey} data-task-section="dated" data-task-drop-date={dateKey}>
                   <div className="planningAgendaDayHeader">
                     <strong>{dayLongLabel(dateKey, planning.today)}</strong>
                     <span data-task-count-label>{tasks.length} {tasks.length === 1 ? 'taak' : 'taken'}</span>
@@ -718,6 +733,9 @@ export default async function PlanningPage() {
                             assignees={assignees}
                             assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                             currentUserId={user.id}
+                        priority={task.priority ?? 1}
+                        taskArea={taskAreaById.get(task.id) ?? 'office'}
+                        canChooseOffice={profile.role === 'admin'}
                             urgent={meta.urgent}
                           />
                         );
@@ -731,7 +749,7 @@ export default async function PlanningPage() {
             })}
 
             {noDateTasks.length ? (
-              <section className="planningAgendaDay" data-task-section="nodate">
+              <section className="planningAgendaDay" data-task-section="nodate" data-task-drop-date="none">
                 <div className="planningAgendaDayHeader">
                   <strong>Zonder deadline</strong>
                   <span data-task-count-label>{noDateTasks.length} {noDateTasks.length === 1 ? 'taak' : 'taken'}</span>
@@ -754,6 +772,9 @@ export default async function PlanningPage() {
                         assignees={assignees}
                         assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
                         currentUserId={user.id}
+                        priority={task.priority ?? 1}
+                        taskArea={taskAreaById.get(task.id) ?? 'office'}
+                        canChooseOffice={profile.role === 'admin'}
                       />
                     );
                   })}
