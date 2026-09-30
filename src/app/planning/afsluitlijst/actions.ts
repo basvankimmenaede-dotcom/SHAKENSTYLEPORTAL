@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/auth';
 
 function revalidateClosing() {
   revalidatePath('/planning/afsluitlijst');
+  revalidatePath('/planning/afsluitlijst/beheer');
   revalidatePath('/planning');
 }
 
