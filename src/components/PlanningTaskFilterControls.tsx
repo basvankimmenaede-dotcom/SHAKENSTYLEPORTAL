@@ -19,8 +19,8 @@ function applyFilter(filter: Filter, canSeeOffice: boolean, showWarehouse: boole
       const mine = task.dataset.taskMine === 'true';
       const area = task.dataset.taskArea || 'office';
       const areaVisible = canSeeOffice
-        ? area === 'office' || showWarehouse
-        : area === 'warehouse';
+        ? area === 'office' || area === 'both' || (showWarehouse && area === 'warehouse')
+        : area === 'warehouse' || area === 'both';
 
       if (!areaVisible) return false;
       return filter === 'mine' ? mine : true;
@@ -29,8 +29,8 @@ function applyFilter(filter: Filter, canSeeOffice: boolean, showWarehouse: boole
     tasks.forEach((task) => {
       const area = task.dataset.taskArea || 'office';
       const areaVisible = canSeeOffice
-        ? area === 'office' || showWarehouse
-        : area === 'warehouse';
+        ? area === 'office' || area === 'both' || (showWarehouse && area === 'warehouse')
+        : area === 'warehouse' || area === 'both';
       const mineVisible = filter === 'all' || task.dataset.taskMine === 'true';
       task.hidden = !(areaVisible && mineVisible);
     });

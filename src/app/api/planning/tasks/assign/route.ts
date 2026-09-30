@@ -20,9 +20,13 @@ export async function POST(request: Request) {
       .eq('todoist_task_id', taskId)
       .maybeSingle();
 
-    const taskArea = metadata?.task_area === 'warehouse' ? 'warehouse' : 'office';
+    const taskArea = metadata?.task_area === 'warehouse'
+      ? 'warehouse'
+      : metadata?.task_area === 'both'
+        ? 'both'
+        : 'office';
 
-    if (profile.role === 'warehouse' && taskArea !== 'warehouse') {
+    if (profile.role === 'warehouse' && taskArea !== 'warehouse' && taskArea !== 'both') {
       return NextResponse.json({ ok: false, error: 'Geen toegang tot deze kantoortaak.' }, { status: 403 });
     }
 

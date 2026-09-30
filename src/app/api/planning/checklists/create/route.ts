@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const checklistId = Number(data);
     const { data: items, error: itemsError } = await supabase
       .from('project_checklist_items')
-      .select('id,label,due_date,todoist_task_id,is_required')
+      .select('id,label,due_date,todoist_task_id,is_required,task_area')
       .eq('project_checklist_id', checklistId)
       .eq('is_required', true)
       .is('todoist_task_id', null);
@@ -44,12 +44,25 @@ export async function POST(request: Request) {
           description: `Automatisch aangemaakt vanuit SHAKENSTYLE checklist · project ${rentmanProjectNumber} · checklist-item ${item.id}`,
         });
 
+        const taskArea = item.task_area === 'office' || item.task_area === 'warehouse' ? item.task_area : 'both';
+
         const { error: updateError } = await supabase
           .from('project_checklist_items')
           .update({ todoist_task_id: task.id })
           .eq('id', item.id);
 
         if (updateError) throw updateError;
+
+        const { error: assignmentError } = await supabase
+          .from('planning_task_assignments')
+          .upsert({
+            todoist_task_id: task.id,
+            assignee_profile_id: null,
+            task_area: taskArea,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'todoist_task_id' });
+
+        if (assignmentError) throw assignmentError;
       } catch (todoistError) {
         todoistErrors.push(
           todoistError instanceof Error ? todoistError.message : `Taak voor ${item.label} kon niet worden aangemaakt.`,

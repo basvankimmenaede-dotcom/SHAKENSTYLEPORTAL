@@ -39,7 +39,7 @@ export default function TodoistTaskItem({
   dueDate?: string | null;
   useDeadline?: boolean;
   priority?: number;
-  taskArea?: 'office' | 'warehouse';
+  taskArea?: 'office' | 'warehouse' | 'both';
   canChooseOffice?: boolean;
   labels?: string[];
   urgent?: boolean;
@@ -59,7 +59,7 @@ export default function TodoistTaskItem({
   const [editContent, setEditContent] = useState(rawContent ?? content);
   const [editDueDate, setEditDueDate] = useState(dueDate ?? '');
   const [editPriority, setEditPriority] = useState(String(priority));
-  const [editArea, setEditArea] = useState<'office' | 'warehouse'>(taskArea);
+  const [editArea, setEditArea] = useState<'office' | 'warehouse' | 'both'>(taskArea);
 
   useEffect(() => {
     setCurrentContent(content);
@@ -246,7 +246,11 @@ export default function TodoistTaskItem({
                   className="select"
                   value={editArea}
                   onChange={(event) => {
-                    const next = event.target.value === 'warehouse' ? 'warehouse' : 'office';
+                    const next = event.target.value === 'warehouse'
+                      ? 'warehouse'
+                      : event.target.value === 'both'
+                        ? 'both'
+                        : 'office';
                     setEditArea(next);
                     if (next === 'office') {
                       const selected = assignees.find((assignee) => assignee.id === assignedTo);
@@ -257,6 +261,7 @@ export default function TodoistTaskItem({
                 >
                   <option value="office">Kantoor</option>
                   <option value="warehouse">Magazijn</option>
+                  <option value="both">Beide</option>
                 </select>
               </label>
             ) : null}
@@ -288,8 +293,8 @@ export default function TodoistTaskItem({
               <strong>{currentContent}</strong>
               <div className="todoistTaskTitleActions">
                 <span className={`todoistPriority p${priorityLabel(priority).slice(1)}`}>{priorityLabel(priority)}</span>
-                <span className={taskArea === 'warehouse' ? 'todoistArea warehouse' : 'todoistArea office'}>
-                  {taskArea === 'warehouse' ? 'Magazijn' : 'Kantoor'}
+                <span className={`todoistArea ${taskArea}`}>
+                  {taskArea === 'warehouse' ? 'Magazijn' : taskArea === 'both' ? 'Beide' : 'Kantoor'}
                 </span>
                 <button className="todoistEditButton" type="button" onClick={() => setEditing(true)}>
                   Wijzigen
