@@ -53,6 +53,12 @@ export async function assignUserProfile(formData: FormData) {
 
   if (!userId || !['admin', 'customer', 'warehouse'].includes(role)) return;
 
+  const { data: currentProfile } = await admin
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
+
   await admin
     .from('profiles')
     .update({
@@ -61,12 +67,14 @@ export async function assignUserProfile(formData: FormData) {
     })
     .eq('id', userId);
 
-  const defaults = defaultPermissionsForRole(role).map((permission) => ({
-    user_id: userId,
-    ...permission,
-    updated_at: new Date().toISOString(),
-  }));
-  await admin.from('user_permissions').upsert(defaults, { onConflict: 'user_id,permission_key' });
+  if (!currentProfile || currentProfile.role !== role) {
+    const defaults = defaultPermissionsForRole(role).map((permission) => ({
+      user_id: userId,
+      ...permission,
+      updated_at: new Date().toISOString(),
+    }));
+    await admin.from('user_permissions').upsert(defaults, { onConflict: 'user_id,permission_key' });
+  }
 
   revalidatePath('/admin/users');
   revalidatePath('/portal');
