@@ -5627,14 +5627,26 @@ tr:last-child td { border-bottom: 0; }
 }
 .closingTemplateAdd {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: 180px minmax(320px, 1fr) auto;
+  gap: 12px;
   align-items: end;
   margin-bottom: 14px;
   padding: 14px;
   border: 1px solid #eadfd5;
   border-radius: 14px;
   background: #fff8f3;
+}
+.closingTemplateAdd .field {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.closingTemplateAdd .input {
+  min-width: 0;
+}
+.closingTemplateAdd > .button {
+  width: auto;
+  min-width: 120px;
+  white-space: nowrap;
 }
 .closingTemplateList {
   overflow: hidden;
@@ -5654,9 +5666,16 @@ tr:last-child td { border-bottom: 0; }
 }
 .closingTemplateEdit {
   display: grid;
-  grid-template-columns: 76px 140px minmax(180px, 1fr) 90px 86px;
+  grid-template-columns: 72px 160px minmax(260px, 1fr) 86px auto;
   gap: 10px;
   align-items: center;
+}
+.closingTemplateEdit .input {
+  min-width: 0;
+}
+.closingTemplateEdit .button {
+  width: auto;
+  white-space: nowrap;
 }
 .closingTemplateOrder {
   text-align: center;
