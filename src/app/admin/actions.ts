@@ -86,14 +86,37 @@ export async function saveUserBrandAccess(formData: FormData) {
   if (!userId) return;
 
   const { data: profile } = await admin.from('profiles').select('role,distributor_id').eq('id', userId).maybeSingle();
-  if (!profile || profile.role === 'admin' || !profile.distributor_id) return;
+  if (!profile || profile.role === 'admin') return;
 
-  const { data: allowedRows } = await admin
-    .from('distributor_brands')
-    .select('brand_id')
-    .eq('distributor_id', profile.distributor_id);
-  const allowedBrandIds = new Set((allowedRows ?? []).map((row) => Number(row.brand_id)));
-  const validSelectedBrandIds = selectedBrandIds.filter((brandId) => allowedBrandIds.has(brandId));
+  const { data: portalPermission } = await admin
+    .from('user_permissions')
+    .select('access_level')
+    .eq('user_id', userId)
+    .eq('permission_key', 'portal')
+    .maybeSingle();
+
+  if (!portalPermission || !['view', 'manage'].includes(String(portalPermission.access_level))) return;
+
+  let validSelectedBrandIds: number[] = [];
+
+  if (profile.role === 'customer') {
+    if (!profile.distributor_id) return;
+    const { data: allowedRows } = await admin
+      .from('distributor_brands')
+      .select('brand_id')
+      .eq('distributor_id', profile.distributor_id);
+    const allowedBrandIds = new Set((allowedRows ?? []).map((row) => Number(row.brand_id)));
+    validSelectedBrandIds = selectedBrandIds.filter((brandId) => allowedBrandIds.has(brandId));
+  } else {
+    const { data: allowedRows } = await admin
+      .from('brands')
+      .select('id')
+      .eq('portal_enabled', true)
+      .eq('is_brand', true)
+      .eq('rentman_active', true);
+    const allowedBrandIds = new Set((allowedRows ?? []).map((row) => Number(row.id)));
+    validSelectedBrandIds = selectedBrandIds.filter((brandId) => allowedBrandIds.has(brandId));
+  }
 
   const { error: deleteError } = await admin.from('user_brand_access').delete().eq('user_id', userId);
   if (deleteError) throw new Error(deleteError.message);
