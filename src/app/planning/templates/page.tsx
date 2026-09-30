@@ -37,10 +37,6 @@ export default async function ChecklistTemplatesPage() {
   const templates = ((data ?? []) as Template[]).map((template) => ({
     ...template,
     checklist_template_items: [...(template.checklist_template_items ?? [])]
-      .map((item) => ({
-        ...item,
-        task_area: item.task_area === 'office' || item.task_area === 'warehouse' ? item.task_area : 'both',
-      }))
       .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id),
   }));
 
