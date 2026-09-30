@@ -8,9 +8,11 @@ import LogoutButton from './LogoutButton';
 export default function PlanningShell({
   children,
   role,
+  canViewPortal = false,
 }: {
   children: React.ReactNode;
   role: 'admin' | 'warehouse' | 'customer';
+  canViewPortal?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -28,6 +30,7 @@ export default function PlanningShell({
         <nav className="planningStandaloneNav">
           <Link href="/planning">Dashboard</Link>
           <Link href="/planning/tv">TV-weergave</Link>
+          {canViewPortal ? <Link href="/portal">Klantenportaal</Link> : null}
           {role === 'admin' ? (
             <>
               <Link href="/planning/templates">Checklist-templates</Link>
