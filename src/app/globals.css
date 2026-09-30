@@ -4436,3 +4436,526 @@ tr:last-child td { border-bottom: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   SHAKENSTYLE UI SYSTEM v1
+   One shell, one spacing scale, one card/button language.
+   ========================================================= */
+:root {
+  --ui-sidebar-width: 238px;
+  --ui-page-max: 1500px;
+  --ui-space-1: 6px;
+  --ui-space-2: 10px;
+  --ui-space-3: 14px;
+  --ui-space-4: 18px;
+  --ui-space-5: 24px;
+  --ui-space-6: 32px;
+  --ui-radius-sm: 10px;
+  --ui-radius-md: 14px;
+  --ui-radius-lg: 18px;
+  --ui-panel: #fff;
+  --ui-panel-soft: #fbfaf8;
+  --ui-sidebar: #171614;
+  --ui-sidebar-soft: #24211e;
+  --ui-border: #e7e2db;
+  --ui-text: #181614;
+  --ui-muted: #817a72;
+  --ui-accent: #f37021;
+  --ui-accent-soft: #fff1e8;
+  --ui-shadow: 0 8px 30px rgba(39, 33, 28, .045);
+}
+
+.uiAppShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--ui-sidebar-width) minmax(0, 1fr);
+  background: var(--bg);
+}
+
+.uiAppMain {
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.uiAppMain > .container,
+.uiAppMain > .accountPage {
+  width: min(var(--ui-page-max), calc(100% - 48px));
+  max-width: none;
+  margin-inline: auto;
+  padding-top: 30px;
+}
+
+.uiSidebar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 22px 14px 16px;
+  background: var(--ui-sidebar);
+  color: #fff;
+  border-right: 1px solid rgba(255,255,255,.06);
+}
+
+.uiSidebarBrand {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.uiSidebarBrand a {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+.uiSidebarBrand .brandLogoImage,
+.uiSidebarBrand .brandLogoImageCompact {
+  width: 168px !important;
+  height: auto !important;
+  max-width: 100% !important;
+  filter: brightness(0) invert(1);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.uiSidebarNav {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding-top: 18px;
+}
+.uiSidebarLink {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 11px;
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+  font-weight: 750;
+  transition: background .15s ease, color .15s ease;
+}
+.uiSidebarLink:hover {
+  color: #fff;
+  background: rgba(255,255,255,.055);
+}
+.uiSidebarLink.active {
+  color: #fff;
+  background: var(--ui-sidebar-soft);
+  box-shadow: inset 3px 0 0 var(--ui-accent);
+}
+.uiSidebarDot {
+  width: 6px;
+  height: 6px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: .75;
+}
+.uiSidebarLink.active .uiSidebarDot {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent);
+  opacity: 1;
+}
+
+.uiSidebarFooter {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.uiSidebarAccount {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 11px;
+}
+.uiSidebarAccount:hover,
+.uiSidebarAccount.active {
+  background: rgba(255,255,255,.06);
+}
+.uiSidebarAvatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f0ebe6;
+  color: #2d2925;
+  font-size: 11px;
+  font-weight: 900;
+}
+.uiSidebarAccount > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.uiSidebarAccount strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.uiSidebarAccount small {
+  color: rgba(255,255,255,.5);
+  font-size: 8px;
+}
+.uiSidebarFooter .ghostButton {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9px;
+  color: rgba(255,255,255,.7);
+  background: transparent;
+  font-size: 9px;
+}
+.uiSidebarFooter .ghostButton:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,.26);
+}
+
+.uiPreviewBanner {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid #ffd8be;
+}
+
+/* Page headers: same rhythm everywhere */
+.uiAppMain .hero,
+.uiAppMain .planningCompactHeader,
+.uiAppMain .usersAdminHeader,
+.uiAppMain .billingHero {
+  min-height: 92px;
+  margin: 0 0 20px;
+  padding: 0;
+  align-items: flex-end;
+}
+.uiAppMain .hero h1,
+.uiAppMain .planningCompactHeader h1,
+.uiAppMain .usersAdminHeader h1,
+.uiAppMain .billingHero h1 {
+  margin: 0;
+  font-size: clamp(34px, 4vw, 50px);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+.uiAppMain .hero p,
+.uiAppMain .usersAdminHeader p,
+.uiAppMain .billingHero p {
+  margin-top: 9px;
+  color: var(--ui-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.uiAppMain .eyebrowLink,
+.uiAppMain .usersAdminEyebrow,
+.uiAppMain .eyebrow {
+  margin: 0 0 8px;
+  color: var(--ui-accent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* Global card language */
+.uiAppMain .card,
+.uiAppMain .usersDirectory,
+.uiAppMain .usersDetail,
+.uiAppMain .planningCompactColumn,
+.uiAppMain .planningBillingStandalone,
+.uiAppMain .billingRow,
+.uiAppMain .tableWrap {
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-panel);
+  box-shadow: var(--ui-shadow);
+}
+.uiAppMain .card {
+  padding: 18px;
+}
+.uiAppMain .tableWrap {
+  overflow: hidden;
+}
+
+/* Global buttons and controls */
+.uiAppMain .button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 850;
+}
+.uiAppMain .button.orange {
+  background: var(--ui-accent);
+}
+.uiAppMain .button.secondary {
+  border-color: var(--ui-border);
+  background: #fff;
+}
+.uiAppMain .input,
+.uiAppMain .select {
+  min-height: 40px;
+  border-color: var(--ui-border);
+  border-radius: 10px;
+  font-size: 11px;
+}
+.uiAppMain .field label {
+  font-size: 9px;
+  font-weight: 850;
+}
+.uiAppMain .badge {
+  min-height: 24px;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 8px;
+}
+
+/* Planning: keep current weekly-information structure, make it match users page */
+.uiAppMain .planningCompactPage {
+  max-width: none;
+}
+.uiAppMain .planningCompactHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+.uiAppMain .planningCompactActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.uiAppMain .planningWeekStrip {
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.uiAppMain .planningWeekDay {
+  min-height: 88px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+.uiAppMain .planningWeekDay.active {
+  border-color: rgba(243,112,33,.65);
+  background: var(--ui-accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(243,112,33,.08);
+}
+.uiAppMain .planningWeekDay strong {
+  font-size: 10px;
+}
+.uiAppMain .planningWeekDay span,
+.uiAppMain .planningWeekDay small {
+  font-size: 8px;
+}
+.uiAppMain .planningActionBanner {
+  margin-bottom: 14px;
+  border: 1px solid #ffd4b8;
+  border-radius: 14px;
+  background: #fff7f1;
+  box-shadow: none;
+}
+.uiAppMain .planningCompactGrid {
+  gap: 12px;
+}
+.uiAppMain .planningCompactColumn {
+  overflow: hidden;
+}
+.uiAppMain .planningColumnHeader {
+  padding: 14px 15px;
+  border-bottom-color: var(--ui-border);
+  background: #fff;
+}
+.uiAppMain .planningColumnHeader h2 {
+  font-size: 16px;
+  letter-spacing: -.02em;
+}
+.uiAppMain .planningColumnHeader span,
+.uiAppMain .planningColumnHeader > strong {
+  font-size: 8px;
+}
+.uiAppMain .planningAgendaDayHeader,
+.uiAppMain .planningTaskColumnHeader,
+.uiAppMain .planningCrewDayHeader {
+  background: var(--ui-panel-soft);
+}
+.uiAppMain .compactProjectRow,
+.uiAppMain .todoistTask,
+.uiAppMain .planningCrewRowButton {
+  border-bottom-color: #efebe5;
+}
+.uiAppMain .compactProjectRow:hover,
+.uiAppMain .planningCrewRowButton:hover {
+  background: #fffbf8;
+}
+
+/* Billing and admin lists share the same surface */
+.uiAppMain .billingPage {
+  padding-bottom: 52px;
+}
+.uiAppMain .billingHeroMetric {
+  padding: 14px 16px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: #fff;
+}
+.uiAppMain .billingHeroMetric strong {
+  font-size: 28px;
+}
+.uiAppMain .billingTabs {
+  gap: 6px;
+}
+.uiAppMain .billingTabs button,
+.uiAppMain .billingTabs a {
+  border-color: var(--ui-border);
+  border-radius: 9px;
+  font-size: 10px;
+}
+.uiAppMain .billingTabs button.active,
+.uiAppMain .billingTabs a.active {
+  background: var(--ui-text);
+}
+
+/* Users & rights remains the visual reference */
+.uiAppMain .usersAdminPage {
+  max-width: none;
+}
+.uiAppMain .usersWorkspace {
+  gap: 12px;
+}
+.uiAppMain .usersMetricCard {
+  border-color: var(--ui-border);
+  box-shadow: var(--ui-shadow);
+}
+.uiAppMain .usersDetailTabs,
+.uiAppMain .usersDirectoryTabs {
+  background: var(--ui-panel-soft);
+}
+
+/* Admin dashboard cards */
+.uiAppMain .grid {
+  gap: 12px;
+}
+.uiAppMain .grid .card {
+  box-shadow: var(--ui-shadow);
+}
+.uiAppMain .metric {
+  font-size: 28px;
+}
+.uiAppMain table th {
+  background: var(--ui-panel-soft);
+}
+.uiAppMain table th,
+.uiAppMain table td {
+  border-color: #efebe5;
+}
+
+/* Account */
+.uiAppMain .accountPage {
+  max-width: 1100px;
+}
+.uiAppMain .accountDetailsCard {
+  border-color: var(--ui-border);
+}
+
+/* Responsive shell */
+@media (max-width: 980px) {
+  .uiAppShell {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+  .uiSidebarBrand .brandLogoImage,
+  .uiSidebarBrand .brandLogoImageCompact {
+    width: 142px !important;
+  }
+  .uiAppMain > .container,
+  .uiAppMain > .accountPage {
+    width: min(100% - 32px, var(--ui-page-max));
+  }
+}
+
+@media (max-width: 760px) {
+  .uiAppShell {
+    display: block;
+  }
+  .uiSidebar {
+    position: sticky;
+    height: auto;
+    min-height: 64px;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .uiSidebarBrand {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+  }
+  .uiSidebarBrand .brandLogoImage,
+  .uiSidebarBrand .brandLogoImageCompact {
+    width: 105px !important;
+  }
+  .uiSidebarNav {
+    display: flex;
+    gap: 4px;
+    padding: 0;
+    overflow-x: auto;
+  }
+  .uiSidebarLink {
+    min-height: 36px;
+    grid-template-columns: 1fr;
+    padding: 0 9px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  .uiSidebarDot {
+    display: none;
+  }
+  .uiSidebarLink.active {
+    box-shadow: inset 0 -2px 0 var(--ui-accent);
+  }
+  .uiSidebarFooter {
+    display: flex;
+    padding: 0;
+    border: 0;
+  }
+  .uiSidebarAccount {
+    display: flex;
+    padding: 0;
+  }
+  .uiSidebarAccount > span:last-child,
+  .uiSidebarFooter .ghostButton {
+    display: none;
+  }
+  .uiSidebarAvatar {
+    width: 34px;
+    height: 34px;
+  }
+  .uiAppMain > .container,
+  .uiAppMain > .accountPage {
+    width: min(100% - 24px, var(--ui-page-max));
+    padding-top: 20px;
+  }
+  .uiAppMain .hero,
+  .uiAppMain .planningCompactHeader,
+  .uiAppMain .usersAdminHeader,
+  .uiAppMain .billingHero {
+    min-height: auto;
+    align-items: flex-start;
+  }
+}

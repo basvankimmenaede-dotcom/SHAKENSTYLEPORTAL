@@ -1,18 +1,18 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import BrandLogo from './BrandLogo';
-import LogoutButton from './LogoutButton';
+import UnifiedSidebar from './UnifiedSidebar';
 
 export default function PlanningShell({
   children,
   role,
   canViewPortal = false,
+  userLabel,
 }: {
   children: React.ReactNode;
   role: 'admin' | 'warehouse' | 'customer';
   canViewPortal?: boolean;
+  userLabel?: string | null;
 }) {
   const pathname = usePathname();
 
@@ -21,26 +21,13 @@ export default function PlanningShell({
   }
 
   return (
-    <div className="planningShell">
-      <header className="planningStandaloneTopbar">
-        <Link href="/planning" className="planningBrand" aria-label="SHAKENSTYLE Planning">
-          <BrandLogo compact />
-          <span>Planning</span>
-        </Link>
-        <nav className="planningStandaloneNav">
-          <Link href="/planning">Dashboard</Link>
-          <Link href="/planning/tv">TV-weergave</Link>
-          {canViewPortal ? <Link href="/portal">Klantenportaal</Link> : null}
-          {role === 'admin' ? (
-            <>
-              <Link href="/planning/templates">Checklist-templates</Link>
-              <Link href="/admin" className="planningPortalLink">Beheerportaal</Link>
-            </>
-          ) : null}
-          <LogoutButton />
-        </nav>
-      </header>
-      {children}
+    <div className="uiAppShell">
+      <UnifiedSidebar
+        mode={role === 'admin' ? 'admin' : 'planning'}
+        userLabel={userLabel}
+        canViewPortal={canViewPortal}
+      />
+      <div className="uiAppMain">{children}</div>
     </div>
   );
 }
