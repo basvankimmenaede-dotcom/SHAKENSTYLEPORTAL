@@ -10,6 +10,7 @@ export default function AppShell({
   canViewPortal = false,
   canViewPlanning = false,
   canViewBilling = false,
+  canViewChecklists = false,
 }: {
   children: React.ReactNode;
   role: 'admin' | 'warehouse' | 'customer';
@@ -20,6 +21,7 @@ export default function AppShell({
   canViewPortal?: boolean;
   canViewPlanning?: boolean;
   canViewBilling?: boolean;
+  canViewChecklists?: boolean;
 }) {
   const mode = admin ? 'admin' : 'portal';
 
@@ -32,6 +34,7 @@ export default function AppShell({
         canViewPortal={canViewPortal}
         canViewPlanning={canViewPlanning}
         canViewBilling={canViewBilling}
+        canViewChecklists={canViewChecklists}
       />
       <div className="uiAppMain">
         {adminPreview ? (

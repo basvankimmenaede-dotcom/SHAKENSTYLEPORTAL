@@ -8,12 +8,14 @@ export default function PlanningShell({
   role,
   canViewPortal = false,
   canViewBilling = false,
+  canViewChecklists = false,
   userLabel,
 }: {
   children: React.ReactNode;
   role: 'admin' | 'warehouse' | 'customer';
   canViewPortal?: boolean;
   canViewBilling?: boolean;
+  canViewChecklists?: boolean;
   userLabel?: string | null;
 }) {
   const pathname = usePathname();
@@ -31,6 +33,7 @@ export default function PlanningShell({
         canViewPlanning
         canViewPortal={canViewPortal}
         canViewBilling={canViewBilling}
+        canViewChecklists={canViewChecklists}
       />
       <div className="uiAppMain">{children}</div>
     </div>

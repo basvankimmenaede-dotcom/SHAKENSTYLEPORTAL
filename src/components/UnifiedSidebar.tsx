@@ -18,6 +18,7 @@ export default function UnifiedSidebar({
   canViewPortal = false,
   canViewPlanning = false,
   canViewBilling = false,
+  canViewChecklists = false,
 }: {
   mode: 'admin' | 'planning' | 'portal';
   role: 'admin' | 'warehouse' | 'customer';
@@ -25,6 +26,7 @@ export default function UnifiedSidebar({
   canViewPortal?: boolean;
   canViewPlanning?: boolean;
   canViewBilling?: boolean;
+  canViewChecklists?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -33,6 +35,7 @@ export default function UnifiedSidebar({
   const internalItems: NavItem[] = [
     ...(canViewPlanning ? [{ href: '/planning', label: 'Planning', match: ['/planning'] }] : []),
     ...(canViewBilling ? [{ href: '/planning/billing', label: 'Facturatie', match: ['/planning/billing'] }] : []),
+    ...(canViewChecklists ? [{ href: '/planning/afsluitlijst', label: 'Afsluitlijst', match: ['/planning/afsluitlijst'] }] : []),
     ...(canViewPortal ? [{ href: '/portal', label: portalLabel, match: ['/portal'] }] : []),
   ];
 
@@ -41,6 +44,7 @@ export default function UnifiedSidebar({
         { href: '/admin', label: 'Dashboard', match: ['/admin'] },
         { href: '/planning', label: 'Planning', match: ['/planning'] },
         { href: '/planning/billing', label: 'Facturatie', match: ['/planning/billing'] },
+        { href: '/planning/afsluitlijst', label: 'Afsluitlijst', match: ['/planning/afsluitlijst'] },
         { href: '/admin/brands', label: 'Merken & materialen', match: ['/admin/brands'] },
         { href: '/admin/distributors', label: 'Distributeurs', match: ['/admin/distributors'] },
         { href: '/admin/users', label: 'Gebruikers & rechten', match: ['/admin/users'] },
