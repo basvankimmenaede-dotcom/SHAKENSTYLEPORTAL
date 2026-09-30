@@ -16,7 +16,7 @@ export async function POST(
       .eq('todoist_task_id', id)
       .maybeSingle();
 
-    if (metadata?.task_area !== 'warehouse') {
+    if (metadata?.task_area !== 'warehouse' && metadata?.task_area !== 'both') {
       return NextResponse.json({ ok: false, error: 'Geen toegang tot deze kantoortaak.' }, { status: 403 });
     }
   }
