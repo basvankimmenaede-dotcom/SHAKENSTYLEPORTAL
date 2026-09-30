@@ -6,8 +6,20 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requirePlanningUser();
+  const { supabase, profile } = await requirePlanningUser();
   const { id } = await params;
+
+  if (profile.role === 'warehouse') {
+    const { data: metadata } = await supabase
+      .from('planning_task_assignments')
+      .select('task_area')
+      .eq('todoist_task_id', id)
+      .maybeSingle();
+
+    if (metadata?.task_area !== 'warehouse') {
+      return NextResponse.json({ ok: false, error: 'Geen toegang tot deze kantoortaak.' }, { status: 403 });
+    }
+  }
 
   try {
     await completePlanningTodoistTask(id);
