@@ -25,6 +25,7 @@ import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 import CrewPlanningPopup from '@/components/CrewPlanningPopup';
 import PlanningTaskCreateButton from '@/components/PlanningTaskCreateButton';
 import PlanningTaskFilterControls from '@/components/PlanningTaskFilterControls';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -206,6 +207,7 @@ function CompactProjectRow({
 
 export default async function PlanningPage() {
   const { supabase, user } = await requirePlanningUser();
+  const admin = createAdminClient();
 
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
@@ -240,7 +242,7 @@ export default async function PlanningPage() {
       .select('id,name,rentman_project_type_id')
       .eq('is_active', true)
       .order('name'),
-    supabase
+    admin
       .from('profiles')
       .select('id,full_name,role')
       .in('role', ['admin', 'warehouse'])
