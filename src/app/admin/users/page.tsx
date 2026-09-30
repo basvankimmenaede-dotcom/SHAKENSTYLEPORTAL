@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import UsersManager from '@/components/UsersManager';
+import UsersManagerEnhancements from '@/components/UsersManagerEnhancements';
 
 const permissionKeys = ['portal', 'planning', 'tasks', 'billing', 'checklists', 'user_admin'] as const;
 type PermissionKey = typeof permissionKeys[number];
@@ -116,7 +117,9 @@ export default async function UsersPage() {
   });
 
   return (
-    <UsersManager
+    <>
+      <UsersManagerEnhancements />
+      <UsersManager
       users={users}
       distributors={(distributors ?? []).map((distributor) => ({
         id: Number(distributor.id),
@@ -124,6 +127,7 @@ export default async function UsersPage() {
       }))}
       brands={activeBrands}
       currentUserId={session.user.id}
-    />
+      />
+    </>
   );
 }
