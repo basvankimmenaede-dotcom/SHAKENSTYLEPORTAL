@@ -282,7 +282,7 @@ export default async function PlanningPage() {
     && closingTodayDate >= String(closingSettings?.required_from_date ?? closingTodayDate);
 
   if (closingRequired) {
-    await supabase.rpc('ensure_closing_checklist', { p_date: closingTodayDate }).catch(() => undefined);
+    await supabase.rpc('ensure_closing_checklist', { p_date: closingTodayDate });
   }
 
   const { data: closingToday } = closingRequired
