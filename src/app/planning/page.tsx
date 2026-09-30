@@ -261,16 +261,23 @@ export default async function PlanningPage() {
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
-  const billingLevel = await getUserPermissionLevel(supabase, user.id, 'billing');
+  const [billingLevel, checklistLevel] = profile.role === 'admin'
+    ? ['manage', 'manage'] as const
+    : await Promise.all([
+        getUserPermissionLevel(supabase, user.id, 'billing'),
+        getUserPermissionLevel(supabase, user.id, 'checklists'),
+      ]);
   const canSeeBilling = permissionAtLeast(billingLevel, 'view');
   const canManageBilling = permissionAtLeast(billingLevel, 'manage');
+  const canSeeClosing = permissionAtLeast(checklistLevel, 'view');
 
   const closingTodayDate = amsterdamDateKey();
   const [{ data: closingSettings }, { data: closingExemption }] = await Promise.all([
     supabase.from('closing_checklist_settings').select('required_from_date').eq('id', 1).maybeSingle(),
     supabase.from('closing_checklist_exemptions').select('reason').eq('checklist_date', closingTodayDate).maybeSingle(),
   ]);
-  const closingRequired = !isWeekend(closingTodayDate)
+  const closingRequired = canSeeClosing
+    && !isWeekend(closingTodayDate)
     && !closingExemption
     && closingTodayDate >= String(closingSettings?.required_from_date ?? closingTodayDate);
 
