@@ -36,6 +36,7 @@ export default function UnifiedSidebar({
     ...(canViewPlanning ? [{ href: '/planning', label: 'Planning', match: ['/planning'] }] : []),
     ...(canViewBilling ? [{ href: '/planning/billing', label: 'Facturatie', match: ['/planning/billing'] }] : []),
     ...(canViewChecklists ? [{ href: '/planning/afsluitlijst', label: 'Afsluitlijst', match: ['/planning/afsluitlijst'] }] : []),
+    ...(canViewPlanning ? [{ href: '/planning/rentman-wijzigingen', label: 'Rentman wijzigingen', match: ['/planning/rentman-wijzigingen'] }] : []),
     ...(canViewPortal ? [{ href: '/portal', label: portalLabel, match: ['/portal'] }] : []),
   ];
 
@@ -45,6 +46,7 @@ export default function UnifiedSidebar({
         { href: '/planning', label: 'Planning', match: ['/planning'] },
         { href: '/planning/billing', label: 'Facturatie', match: ['/planning/billing'] },
         { href: '/planning/afsluitlijst', label: 'Afsluitlijst', match: ['/planning/afsluitlijst'] },
+        { href: '/planning/rentman-wijzigingen', label: 'Rentman wijzigingen', match: ['/planning/rentman-wijzigingen'] },
         { href: '/admin/brands', label: 'Merken & materialen', match: ['/admin/brands'] },
         { href: '/admin/distributors', label: 'Distributeurs', match: ['/admin/distributors'] },
         { href: '/admin/users', label: 'Gebruikers & rechten', match: ['/admin/users'] },
