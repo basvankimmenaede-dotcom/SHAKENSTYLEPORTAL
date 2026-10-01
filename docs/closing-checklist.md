@@ -16,3 +16,4 @@ Integrated with checklist editor v2.
 
 Deployment integration verified on 2026-09-30.
 Sections/headings and daily planning task enabled on 2026-09-30.
+Production retry after build-rate-limit on 2026-10-01.
