@@ -31,11 +31,21 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
   const [selectedId, setSelectedId] = useState(sections[0]?.id ?? 0);
   const [showNewSection, setShowNewSection] = useState(false);
   const [showNewTask, setShowNewTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showSectionSettings, setShowSectionSettings] = useState(false);
+  const [newFrequency, setNewFrequency] = useState<'daily' | 'weekly' | 'interval'>('daily');
+  const [editFrequency, setEditFrequency] = useState<'daily' | 'weekly' | 'interval'>('daily');
+
   const selected = sections.find((section) => section.id === selectedId) ?? sections[0];
   const sectionTasks = useMemo(
     () => tasks.filter((task) => task.section_id === selected?.id),
     [tasks, selected?.id],
   );
+
+  function openTaskEditor(task: Task) {
+    setEditingTask(task);
+    setEditFrequency(task.recurrence_type);
+  }
 
   return (
     <section className="usersWorkspace closingManageWorkspace">
@@ -49,7 +59,12 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
             <button
               type="button"
               className={section.id === selected?.id ? 'usersDirectoryRow active' : 'usersDirectoryRow'}
-              onClick={() => { setSelectedId(section.id); setShowNewTask(false); }}
+              onClick={() => {
+                setSelectedId(section.id);
+                setShowNewTask(false);
+                setEditingTask(null);
+                setShowSectionSettings(false);
+              }}
               key={section.id}
             >
               <span className="usersAvatar">{section.name.slice(0, 2).toUpperCase()}</span>
@@ -64,89 +79,164 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
       </aside>
 
       <section className="usersDetail">
-        {showNewSection ? (
-          <div className="usersDetailPanel">
-            <div className="usersDetailSectionHeader"><div><h3>Nieuwe kop</h3><p>Bijvoorbeeld Kantoor, Spoel, Magazijn of WC.</p></div></div>
-            <form action={addClosingSection} className="usersProfilePanel">
-              <div className="field"><label>Naam</label><input className="input" name="name" autoFocus required /></div>
-              <div className="usersPanelFooter">
-                <button className="button secondary" type="button" onClick={() => setShowNewSection(false)}>Annuleren</button>
-                <button className="button orange" type="submit">Kop toevoegen</button>
-              </div>
-            </form>
-          </div>
-        ) : selected ? (
+        {selected ? (
           <>
             <header className="usersDetailHeader">
               <div className="usersDetailIdentity">
                 <span className="usersAvatar large">{selected.name.slice(0, 2).toUpperCase()}</span>
-                <div><div className="usersDetailTitle"><h2>{selected.name}</h2></div><p>Beheer de terugkerende taken binnen deze kop.</p></div>
+                <div>
+                  <div className="usersDetailTitle"><h2>{selected.name}</h2></div>
+                  <p>Beheer de terugkerende taken binnen deze kop.</p>
+                </div>
               </div>
-              <button className="button orange" type="button" onClick={() => setShowNewTask(true)}>Nieuwe taak</button>
+              <div className="closingHeaderActions">
+                <button className="button secondary" type="button" onClick={() => setShowSectionSettings(true)}>Kopinstellingen</button>
+                <button className="button orange" type="button" onClick={() => { setNewFrequency('daily'); setShowNewTask(true); }}>Nieuwe taak</button>
+              </div>
             </header>
 
             <div className="usersDetailPanel">
-              <div className="usersDetailSectionHeader"><div><h3>Taken</h3><p>Alleen taken die volgens hun frequentie vandaag aan de beurt zijn verschijnen op de Afsluitlijst.</p></div></div>
+              <div className="usersDetailSectionHeader">
+                <div>
+                  <h3>Taken</h3>
+                  <p>Alleen taken die volgens hun frequentie aan de beurt zijn verschijnen op de Afsluitlijst.</p>
+                </div>
+              </div>
 
-              {showNewTask ? (
-                <form action={addClosingTemplateItem} className="closingTaskEditor">
-                  <input type="hidden" name="section_id" value={selected.id} />
-                  <div className="field"><label>Taak</label><input className="input" name="label" placeholder="Bijv. WC-rollen bijvullen" required /></div>
-                  <div className="field">
-                    <label>Frequentie</label>
-                    <select className="select" name="recurrence_type" defaultValue="daily">
-                      <option value="daily">Dagelijks</option>
-                      <option value="weekly">Wekelijks</option>
-                      <option value="interval">Elke X dagen</option>
-                    </select>
-                  </div>
-                  <div className="field"><label>Aantal dagen (alleen bij Elke X dagen)</label><input className="input" type="number" min="2" name="interval_days" defaultValue="9" /></div>
-                  <div className="field"><label>Start / eerste uitvoerdag</label><input className="input" type="date" name="recurrence_start_date" defaultValue={new Date().toISOString().slice(0,10)} /></div>
-                  <div className="usersPanelFooter">
-                    <button className="button secondary" type="button" onClick={() => setShowNewTask(false)}>Annuleren</button>
-                    <button className="button orange" type="submit">Taak toevoegen</button>
-                  </div>
-                </form>
-              ) : null}
-
-              <div className="usersPermissionsTable closingTaskList">
+              <div className="closingTaskListV2">
                 {sectionTasks.map((task) => (
-                  <details className="closingTaskManageRow" key={task.id}>
-                    <summary className="usersPermissionRow">
-                      <div><strong>{task.label}</strong><small>{frequencyLabel(task)}{task.is_active ? '' : ' · Inactief'}</small></div>
-                      <span className="button secondary">Wijzigen</span>
-                    </summary>
-                    <form action={updateClosingTemplateItem} className="closingTaskEditor">
-                      <input type="hidden" name="item_id" value={task.id} />
-                      <input type="hidden" name="section_id" value={selected.id} />
-                      <div className="field"><label>Taak</label><input className="input" name="label" defaultValue={task.label} required /></div>
-                      <div className="field"><label>Frequentie</label><select className="select" name="recurrence_type" defaultValue={task.recurrence_type}><option value="daily">Dagelijks</option><option value="weekly">Wekelijks</option><option value="interval">Elke X dagen</option></select></div>
-                      <div className="field"><label>Aantal dagen</label><input className="input" type="number" min="2" name="interval_days" defaultValue={task.interval_days ?? 9} /></div>
-                      <div className="field"><label>Start / eerste uitvoerdag</label><input className="input" type="date" name="recurrence_start_date" defaultValue={task.recurrence_start_date} /></div>
-                      <label className="closingTemplateActive"><input type="checkbox" name="is_active" defaultChecked={task.is_active} /><span>Actief</span></label>
-                      <div className="usersPanelFooter"><button className="button orange" type="submit">Opslaan</button></div>
-                    </form>
-                    <form action={deleteClosingTemplateItem} className="closingDeleteForm"><input type="hidden" name="item_id" value={task.id} /><button className="templateDeleteButton" type="submit">Taak verwijderen</button></form>
-                  </details>
+                  <article className="closingTaskCard" key={task.id}>
+                    <div>
+                      <strong>{task.label}</strong>
+                      <span>{frequencyLabel(task)}{task.is_active ? '' : ' · Inactief'}</span>
+                    </div>
+                    <button className="button secondary" type="button" onClick={() => openTaskEditor(task)}>Wijzigen</button>
+                  </article>
                 ))}
                 {!sectionTasks.length ? <div className="compactEmpty">Nog geen taken in {selected.name}.</div> : null}
               </div>
-
-              <details className="closingSectionSettings">
-                <summary>Instellingen van deze kop</summary>
-                <form action={updateClosingSection} className="closingTaskEditor">
-                  <input type="hidden" name="section_id" value={selected.id} />
-                  <div className="field"><label>Naam kop</label><input className="input" name="name" defaultValue={selected.name} required /></div>
-                  <div className="usersPanelFooter"><button className="button orange" type="submit">Naam opslaan</button></div>
-                </form>
-                <form action={deleteClosingSection}><input type="hidden" name="section_id" value={selected.id} /><button className="templateDeleteButton" type="submit">Kop verwijderen</button></form>
-              </details>
             </div>
           </>
         ) : (
           <div className="usersDetailPanel"><div className="compactEmpty">Maak links eerst een kop aan.</div></div>
         )}
       </section>
+
+      {showNewSection ? (
+        <div className="planningTaskCreateBackdrop" data-planning-modal-open="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowNewSection(false); }}>
+          <section className="planningTaskCreateModal closingManageModal" role="dialog" aria-modal="true">
+            <button className="planningTaskCreateClose" type="button" onClick={() => setShowNewSection(false)}>×</button>
+            <h2>Nieuwe kop</h2>
+            <p className="closingModalIntro">Bijvoorbeeld Kantoor, Spoelkeuken, Magazijn of WC.</p>
+            <form action={addClosingSection} onSubmit={() => setShowNewSection(false)}>
+              <div className="field"><label>Naam</label><input className="input" name="name" autoFocus required /></div>
+              <div className="planningTaskCreateActions">
+                <button className="button secondary" type="button" onClick={() => setShowNewSection(false)}>Annuleren</button>
+                <button className="button orange" type="submit">Kop toevoegen</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
+      {showNewTask && selected ? (
+        <div className="planningTaskCreateBackdrop" data-planning-modal-open="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowNewTask(false); }}>
+          <section className="planningTaskCreateModal closingManageModal" role="dialog" aria-modal="true">
+            <button className="planningTaskCreateClose" type="button" onClick={() => setShowNewTask(false)}>×</button>
+            <h2>Nieuwe taak</h2>
+            <p className="closingModalIntro">Toevoegen aan <strong>{selected.name}</strong>.</p>
+            <form action={addClosingTemplateItem} className="closingTaskEditorV2" onSubmit={() => setShowNewTask(false)}>
+              <input type="hidden" name="section_id" value={selected.id} />
+              <div className="field"><label>Taak</label><input className="input" name="label" placeholder="Bijv. WC-rollen bijvullen" autoFocus required /></div>
+              <div className="field">
+                <label>Frequentie</label>
+                <select className="select" name="recurrence_type" value={newFrequency} onChange={(event) => setNewFrequency(event.target.value as 'daily' | 'weekly' | 'interval')}>
+                  <option value="daily">Dagelijks</option>
+                  <option value="weekly">Wekelijks</option>
+                  <option value="interval">Elke X dagen</option>
+                </select>
+              </div>
+              {newFrequency === 'interval' ? (
+                <div className="field"><label>Elke hoeveel dagen?</label><input className="input" type="number" min="2" name="interval_days" defaultValue="9" required /></div>
+              ) : null}
+              {newFrequency !== 'daily' ? (
+                <div className="field"><label>Eerste uitvoerdag</label><input className="input" type="date" name="recurrence_start_date" defaultValue={new Date().toISOString().slice(0,10)} required /></div>
+              ) : (
+                <input type="hidden" name="recurrence_start_date" value={new Date().toISOString().slice(0,10)} />
+              )}
+              <div className="planningTaskCreateActions">
+                <button className="button secondary" type="button" onClick={() => setShowNewTask(false)}>Annuleren</button>
+                <button className="button orange" type="submit">Taak toevoegen</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
+      {editingTask && selected ? (
+        <div className="planningTaskCreateBackdrop" data-planning-modal-open="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingTask(null); }}>
+          <section className="planningTaskCreateModal closingManageModal" role="dialog" aria-modal="true">
+            <button className="planningTaskCreateClose" type="button" onClick={() => setEditingTask(null)}>×</button>
+            <h2>Taak wijzigen</h2>
+            <form action={updateClosingTemplateItem} className="closingTaskEditorV2" onSubmit={() => setEditingTask(null)}>
+              <input type="hidden" name="item_id" value={editingTask.id} />
+              <input type="hidden" name="section_id" value={selected.id} />
+              <div className="field"><label>Taak</label><input className="input" name="label" defaultValue={editingTask.label} required /></div>
+              <div className="field">
+                <label>Frequentie</label>
+                <select className="select" name="recurrence_type" value={editFrequency} onChange={(event) => setEditFrequency(event.target.value as 'daily' | 'weekly' | 'interval')}>
+                  <option value="daily">Dagelijks</option>
+                  <option value="weekly">Wekelijks</option>
+                  <option value="interval">Elke X dagen</option>
+                </select>
+              </div>
+              {editFrequency === 'interval' ? (
+                <div className="field"><label>Elke hoeveel dagen?</label><input className="input" type="number" min="2" name="interval_days" defaultValue={editingTask.interval_days ?? 9} required /></div>
+              ) : null}
+              {editFrequency !== 'daily' ? (
+                <div className="field"><label>Eerste uitvoerdag</label><input className="input" type="date" name="recurrence_start_date" defaultValue={editingTask.recurrence_start_date} required /></div>
+              ) : (
+                <input type="hidden" name="recurrence_start_date" value={editingTask.recurrence_start_date} />
+              )}
+              <label className="closingTemplateActive"><input type="checkbox" name="is_active" defaultChecked={editingTask.is_active} /><span>Actief</span></label>
+              <div className="closingModalFooterSplit">
+                <form action={deleteClosingTemplateItem}>
+                  <input type="hidden" name="item_id" value={editingTask.id} />
+                  <button className="templateDeleteButton" type="submit">Taak verwijderen</button>
+                </form>
+                <div className="planningTaskCreateActions">
+                  <button className="button secondary" type="button" onClick={() => setEditingTask(null)}>Annuleren</button>
+                  <button className="button orange" type="submit">Opslaan</button>
+                </div>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
+      {showSectionSettings && selected ? (
+        <div className="planningTaskCreateBackdrop" data-planning-modal-open="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowSectionSettings(false); }}>
+          <section className="planningTaskCreateModal closingManageModal" role="dialog" aria-modal="true">
+            <button className="planningTaskCreateClose" type="button" onClick={() => setShowSectionSettings(false)}>×</button>
+            <h2>Kopinstellingen</h2>
+            <form action={updateClosingSection} onSubmit={() => setShowSectionSettings(false)}>
+              <input type="hidden" name="section_id" value={selected.id} />
+              <div className="field"><label>Naam kop</label><input className="input" name="name" defaultValue={selected.name} required /></div>
+              <div className="planningTaskCreateActions">
+                <button className="button secondary" type="button" onClick={() => setShowSectionSettings(false)}>Annuleren</button>
+                <button className="button orange" type="submit">Naam opslaan</button>
+              </div>
+            </form>
+            <div className="closingDangerZone">
+              <span>Deze kop verwijderen</span>
+              <form action={deleteClosingSection}>
+                <input type="hidden" name="section_id" value={selected.id} />
+                <button className="templateDeleteButton" type="submit">Kop verwijderen</button>
+              </form>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
