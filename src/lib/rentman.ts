@@ -355,6 +355,7 @@ export type RentmanPlanningProject = {
     visit_number?: string;
     visit_postalcode?: string;
     visit_city?: string;
+    distance?: number | null;
   } | null;
   loc_contact?: {
     displayname?: string;
