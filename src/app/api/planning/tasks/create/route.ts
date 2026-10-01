@@ -23,7 +23,9 @@ export async function POST(request: Request) {
       ? 'warehouse'
       : requestedArea === 'warehouse'
         ? 'warehouse'
-        : 'office';
+        : requestedArea === 'office'
+          ? 'office'
+          : 'both';
     const priority = normalizePriority(body.priority);
 
     if (!content) {
