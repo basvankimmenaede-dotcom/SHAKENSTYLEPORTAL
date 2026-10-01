@@ -79,7 +79,7 @@ export async function addClosingTemplateItem(formData: FormData) {
       sort_order: Number(lastItem?.sort_order ?? 0) + 10,
       is_active: true,
       item_type: 'item',
-      section_id: sectionId,
+      section_id: sectionId > 0 ? sectionId : null,
       recurrence_type: recurrenceType,
       interval_days: intervalDays,
       recurrence_start_date: /^\d{4}-\d{2}-\d{2}$/.test(recurrenceStartDate) ? recurrenceStartDate : new Date().toISOString().slice(0, 10),
@@ -107,7 +107,7 @@ export async function updateClosingTemplateItem(formData: FormData) {
     .from('closing_checklist_template_items')
     .update({
       label,
-      section_id: sectionId,
+      section_id: sectionId > 0 ? sectionId : null,
       is_active: isActive,
       item_type: 'item',
       recurrence_type: recurrenceType,
