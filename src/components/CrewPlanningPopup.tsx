@@ -115,6 +115,9 @@ type Props = {
   contactEmail?: string | null;
   notes?: string | null;
   bar?: string | null;
+  fuelCardRequired?: boolean;
+  roundTripDistanceKm?: number | null;
+  fuelCardThresholdKm?: number;
 };
 
 function formatTime(value?: string | null) {
@@ -401,7 +404,18 @@ export default function CrewPlanningPopup(props: Props) {
           <span>{role}{people.length > 1 ? ` · ${people.length}p` : ''}</span>
         </span>
         <span className="planningCrewShift">
-          <strong>{formatTime(props.start)} – {formatTime(props.end)}</strong>
+          <strong>
+            {formatTime(props.start)} – {formatTime(props.end)}
+            {props.fuelCardRequired ? (
+              <span
+                className="planningFuelCardBadge"
+                title={`Brandstofpas nodig · ${props.roundTripDistanceKm ?? '—'} km retour`}
+                aria-label={`Brandstofpas nodig · ${props.roundTripDistanceKm ?? '—'} kilometer retour`}
+              >
+                <span className="planningFuelCardIcon" aria-hidden="true" />
+              </span>
+            ) : null}
+          </strong>
           <span>
             {props.projectName
               ? `#${props.projectNumber ?? props.projectId ?? ''} · ${props.projectName}`
@@ -454,6 +468,18 @@ export default function CrewPlanningPopup(props: Props) {
                 {props.projectName || 'Rentman activiteit'}
               </strong>
             </div>
+
+            {props.fuelCardRequired ? (
+              <div className="crewPlanningFuelCardNotice">
+                <span className="planningFuelCardIcon" aria-hidden="true" />
+                <div>
+                  <strong>Brandstofpas nodig</strong>
+                  <span>
+                    {props.roundTripDistanceKm ?? '—'} km retour · grens {props.fuelCardThresholdKm ?? 150} km
+                  </span>
+                </div>
+              </div>
+            ) : null}
 
             <div className="crewPlanningInfoGrid">
               <div className="crewPlanningInfoCard">
