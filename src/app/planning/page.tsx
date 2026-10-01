@@ -28,6 +28,7 @@ import PlanningTaskFilterControls from '@/components/PlanningTaskFilterControls'
 import PlanningTaskDragManager from '@/components/PlanningTaskDragManager';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { amsterdamDateKey, isWeekend } from '@/lib/closingChecklist';
+import { updateFuelCardDistanceSetting } from './actions';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -214,7 +215,7 @@ export default async function PlanningPage() {
   let rentmanError: string | null = null;
   let todoistError: string | null = null;
 
-  const [planningResult, todoistResult, crewResult, equipmentGroupsResult, checklistResult, templateResult, profilesResult, taskAssignmentsResult] = await Promise.all([
+  const [planningResult, todoistResult, crewResult, equipmentGroupsResult, checklistResult, templateResult, profilesResult, taskAssignmentsResult, planningSettingsResult] = await Promise.all([
     getPlanningProjects()
       .then((value) => ({ value, error: null as string | null }))
       .catch((error) => ({
@@ -252,12 +253,18 @@ export default async function PlanningPage() {
     supabase
       .from('planning_task_assignments')
       .select('todoist_task_id,assignee_profile_id,task_area'),
+    supabase
+      .from('planning_settings')
+      .select('fuel_card_distance_km')
+      .eq('id', 1)
+      .maybeSingle(),
   ]);
 
   const planning = planningResult.value;
   const allTodoistTasks = todoistResult.value;
   const crewAssignments = crewResult.value;
   const equipmentGroups = equipmentGroupsResult.value;
+  const fuelCardDistanceKm = Number(planningSettingsResult.data?.fuel_card_distance_km ?? 150);
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
@@ -878,9 +885,28 @@ export default async function PlanningPage() {
 
         <aside className="planningOpsColumn">
           <section className="planningOpsCard planningCrewCard">
-            <div className="planningOpsHeader">
-              <span>Personeel (Rentman)</span>
-              <strong>{weeklyCrewCount} deze week</strong>
+            <div className="planningOpsHeader planningCrewHeader">
+              <div>
+                <span>Personeel (Rentman)</span>
+                <strong>{weeklyCrewCount} deze week</strong>
+              </div>
+              {profile.role === 'admin' ? (
+                <form action={updateFuelCardDistanceSetting} className="fuelCardDistanceSetting">
+                  <label>
+                    <span>Pas vanaf</span>
+                    <input
+                      className="input"
+                      type="number"
+                      min="1"
+                      name="fuel_card_distance_km"
+                      defaultValue={fuelCardDistanceKm}
+                      aria-label="Brandstofpas grens retourkilometers"
+                    />
+                    <small>km retour</small>
+                  </label>
+                  <button className="button secondary" type="submit">Opslaan</button>
+                </form>
+              ) : null}
             </div>
 
             <div className="planningCrewDays">
@@ -935,6 +961,10 @@ export default async function PlanningPage() {
                               [project.location.visit_postalcode, project.location.visit_city].filter(Boolean).join(' '),
                             ].filter(Boolean).join(', ')
                           : null;
+                        const oneWayDistanceKm = Number(project?.location?.distance ?? 0);
+                        const roundTripDistanceKm = oneWayDistanceKm > 0 ? Math.round(oneWayDistanceKm * 2) : null;
+                        const fuelCardRequired = roundTripDistanceKm !== null && roundTripDistanceKm > fuelCardDistanceKm;
+
                         const locationContact = project?.loc_contact;
                         const locationContactName = locationContact?.displayname
                           || [locationContact?.firstname, locationContact?.middle_name, locationContact?.lastname]
@@ -967,6 +997,9 @@ export default async function PlanningPage() {
                             projectUsageEnd={project?.usageperiod_end ?? null}
                             projectPlanStart={project?.planperiod_start ?? null}
                             projectPlanEnd={project?.planperiod_end ?? null}
+                            fuelCardRequired={fuelCardRequired}
+                            roundTripDistanceKm={roundTripDistanceKm}
+                            fuelCardThresholdKm={fuelCardDistanceKm}
                           />
                         );
                       })}
