@@ -50,6 +50,7 @@ export default function UnifiedSidebar({
         { href: '/admin/brands', label: 'Merken & materialen', match: ['/admin/brands'] },
         { href: '/admin/distributors', label: 'Distributeurs', match: ['/admin/distributors'] },
         { href: '/admin/users', label: 'Gebruikers & rechten', match: ['/admin/users'] },
+        { href: '/planning/instellingen', label: 'Instellingen', match: ['/planning/instellingen'] },
         { href: '/portal', label: 'Klantenportaal', match: ['/portal'] },
       ]
     : internalItems.length
