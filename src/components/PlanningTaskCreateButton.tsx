@@ -29,7 +29,7 @@ export default function PlanningTaskCreateButton({
   const [dueDate, setDueDate] = useState('');
   const [projectNumber, setProjectNumber] = useState('');
   const [assigneeProfileId, setAssigneeProfileId] = useState('');
-  const [taskArea, setTaskArea] = useState<'office' | 'warehouse' | 'both'>(canChooseOffice ? 'both' : 'warehouse');
+  const [taskArea, setTaskArea] = useState<'office' | 'warehouse' | 'both'>(canChooseOffice ? 'office' : 'warehouse');
   const [priority, setPriority] = useState('1');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -78,7 +78,7 @@ export default function PlanningTaskCreateButton({
     setDueDate('');
     setProjectNumber('');
     setAssigneeProfileId('');
-    setTaskArea(canChooseOffice ? 'both' : 'warehouse');
+    setTaskArea(canChooseOffice ? 'office' : 'warehouse');
     setPriority('1');
     setSaving(false);
     setOpen(false);
