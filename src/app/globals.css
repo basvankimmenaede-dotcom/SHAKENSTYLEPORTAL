@@ -5912,3 +5912,11 @@ tr:last-child td { border-bottom: 0; }
 
 /* Planning filters must override task layout styles */
 .todoistTask[hidden] { display: none !important; }
+
+
+/* Planning settings */
+.planningSettingsForm { max-width: 620px; display:grid; gap:18px; }
+.planningSettingInline { display:flex; align-items:center; gap:10px; }
+.planningSettingInline .input { max-width:140px; }
+.planningSettingInline span { color:var(--muted); font-weight:700; }
+.planningSettingsForm .field > small { display:block; margin-top:7px; color:var(--muted); line-height:1.45; }
