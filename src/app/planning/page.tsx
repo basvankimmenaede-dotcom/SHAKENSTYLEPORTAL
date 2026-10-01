@@ -13,7 +13,6 @@ import {
 import {
   findRentmanProjectNumber,
   getPlanningTodoistTasks,
-  createPlanningTodoistTask,
   todoistTaskDate,
   type TodoistTask,
 } from '@/lib/todoist';
@@ -298,37 +297,7 @@ export default async function PlanningPage() {
   const closingTodayDone = closingTodayItems.filter((item) => item.completed).length;
   const closingTodayTotal = closingTodayItems.length;
 
-  if (closingRequired && closingToday && closingToday.status !== 'completed') {
-    const existingTaskIsOpen = closingToday.todoist_task_id
-      ? allTodoistTasks.some((task) => task.id === String(closingToday.todoist_task_id))
-      : false;
 
-    if (!existingTaskIsOpen) {
-      const closingTask = await createPlanningTodoistTask({
-        content: 'Afsluitlijst afronden',
-        description: 'Dagelijkse SHAKENSTYLE afsluitlijst. Rond de checklist af voordat we naar huis gaan.',
-        dueDate: closingTodayDate,
-        priority: 2,
-      }).catch(() => null);
-
-      if (closingTask) {
-        allTodoistTasks.push(closingTask);
-        await admin
-          .from('closing_checklists')
-          .update({ todoist_task_id: closingTask.id })
-          .eq('id', closingToday.id);
-        await admin
-          .from('planning_task_assignments')
-          .upsert({
-            todoist_task_id: closingTask.id,
-            assignee_profile_id: null,
-            assigned_by: user.id,
-            task_area: 'both',
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'todoist_task_id' });
-      }
-    }
-  }
 
   if (canManageBilling && planning.allProjects.length) {
     await syncBillingQueueOncePerDay({
