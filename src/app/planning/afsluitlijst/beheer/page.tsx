@@ -27,12 +27,17 @@ export default async function ClosingChecklistManagePage() {
       </section>
 
       <ClosingChecklistManager
-        sections={(sections ?? []).map((section) => ({
-          id: Number(section.id),
-          name: String(section.name),
-          sort_order: Number(section.sort_order),
-          is_active: Boolean(section.is_active),
-        }))}
+        sections={[
+          ...((templateItems ?? []).some((item) => item.section_id == null)
+            ? [{ id: 0, name: 'Overige', sort_order: 9999, is_active: true }]
+            : []),
+          ...(sections ?? []).map((section) => ({
+            id: Number(section.id),
+            name: String(section.name),
+            sort_order: Number(section.sort_order),
+            is_active: Boolean(section.is_active),
+          })),
+        ]}
         tasks={(templateItems ?? []).map((item) => ({
           id: Number(item.id),
           label: String(item.label),
