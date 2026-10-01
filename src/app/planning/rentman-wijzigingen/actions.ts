@@ -14,7 +14,7 @@ export async function createRentmanChange(formData: FormData) {
   const summary = String(formData.get('summary') ?? '').trim();
   if (!summary) return;
   if (reportType === 'project_change' && !projectNumber) return;
-  if (reportType === 'wrong_item' && !itemName) return;
+  if (reportType === 'wrong_item' && (!itemName || !Number.isFinite(equipmentId))) return;
 
   const { error } = await supabase.from('rentman_changes').insert({
     report_type: reportType,
@@ -61,7 +61,7 @@ export async function updateRentmanChange(formData: FormData) {
   if (!Number.isFinite(id) || !summary) return;
   if (!['open','in_progress','completed'].includes(status)) return;
   if (reportType === 'project_change' && !projectNumber) return;
-  if (reportType === 'wrong_item' && !itemName) return;
+  if (reportType === 'wrong_item' && (!itemName || !Number.isFinite(equipmentId))) return;
 
   const { error } = await supabase.from('rentman_changes').update({
     report_type: reportType,
