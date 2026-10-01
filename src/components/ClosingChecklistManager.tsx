@@ -38,7 +38,7 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
 
   const selected = sections.find((section) => section.id === selectedId) ?? sections[0];
   const sectionTasks = useMemo(
-    () => tasks.filter((task) => task.section_id === selected?.id),
+    () => tasks.filter((task) => (task.section_id ?? 0) === selected?.id),
     [tasks, selected?.id],
   );
 
@@ -70,7 +70,7 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
               <span className="usersAvatar">{section.name.slice(0, 2).toUpperCase()}</span>
               <span className="usersDirectoryIdentity">
                 <strong>{section.name}</strong>
-                <small>{tasks.filter((task) => task.section_id === section.id && task.is_active).length} taken</small>
+                <small>{tasks.filter((task) => (task.section_id ?? 0) === section.id && task.is_active).length} taken</small>
               </span>
             </button>
           ))}
@@ -90,7 +90,9 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
                 </div>
               </div>
               <div className="closingHeaderActions">
-                <button className="button secondary" type="button" onClick={() => setShowSectionSettings(true)}>Kopinstellingen</button>
+                {selected.id > 0 ? (
+                  <button className="button secondary" type="button" onClick={() => setShowSectionSettings(true)}>Kopinstellingen</button>
+                ) : null}
                 <button className="button orange" type="button" onClick={() => { setNewFrequency('daily'); setShowNewTask(true); }}>Nieuwe taak</button>
               </div>
             </header>
@@ -180,7 +182,15 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
             <h2>Taak wijzigen</h2>
             <form action={updateClosingTemplateItem} className="closingTaskEditorV2" onSubmit={() => setEditingTask(null)}>
               <input type="hidden" name="item_id" value={editingTask.id} />
-              <input type="hidden" name="section_id" value={selected.id} />
+              <div className="field">
+                <label>Onderdeel</label>
+                <select className="select" name="section_id" defaultValue={editingTask.section_id ?? 0}>
+                  <option value="0">Overige</option>
+                  {sections.filter((section) => section.id > 0).map((section) => (
+                    <option value={section.id} key={section.id}>{section.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="field"><label>Taak</label><input className="input" name="label" defaultValue={editingTask.label} required /></div>
               <div className="field">
                 <label>Frequentie</label>
