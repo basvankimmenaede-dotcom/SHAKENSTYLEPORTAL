@@ -732,3 +732,10 @@ export async function getRentmanProjectTypes() {
     '/projecttypes?fields=id,name&limit=300',
   );
 }
+
+
+export async function getPlanningEquipmentCatalog() {
+  return rentmanPlanningFetchAll<RentmanEquipment>(
+    '/equipment?fields=id,name,code,current_quantity&sort=+name&limit=1500',
+  );
+}
