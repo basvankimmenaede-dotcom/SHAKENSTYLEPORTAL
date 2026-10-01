@@ -5908,3 +5908,7 @@ tr:last-child td { border-bottom: 0; }
     width: 100%;
   }
 }
+
+
+/* Planning filters must override task layout styles */
+.todoistTask[hidden] { display: none !important; }
