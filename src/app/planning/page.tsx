@@ -28,7 +28,6 @@ import PlanningTaskFilterControls from '@/components/PlanningTaskFilterControls'
 import PlanningTaskDragManager from '@/components/PlanningTaskDragManager';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { amsterdamDateKey, isWeekend } from '@/lib/closingChecklist';
-import { updateFuelCardDistanceSetting } from './actions';
 
 type ChecklistRow = PlanningChecklist & {
   rentman_project_id: number;
@@ -885,28 +884,9 @@ export default async function PlanningPage() {
 
         <aside className="planningOpsColumn">
           <section className="planningOpsCard planningCrewCard">
-            <div className="planningOpsHeader planningCrewHeader">
-              <div>
-                <span>Personeel (Rentman)</span>
-                <strong>{weeklyCrewCount} deze week</strong>
-              </div>
-              {profile.role === 'admin' ? (
-                <form action={updateFuelCardDistanceSetting} className="fuelCardDistanceSetting">
-                  <label>
-                    <span>Pas vanaf</span>
-                    <input
-                      className="input"
-                      type="number"
-                      min="1"
-                      name="fuel_card_distance_km"
-                      defaultValue={fuelCardDistanceKm}
-                      aria-label="Brandstofpas grens retourkilometers"
-                    />
-                    <small>km retour</small>
-                  </label>
-                  <button className="button secondary" type="submit">Opslaan</button>
-                </form>
-              ) : null}
+            <div className="planningOpsHeader">
+              <span>Personeel (Rentman)</span>
+              <strong>{weeklyCrewCount} deze week</strong>
             </div>
 
             <div className="planningCrewDays">
