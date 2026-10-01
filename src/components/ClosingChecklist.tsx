@@ -7,6 +7,9 @@ type Item = {
   id: number;
   label: string;
   item_type: 'item' | 'heading';
+  section_id: number | null;
+  section_name: string;
+  section_sort_order: number;
   completed: boolean;
   completed_at: string | null;
   completed_by_name: string | null;
@@ -70,34 +73,42 @@ export default function ClosingChecklist({
       </div>
 
       <div className="closingChecklistItems">
-        {rows.map((item) => {
-          if (item.item_type === 'heading') {
-            return <div className="closingChecklistHeading" key={item.id}>{item.label}</div>;
-          }
-          const busy = pending.has(item.id);
-          return (
-            <button
-              type="button"
-              className={item.completed ? 'closingChecklistRow complete' : 'closingChecklistRow'}
-              key={item.id}
-              onClick={() => toggle(item)}
-              disabled={!canManage || busy}
-            >
-              <span className="closingCheckBox">{item.completed ? '✓' : ''}</span>
-              <span className="closingChecklistLabel">{item.label}</span>
-              <small>
-                {busy
-                  ? 'opslaan…'
-                  : item.completed
-                    ? item.completed_by_name
-                      ? `Afgevinkt door ${item.completed_by_name}`
-                      : 'Afgerond'
-                    : 'Nog open'}
-              </small>
-            </button>
-          );
-        })}
-        {!actionableRows.length ? <div className="compactEmpty">Nog geen afsluitpunten ingesteld.</div> : null}
+        {Array.from(new Map(
+          actionableRows
+            .sort((a, b) => a.section_sort_order - b.section_sort_order || a.id - b.id)
+            .map((item) => [item.section_id ?? -1, item.section_name]),
+        )).map(([sectionId, sectionName]) => (
+          <div className="closingChecklistSection" key={sectionId}>
+            <div className="closingChecklistHeading">{sectionName}</div>
+            {actionableRows
+              .filter((item) => (item.section_id ?? -1) === sectionId)
+              .map((item) => {
+                const busy = pending.has(item.id);
+                return (
+                  <button
+                    type="button"
+                    className={item.completed ? 'closingChecklistRow complete' : 'closingChecklistRow'}
+                    key={item.id}
+                    onClick={() => toggle(item)}
+                    disabled={!canManage || busy}
+                  >
+                    <span className="closingCheckBox">{item.completed ? '✓' : ''}</span>
+                    <span className="closingChecklistLabel">{item.label}</span>
+                    <small>
+                      {busy
+                        ? 'opslaan…'
+                        : item.completed
+                          ? item.completed_by_name
+                            ? `Afgevinkt door ${item.completed_by_name}`
+                            : 'Afgerond'
+                          : 'Nog open'}
+                    </small>
+                  </button>
+                );
+              })}
+          </div>
+        ))}
+        {!actionableRows.length ? <div className="compactEmpty">Vandaag staan er geen afsluitpunten gepland.</div> : null}
       </div>
 
       {error ? <div className="planningInlineError">{error}</div> : null}
