@@ -48,12 +48,21 @@ export default async function ClosingChecklistPage({
 
   const { data: list } = await supabase
     .from('closing_checklists')
-    .select('id,checklist_date,status,completed_at,completed_by,todoist_task_id,closing_checklist_items(id,label,sort_order,item_type,completed,completed_at,completed_by)')
+    .select('id,checklist_date,status,completed_at,completed_by,todoist_task_id,closing_checklist_items(id,label,sort_order,item_type,section_id,completed,completed_at,completed_by)')
     .eq('checklist_date', selectedDate)
     .maybeSingle();
 
   const itemRows = [...(list?.closing_checklist_items ?? [])]
     .sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || Number(a.id) - Number(b.id));
+
+  const sectionIds = Array.from(new Set(itemRows.map((item) => item.section_id).filter(Boolean).map(Number)));
+  const { data: sections } = sectionIds.length
+    ? await supabase.from('closing_checklist_sections').select('id,name,sort_order').in('id', sectionIds)
+    : { data: [] as Array<{ id: number; name: string; sort_order: number }> };
+  const sectionById = new Map((sections ?? []).map((section) => [Number(section.id), {
+    name: String(section.name),
+    sort_order: Number(section.sort_order),
+  }]));
 
   const completedByIds = Array.from(new Set(itemRows.map((item) => item.completed_by).filter(Boolean).map(String)));
   const { data: people } = completedByIds.length
@@ -68,6 +77,9 @@ export default async function ClosingChecklistPage({
     id: Number(item.id),
     label: String(item.label),
     item_type: (item.item_type === 'heading' ? 'heading' : 'item') as 'heading' | 'item',
+    section_id: item.section_id == null ? null : Number(item.section_id),
+    section_name: item.section_id == null ? 'Overig' : sectionById.get(Number(item.section_id))?.name ?? 'Overig',
+    section_sort_order: item.section_id == null ? 9999 : sectionById.get(Number(item.section_id))?.sort_order ?? 9999,
     completed: Boolean(item.completed),
     completed_at: item.completed_at ? String(item.completed_at) : null,
     completed_by_name: item.completed_by ? personById.get(String(item.completed_by)) ?? null : null,
