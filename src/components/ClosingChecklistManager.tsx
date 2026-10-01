@@ -200,10 +200,7 @@ export default function ClosingChecklistManager({ sections, tasks }: { sections:
               )}
               <label className="closingTemplateActive"><input type="checkbox" name="is_active" defaultChecked={editingTask.is_active} /><span>Actief</span></label>
               <div className="closingModalFooterSplit">
-                <form action={deleteClosingTemplateItem}>
-                  <input type="hidden" name="item_id" value={editingTask.id} />
-                  <button className="templateDeleteButton" type="submit">Taak verwijderen</button>
-                </form>
+                <button className="templateDeleteButton" type="submit" formAction={deleteClosingTemplateItem}>Taak verwijderen</button>
                 <div className="planningTaskCreateActions">
                   <button className="button secondary" type="button" onClick={() => setEditingTask(null)}>Annuleren</button>
                   <button className="button orange" type="submit">Opslaan</button>
