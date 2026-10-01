@@ -58,8 +58,10 @@ export default function RentmanChanges({
   const [filter, setFilter] = useState<'all' | 'project_change' | 'wrong_item'>('all');
   const [query, setQuery] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
+  const [detailEquipmentId, setDetailEquipmentId] = useState('');
 
   const selectedEquipment = equipment.find((item) => String(item.id) === equipmentId) ?? null;
+  const selectedDetailEquipment = equipment.find((item) => String(item.id) === detailEquipmentId) ?? null;
 
   const shown = useMemo(() => changes.filter((row) => {
     const objectLabel = row.report_type === 'project_change'
@@ -96,8 +98,16 @@ export default function RentmanChanges({
             key={row.id}
             role="button"
             tabIndex={0}
-            onClick={() => setDetail(row)}
-            onKeyDown={(event) => { if (event.key === 'Enter') setDetail(row); }}
+            onClick={() => {
+              setDetail(row);
+              setDetailEquipmentId(row.equipment_id == null ? '' : String(row.equipment_id));
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                setDetail(row);
+                setDetailEquipmentId(row.equipment_id == null ? '' : String(row.equipment_id));
+              }
+            }}
           >
             <span>{new Date(row.created_at).toLocaleDateString('nl-NL')}</span>
             <strong>
@@ -295,7 +305,8 @@ export default function RentmanChanges({
                     <select
                       className="select"
                       name="equipment_id"
-                      defaultValue={detail.equipment_id == null ? '' : String(detail.equipment_id)}
+                      value={detailEquipmentId}
+                      onChange={(event) => setDetailEquipmentId(event.target.value)}
                     >
                       <option value="">Kies item...</option>
                       {equipment.map((item) => (
@@ -304,8 +315,8 @@ export default function RentmanChanges({
                         </option>
                       ))}
                     </select>
-                    <input type="hidden" name="item_name" value={detail.item_name ?? ''} />
-                    <input type="hidden" name="equipment_code" value={detail.equipment_code ?? ''} />
+                    <input type="hidden" name="item_name" value={selectedDetailEquipment?.name ?? detail.item_name ?? ''} />
+                    <input type="hidden" name="equipment_code" value={selectedDetailEquipment?.code ?? detail.equipment_code ?? ''} />
                   </div>
 
                   <div className="field">
