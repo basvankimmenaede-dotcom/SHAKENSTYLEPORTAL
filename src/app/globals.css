@@ -5779,3 +5779,132 @@ tr:last-child td { border-bottom: 0; }
 .rentmanDetailHeader p { margin:0; color:var(--muted); font-size:13px; }
 .rentmanDetailMeta { color:var(--muted); font-size:12px; padding-top:4px; }
 .rentmanTextarea.compact { min-height:72px; }
+
+
+/* Brandstofpas markering personeelsplanning */
+.planningCrewHeader {
+  align-items: center;
+  gap: 14px;
+}
+.planningCrewHeader > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.fuelCardDistanceSetting {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+.fuelCardDistanceSetting label {
+  display: grid;
+  grid-template-columns: 74px auto;
+  gap: 3px 7px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.fuelCardDistanceSetting label > span {
+  grid-column: 1 / -1;
+}
+.fuelCardDistanceSetting .input {
+  width: 74px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  font-size: 12px;
+  color: var(--ink);
+  background: #fff;
+}
+.fuelCardDistanceSetting small {
+  font-size: 10px;
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.fuelCardDistanceSetting .button {
+  padding: 8px 11px;
+  min-height: 34px;
+  font-size: 11px;
+}
+
+.planningCrewShift > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.planningFuelCardBadge {
+  display: inline-grid;
+  place-items: center;
+  width: 25px;
+  height: 20px;
+  border-radius: 6px;
+  background: #fff0e6;
+  border: 1px solid #f8c8a8;
+  flex: 0 0 auto;
+}
+.planningFuelCardIcon {
+  position: relative;
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  border: 1.6px solid var(--orange-dark);
+  border-radius: 2.5px;
+  flex: 0 0 auto;
+}
+.planningFuelCardIcon::before {
+  content: '';
+  position: absolute;
+  left: -1.6px;
+  right: -1.6px;
+  top: 2px;
+  height: 2px;
+  background: var(--orange-dark);
+}
+.planningFuelCardIcon::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  bottom: 1.5px;
+  width: 4px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--orange-dark);
+}
+.crewPlanningFuelCardNotice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #f4c5a4;
+  border-radius: 12px;
+  background: #fff7f0;
+}
+.crewPlanningFuelCardNotice .planningFuelCardIcon {
+  width: 20px;
+  height: 14px;
+}
+.crewPlanningFuelCardNotice > div {
+  display: grid;
+  gap: 2px;
+}
+.crewPlanningFuelCardNotice strong {
+  font-size: 13px;
+}
+.crewPlanningFuelCardNotice span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .planningCrewHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .fuelCardDistanceSetting {
+    width: 100%;
+  }
+}
