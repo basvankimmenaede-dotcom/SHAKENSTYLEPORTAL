@@ -5769,3 +5769,13 @@ tr:last-child td { border-bottom: 0; }
 .rentmanChangeModal{width:min(760px,calc(100vw - 30px));max-height:92vh;overflow:auto}.rentmanTypeChoice{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0 20px}.rentmanTypeChoice button{display:grid;gap:5px;text-align:left;border:1px solid var(--line);border-radius:14px;padding:17px;background:#fff;cursor:pointer}.rentmanTypeChoice button small{color:var(--muted);line-height:1.4}.rentmanTypeChoice button.active{border:2px solid var(--orange);background:#fff8f3}.rentmanTypeChoice button.active.wrong{border-color:#d84535;background:#fff6f5}.rentmanChangeForm{display:grid;gap:2px}.rentmanFormGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.rentmanTextarea{min-height:96px;resize:vertical;font:inherit}
 @media(max-width:1000px){.rentmanChangeTable{overflow-x:auto}.rentmanChangeTableHead,.rentmanChangeRow{min-width:1000px}.rentmanChangesToolbar{align-items:stretch;flex-direction:column}.rentmanChangeSearch{max-width:none}}
 @media(max-width:650px){.rentmanChangesHeader{padding-right:0;margin-bottom:74px}.rentmanNewButton{top:115px;left:0;right:auto}.rentmanChangeInfoGrid,.rentmanTypeChoice,.rentmanFormGrid{grid-template-columns:1fr}.rentmanChangeTabs{width:100%}}
+
+
+.rentmanChangeRow.clickable { cursor: pointer; transition: background .15s ease; }
+.rentmanChangeRow.clickable:hover { background: #fffaf6; }
+.rentmanChangeDetailModal { width: min(820px, calc(100vw - 30px)); }
+.rentmanDetailHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+.rentmanDetailHeader h2 { margin:4px 0 4px; font-size:28px; letter-spacing:-.03em; }
+.rentmanDetailHeader p { margin:0; color:var(--muted); font-size:13px; }
+.rentmanDetailMeta { color:var(--muted); font-size:12px; padding-top:4px; }
+.rentmanTextarea.compact { min-height:72px; }
