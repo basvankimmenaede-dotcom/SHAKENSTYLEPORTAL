@@ -329,7 +329,40 @@ export default async function PlanningPage() {
     ? Math.max(0, Math.floor((Date.now() - new Date(oldestBillingDate).getTime()) / (24 * 60 * 60 * 1000)))
     : null;
 
-  const checklists = (checklistResult.data ?? []) as ChecklistRow[];
+  let checklists = (checklistResult.data ?? []) as ChecklistRow[];
+
+  // Keep project checklist completion in sync with Todoist.
+  // A linked task that is present in the active Todoist task list is open;
+  // if it is no longer active, it has been completed in Todoist.
+  const openTodoistTaskIds = new Set(allTodoistTasks.map((task) => String(task.id)));
+  const checklistSyncUpdates: Array<{ id: number; completed: boolean }> = [];
+
+  for (const checklist of checklists) {
+    for (const item of checklist.project_checklist_items ?? []) {
+      if (!item.todoist_task_id) continue;
+      const shouldBeCompleted = !openTodoistTaskIds.has(String(item.todoist_task_id));
+      if (Boolean(item.completed) !== shouldBeCompleted) {
+        checklistSyncUpdates.push({ id: Number(item.id), completed: shouldBeCompleted });
+        item.completed = shouldBeCompleted;
+      }
+    }
+  }
+
+  if (checklistSyncUpdates.length) {
+    await Promise.all(
+      checklistSyncUpdates.map(({ id, completed }) =>
+        admin
+          .from('project_checklist_items')
+          .update({
+            completed,
+            completed_at: completed ? new Date().toISOString() : null,
+            completed_by: null,
+          })
+          .eq('id', id),
+      ),
+    );
+  }
+
   const templates = (templateResult.data ?? []) as ChecklistTemplate[];
   const assignees = (profilesResult.data ?? []).map((profile) => ({
     id: String(profile.id),
