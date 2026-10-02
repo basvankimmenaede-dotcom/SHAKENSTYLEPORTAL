@@ -329,7 +329,7 @@ export default async function PlanningPage() {
     ? Math.max(0, Math.floor((Date.now() - new Date(oldestBillingDate).getTime()) / (24 * 60 * 60 * 1000)))
     : null;
 
-  let checklists = (checklistResult.data ?? []) as ChecklistRow[];
+  const checklists = (checklistResult.data ?? []) as ChecklistRow[];
 
   // Keep project checklist completion in sync with Todoist.
   // A linked task that is present in the active Todoist task list is open;
