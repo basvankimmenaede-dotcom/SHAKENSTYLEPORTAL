@@ -281,8 +281,18 @@ export default function UsersManager({
                 <form action={assignUserProfile} className="usersProfilePanel">
                   <input type="hidden" name="user_id" value={selectedUser.id} />
                   <div className="field">
-                    <label>Naam / e-mail</label>
-                    <input className="input" value={selectedUser.fullName || selectedUser.email} readOnly />
+                    <label>Weergavenaam</label>
+                    <input
+                      className="input"
+                      name="full_name"
+                      defaultValue={selectedUser.fullName || ''}
+                      placeholder={selectedUser.email.split('@')[0]}
+                    />
+                    <small className="muted">Deze naam wordt gebruikt in de planning, taken en checklists.</small>
+                  </div>
+                  <div className="field">
+                    <label>E-mailadres</label>
+                    <input className="input" value={selectedUser.email} readOnly />
                   </div>
                   <div className="field">
                     <label>Rol</label>
