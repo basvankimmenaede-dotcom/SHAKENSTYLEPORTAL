@@ -48,7 +48,11 @@ export default function EquipmentSearch({
       })
       .map(([category, categoryItems]) => ({
         category,
-        items: categoryItems.sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' })),
+        items: categoryItems.sort((a, b) => {
+          const quantityDiff = Number(b.current_quantity ?? 0) - Number(a.current_quantity ?? 0);
+          if (quantityDiff !== 0) return quantityDiff;
+          return a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' });
+        }),
       }));
   }, [filtered]);
 
