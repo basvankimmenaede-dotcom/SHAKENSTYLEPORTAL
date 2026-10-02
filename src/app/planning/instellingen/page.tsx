@@ -13,98 +13,96 @@ export default async function PlanningSettingsPage() {
   const fuelCardDistanceKm = Number(settings?.fuel_card_distance_km ?? 150);
 
   return (
-    <main className="container usersAdminPage">
+    <main className="container settingsPage">
       <section className="usersAdminHeader">
         <div>
-          <span className="usersAdminEyebrow">Planning</span>
+          <span className="usersAdminEyebrow">Beheer</span>
           <h1>Instellingen</h1>
-          <p>Beheer vaste instellingen voor de interne planning.</p>
+          <p>Alle vaste planning-, checklist- en weergave-instellingen op één plek.</p>
         </div>
         <Link className="button secondary" href="/planning">← Terug naar planning</Link>
       </section>
 
-      <div className="settingsSectionLabel">Planning beheren</div>
-      <section className="settingsHubGrid">
-        <a className="settingsHubCard" href="#terugkerende-taken">
-          <span className="settingsHubIcon">↻</span>
-          <strong>Terugkerende taken</strong>
-          <span>Beheer vaste werkzaamheden zoals Afsluitlijst en Facturatie vanuit één plek.</span>
-        </a>
-        <Link className="settingsHubCard" href="/planning/templates">
-          <span className="settingsHubIcon">✓</span>
-          <strong>Checklist-templates</strong>
-          <span>Beheer de templates die automatisch aan Rentman-projecten worden gekoppeld.</span>
-        </Link>
-        <Link className="settingsHubCard" href="/planning/afsluitlijst/beheer">
-          <span className="settingsHubIcon">☑</span>
-          <strong>Afsluitlijst-template</strong>
-          <span>Bepaal welke onderdelen dagelijks door kantoor en magazijn worden afgerond.</span>
-        </Link>
-        <Link className="settingsHubCard" href="/planning/tv">
-          <span className="settingsHubIcon">▣</span>
-          <strong>TV-weergave</strong>
-          <span>Open de planningweergave voor het scherm op kantoor of in het magazijn.</span>
-        </Link>
-      </section>
+      <section className="settingsWorkspace">
+        <aside className="settingsLocalNav">
+          <div className="settingsLocalNavTitle">Instellingen</div>
+          <a className="active" href="#algemeen">Algemeen</a>
+          <a href="#terugkerende-taken">Terugkerende taken</a>
+          <Link href="/planning/templates">Checklist-templates <span>→</span></Link>
+          <Link href="/planning/afsluitlijst/beheer">Afsluitlijst-template <span>→</span></Link>
+          <Link href="/planning/tv">TV-weergave <span>→</span></Link>
+        </aside>
 
-      <section className="usersDetail" id="terugkerende-taken">
-        <header className="usersDetailHeader">
-          <div className="usersDetailIdentity">
-            <span className="usersAvatar large">↻</span>
-            <div>
-              <div className="usersDetailTitle"><h2>Terugkerende taken</h2></div>
-              <p>Vaste werkzaamheden die automatisch terugkomen in de planning.</p>
-            </div>
-          </div>
-        </header>
-        <div className="usersDetailPanel">
-          <div className="closingTaskListV2">
-            <div className="closingTaskCard">
-              <div><strong>Afsluitlijst afronden</strong><span>Ma–vr · Beide · gekoppeld aan Afsluitlijst</span></div>
-              <span className="badge green">Actief</span>
-            </div>
-            <div className="closingTaskCard">
-              <div><strong>Facturatie</strong><span>Elke woensdag · Kantoor · gekoppeld aan Facturatie</span></div>
-              <span className="badge green">Actief</span>
-            </div>
-          </div>
-          <p className="muted" style={{ marginTop: 14 }}>Uitgebreid beheer van frequentie en nieuwe terugkerende taken volgt vanuit deze centrale plek.</p>
-        </div>
-      </section>
-
-      <div className="settingsSectionLabel">Algemeen</div>
-      <section className="usersDetail">
-        <header className="usersDetailHeader">
-          <div className="usersDetailIdentity">
-            <span className="usersAvatar large">P</span>
-            <div>
-              <div className="usersDetailTitle"><h2>Brandstofpas</h2></div>
-              <p>Bepaal vanaf welke totale retourafstand een pasmarkering verschijnt bij gepland personeel.</p>
-            </div>
-          </div>
-        </header>
-
-        <div className="usersDetailPanel">
-          <form action={updateFuelCardDistanceSetting} className="planningSettingsForm">
-            <div className="field">
-              <label>Pas nodig vanaf</label>
+        <div className="settingsMain">
+          <section className="settingsPanel" id="algemeen">
+            <header className="settingsPanelHeader">
+              <div>
+                <span>Algemeen</span>
+                <h2>Planning</h2>
+                <p>Instellingen die invloed hebben op het dagelijkse planningsoverzicht.</p>
+              </div>
+            </header>
+            <form action={updateFuelCardDistanceSetting} className="settingsFormRow">
+              <div>
+                <strong>Brandstofpas</strong>
+                <span>Markeer personeel wanneer de retourafstand boven deze grens komt.</span>
+              </div>
               <div className="planningSettingInline">
-                <input
-                  className="input"
-                  type="number"
-                  min="1"
-                  name="fuel_card_distance_km"
-                  defaultValue={fuelCardDistanceKm}
-                  required
-                />
+                <input className="input" type="number" min="1" name="fuel_card_distance_km" defaultValue={fuelCardDistanceKm} required />
                 <span>km retour</span>
               </div>
-              <small>De afstand wordt berekend als Rentman-afstand magazijn → projectlocatie × 2.</small>
+              <button className="button orange" type="submit">Opslaan</button>
+            </form>
+          </section>
+
+          <section className="settingsPanel" id="terugkerende-taken">
+            <header className="settingsPanelHeader">
+              <div>
+                <span>Automatisering</span>
+                <h2>Terugkerende taken</h2>
+                <p>Vaste werkzaamheden die automatisch in de dagelijkse To Do terugkomen.</p>
+              </div>
+            </header>
+            <div className="settingsRecurringList">
+              <div className="settingsRecurringRow">
+                <div className="settingsRecurringIcon">✓</div>
+                <div><strong>Afsluitlijst afronden</strong><span>Ma–vr · Beide · gekoppeld aan Afsluitlijst</span></div>
+                <span className="badge green">Actief</span>
+              </div>
+              <div className="settingsRecurringRow">
+                <div className="settingsRecurringIcon">€</div>
+                <div><strong>Facturatie</strong><span>Elke woensdag · Kantoor · gekoppeld aan Facturatie</span></div>
+                <span className="badge green">Actief</span>
+              </div>
             </div>
-            <div className="usersPanelFooter">
-              <button className="button orange" type="submit">Instelling opslaan</button>
+          </section>
+
+          <section className="settingsPanel">
+            <header className="settingsPanelHeader">
+              <div>
+                <span>Checklists</span>
+                <h2>Beheer</h2>
+                <p>De verschillende lijsten staan hier samen en openen in hun eigen beheerweergave.</p>
+              </div>
+            </header>
+            <div className="settingsLinkGrid">
+              <Link href="/planning/templates">
+                <strong>Projectchecklists</strong>
+                <span>Templates, taaktype en deadlines beheren.</span>
+                <em>Open beheer →</em>
+              </Link>
+              <Link href="/planning/afsluitlijst/beheer">
+                <strong>Afsluitlijst</strong>
+                <span>Koppen, dagelijkse en periodieke taken beheren.</span>
+                <em>Open beheer →</em>
+              </Link>
+              <Link href="/planning/tv">
+                <strong>TV-weergave</strong>
+                <span>Open de schermweergave van de planning.</span>
+                <em>Open weergave →</em>
+              </Link>
             </div>
-          </form>
+          </section>
         </div>
       </section>
     </main>

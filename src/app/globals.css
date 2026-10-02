@@ -6040,3 +6040,28 @@ tr:last-child td { border-bottom: 0; }
  .uiAppMain .planningOpsColumn{grid-column:auto;grid-template-columns:1fr}
  .settingsHubGrid{grid-template-columns:1fr}
 }
+
+
+/* v9.1 — structural planning + settings refinement */
+.planningMetricStrip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.planningMetricCard{min-width:0;min-height:92px;display:grid;grid-template-columns:42px minmax(0,1fr);gap:11px;align-items:center;padding:14px;border:1px solid var(--ui-border);border-radius:15px;background:#fff;box-shadow:var(--ui-shadow)}
+a.planningMetricCard{transition:.16s ease}a.planningMetricCard:hover{transform:translateY(-2px);border-color:#d8d0c7}
+.planningMetricIcon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#fff1e8;color:var(--ui-accent);font-size:15px;font-weight:900}
+.planningMetricIcon.projects{background:#ebf8ef;color:#2e8c55}.planningMetricIcon.billing{background:#edf6ff;color:#247bbb}.planningMetricIcon.closing{background:#eaf8ef;color:#2e8c55}
+.planningMetricCard>div{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:baseline;min-width:0}
+.planningMetricCard small{grid-column:1/-1;color:#514b45;font-size:9px;font-weight:750}.planningMetricCard strong{font-size:26px;line-height:1;letter-spacing:-.04em}.planningMetricCard em{font-style:normal;color:var(--ui-muted);font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uiAppMain .planningCompactHeader{min-height:76px}.uiAppMain .planningCompactHeader .eyebrowLink{margin-bottom:8px}.uiAppMain .planningCompactGrid{margin-top:0}
+
+.settingsPage{max-width:none}.settingsWorkspace{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;align-items:start}
+.settingsLocalNav{position:sticky;top:18px;display:grid;gap:3px;padding:10px;border:1px solid var(--ui-border);border-radius:16px;background:#fff;box-shadow:var(--ui-shadow)}
+.settingsLocalNavTitle{padding:9px 11px 11px;color:var(--ui-muted);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+.settingsLocalNav a{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:39px;padding:0 11px;border-radius:9px;color:#4f4943;font-size:10px;font-weight:750}
+.settingsLocalNav a:hover{background:var(--ui-panel-soft);color:var(--ui-text)}.settingsLocalNav a.active{background:var(--ui-accent-soft);color:var(--ui-accent);box-shadow:inset 3px 0 0 var(--ui-accent)}
+.settingsMain{display:grid;gap:14px}.settingsPanel{overflow:hidden;border:1px solid var(--ui-border);border-radius:16px;background:#fff;box-shadow:var(--ui-shadow)}
+.settingsPanelHeader{padding:18px 20px;border-bottom:1px solid #eee9e3}.settingsPanelHeader span{color:var(--ui-accent);font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.settingsPanelHeader h2{margin:4px 0;font-size:22px;letter-spacing:-.03em}.settingsPanelHeader p{margin:0;color:var(--ui-muted);font-size:10px;line-height:1.5}
+.settingsFormRow{display:grid;grid-template-columns:minmax(260px,1fr) auto auto;gap:14px;align-items:center;padding:18px 20px}.settingsFormRow>div:first-child{display:grid;gap:4px}.settingsFormRow>div:first-child strong{font-size:12px}.settingsFormRow>div:first-child span{color:var(--ui-muted);font-size:9px}
+.settingsRecurringList{display:grid}.settingsRecurringRow{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:72px;padding:12px 20px;border-top:1px solid #eee9e3}.settingsRecurringRow:first-child{border-top:0}.settingsRecurringIcon{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:var(--ui-accent-soft);color:var(--ui-accent);font-weight:900}.settingsRecurringRow>div:nth-child(2){display:grid;gap:3px}.settingsRecurringRow strong{font-size:11px}.settingsRecurringRow span{color:var(--ui-muted);font-size:9px}
+.settingsLinkGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:18px 20px}.settingsLinkGrid>a{display:grid;gap:6px;min-height:120px;padding:15px;border:1px solid var(--ui-border);border-radius:13px;background:var(--ui-panel-soft)}.settingsLinkGrid>a:hover{border-color:#d5cdc4;background:#fff}.settingsLinkGrid strong{font-size:12px}.settingsLinkGrid span{color:var(--ui-muted);font-size:9px;line-height:1.45}.settingsLinkGrid em{margin-top:auto;color:var(--ui-accent);font-style:normal;font-size:9px;font-weight:850}
+@media(max-width:1380px){.planningMetricStrip{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.settingsWorkspace{grid-template-columns:1fr}.settingsLocalNav{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}.settingsLocalNavTitle{grid-column:1/-1}.settingsLinkGrid{grid-template-columns:1fr}.planningMetricStrip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.planningMetricStrip{grid-template-columns:1fr 1fr}.planningMetricCard{grid-template-columns:34px minmax(0,1fr);padding:10px}.planningMetricIcon{width:32px;height:32px}.settingsFormRow{grid-template-columns:1fr}}

@@ -59,7 +59,7 @@ export default function UnifiedSidebar({
 
   function isActive(item: NavItem) {
     if (item.href === '/admin') return pathname === '/admin';
-    if (item.href === '/planning') return pathname === '/planning' || pathname === '/planning/templates' || pathname === '/planning/tv';
+    if (item.href === '/planning') return pathname === '/planning';
     return item.match?.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/')) ?? false;
   }
 
@@ -80,31 +80,16 @@ export default function UnifiedSidebar({
       </div>
 
       <nav className="uiSidebarNav">
-        {items.map((item) => {
-          const isSettings = role === 'admin' && item.href === '/planning/instellingen';
-          return isSettings ? (
-            <div className="uiSidebarSettings" key={item.href}>
-              <Link href={item.href} className={isActive(item) ? 'uiSidebarLink active' : 'uiSidebarLink'}>
-                <span className="uiSidebarDot" />
-                <span>Instellingen</span>
-              </Link>
-              <Link href="/planning/instellingen" className={pathname === '/planning/instellingen' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>Algemeen</Link>
-              <Link href="/planning/instellingen#terugkerende-taken" className="uiSidebarSubLink">Terugkerende taken</Link>
-              <Link href="/planning/templates" className={pathname === '/planning/templates' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>Checklist-templates</Link>
-              <Link href="/planning/afsluitlijst/beheer" className={pathname === '/planning/afsluitlijst/beheer' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>Afsluitlijst (template)</Link>
-              <Link href="/planning/tv" className={pathname === '/planning/tv' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>TV-weergave</Link>
-            </div>
-          ) : (
-            <Link
-              href={item.href}
-              className={isActive(item) ? 'uiSidebarLink active' : 'uiSidebarLink'}
-              key={item.href}
-            >
-              <span className="uiSidebarDot" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {items.map((item) => (
+          <Link
+            href={item.href}
+            className={isActive(item) ? 'uiSidebarLink active' : 'uiSidebarLink'}
+            key={item.href}
+          >
+            <span className="uiSidebarDot" />
+            <span>{item.label}</span>
+          </Link>
+        ))}
       </nav>
 
       <div className="uiSidebarFooter">

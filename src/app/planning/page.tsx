@@ -21,6 +21,7 @@ import ProjectChecklist, {
   type ChecklistTemplate,
   type PlanningChecklist,
 } from '@/components/ProjectChecklist';
+import ProjectChecklistProgress from '@/components/ProjectChecklistProgress';
 import TodoistTaskItem from '@/components/TodoistTaskItem';
 import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 import CrewPlanningPopup from '@/components/CrewPlanningPopup';
@@ -179,10 +180,8 @@ function CompactProjectRow({
       <div className="compactProjectMain">
         <div className="compactProjectTitle">
           <strong>#{number} · {project.name}</strong>
-          {progress ? (
-            <span className={progress.done === progress.total ? 'compactProgress complete' : 'compactProgress'}>
-              {progress.done}/{progress.total}
-            </span>
+          {progress && checklist ? (
+            <ProjectChecklistProgress checklistId={checklist.id} initialDone={progress.done} total={progress.total} />
           ) : (
             <span className="compactProgress empty">geen checklist</span>
           )}
@@ -619,6 +618,11 @@ export default async function PlanningPage() {
     (sum, dateKey) => sum + (crewByDay.get(dateKey)?.length ?? 0),
     0,
   );
+  const tenDayProjectCount = new Set(
+    weekDays.flatMap((dateKey) => (projectsByDay.get(dateKey) ?? []).map((project) => project.id)),
+  ).size;
+  const todayTaskCount = (tasksByDay.get(planning.today) ?? []).length;
+  const todayCrewCount = (crewByDay.get(planning.today) ?? []).length;
 
 
   return (
@@ -632,9 +636,6 @@ export default async function PlanningPage() {
           <h1>Planning</h1>
         </div>
         <div className="planningCompactActions">
-          {profile.role === 'admin' ? (
-            <Link href="/planning/templates" className="button secondary">Checklist-templates</Link>
-          ) : null}
           <Link href="/planning/tv" className="button secondary">TV-weergave</Link>
         </div>
       </section>
@@ -642,74 +643,38 @@ export default async function PlanningPage() {
       {rentmanError ? <div className="notice">Rentman: {rentmanError}</div> : null}
       {todoistError ? <div className="notice">Todoist: {todoistError}</div> : null}
 
-      <section className="planningWeekStrip">
-        {weekDays.map((dateKey, index) => {
-          const projects = projectsByDay.get(dateKey) ?? [];
-          const tasks = tasksByDay.get(dateKey) ?? [];
-          const crew = crewByDay.get(dateKey) ?? [];
-          return (
-            <a
-              key={dateKey}
-              href={`#planning-day-${dateKey}`}
-              className={index === 0 ? 'planningWeekDay active' : 'planningWeekDay'}
-            >
-              <div>
-                <strong>{dayLabel(dateKey, planning.today)}</strong>
-                <span>{shortDate(dateKey)}</span>
-              </div>
-              <div className="planningWeekCounts">
-                <span className="planningWeekStat"><b>{projects.length}</b><small>projecten</small></span>
-                <span className="planningWeekStat"><b>{tasks.length}</b><small>taken</small></span>
-                <span className="planningWeekStat"><b>{crew.length}</b><small>crew</small></span>
-              </div>
-            </a>
-          );
-        })}
-      </section>
-
-      {closingRequired ? (
-        <Link
-          href="/planning/afsluitlijst"
-          className={closingToday?.status === 'completed' ? 'planningClosingBanner complete' : 'planningClosingBanner'}
-        >
-          <div>
-            <span>Dagelijkse afsluitlijst</span>
-            <strong>
-              {closingToday?.status === 'completed'
-                ? 'Afsluitlijst van vandaag is afgerond'
-                : `${closingTodayDone}/${closingTodayTotal} punten afgerond`}
-            </strong>
-            <small>Moet vandaag worden afgerond voordat we naar huis gaan.</small>
-          </div>
-          <div className="planningClosingCta">
-            {closingToday?.status === 'completed' ? '✓ Klaar' : 'Open lijst →'}
-          </div>
-        </Link>
-      ) : null}
-
-      {todayActionCount ? (
-        <a
-          href={todayActionTasks.length ? '#todo-today' : `#planning-day-${planning.today}`}
-          className="planningActionBanner"
-        >
-          <div className="planningActionIcon">!</div>
-          <div className="planningActionCopy">
-            <span>Actie voor vandaag</span>
-            <strong>{todayActionCount} {todayActionCount === 1 ? 'actie vraagt' : 'acties vragen'} vandaag aandacht</strong>
-            <small>
-              {todayActionTasks
-                .map((task) => displayTaskContent(task, taskProjectNumber.get(task.id)))
-                .slice(0, 3)
-                .join(' · ')}
-              {todayActionCount > 3 ? ` · +${todayActionCount - 3} meer` : ''}
-            </small>
-          </div>
-          <div className="planningActionCta">Bekijk acties →</div>
+      <section className="planningMetricStrip">
+        <a className="planningMetricCard" href="#planning-projects">
+          <span className="planningMetricIcon projects">P</span>
+          <div><small>Projecten</small><strong>{tenDayProjectCount}</strong><em>komende 10 dagen</em></div>
         </a>
-      ) : null}
-
+        <a className="planningMetricCard" href="#planning-task-list">
+          <span className="planningMetricIcon tasks">✓</span>
+          <div><small>Taken vandaag</small><strong>{todayTaskCount}</strong><em>{overdueTasks.length ? `${overdueTasks.length} te laat` : 'geen achterstand'}</em></div>
+        </a>
+        <a className="planningMetricCard" href="#planning-crew">
+          <span className="planningMetricIcon crew">M</span>
+          <div><small>Crew vandaag</small><strong>{todayCrewCount}</strong><em>{previewCrewCount} komende 3 dagen</em></div>
+        </a>
+        <div className="planningMetricCard">
+          <span className="planningMetricIcon returns">↩</span>
+          <div><small>Niet retour</small><strong>{overdueReturnProjects.length}</strong><em>{overdueReturnProjects.length ? 'openstaand' : 'alles retour'}</em></div>
+        </div>
+        {canSeeBilling ? (
+          <a className="planningMetricCard" href="/planning/billing">
+            <span className="planningMetricIcon billing">€</span>
+            <div><small>Facturatie</small><strong>{openBillingItems.length}</strong><em>{openBillingItems.length ? 'openstaand' : 'bijgewerkt'}</em></div>
+          </a>
+        ) : null}
+        {closingRequired ? (
+          <a className="planningMetricCard" href="/planning/afsluitlijst">
+            <span className="planningMetricIcon closing">✓</span>
+            <div><small>Afsluitlijst</small><strong>{closingTodayDone}/{closingTodayTotal}</strong><em>{closingToday?.status === 'completed' ? 'afgerond' : 'vandaag afronden'}</em></div>
+          </a>
+        ) : null}
+      </section>
       <section className="planningCompactGrid">
-        <div className="planningCompactColumn">
+        <div className="planningCompactColumn" id="planning-projects">
           <div className="planningColumnHeader">
             <div>
               <span>Rentman</span>
@@ -769,10 +734,12 @@ export default async function PlanningPage() {
                         <span>{contactName(project.location)}{project.customer ? ` · ${contactName(project.customer)}` : ''}</span>
                       </div>
                       <div className="planningLongTermChecklist">
-                        {checklistProgress(getChecklist(project)) ? (
-                          <span className="compactProgress">
-                            {checklistProgress(getChecklist(project))!.done}/{checklistProgress(getChecklist(project))!.total}
-                          </span>
+                        {checklistProgress(getChecklist(project)) && getChecklist(project) ? (
+                          <ProjectChecklistProgress
+                            checklistId={getChecklist(project)!.id}
+                            initialDone={checklistProgress(getChecklist(project))!.done}
+                            total={checklistProgress(getChecklist(project))!.total}
+                          />
                         ) : (
                           <span className="compactProgress empty">geen checklist</span>
                         )}
@@ -962,7 +929,7 @@ export default async function PlanningPage() {
         </div>
 
         <aside className="planningOpsColumn">
-          <section className="planningOpsCard planningCrewCard">
+          <section className="planningOpsCard planningCrewCard" id="planning-crew">
             <div className="planningOpsHeader">
               <span>Personeel (Rentman)</span>
               <strong>{previewCrewCount} komende 3 dagen</strong>
