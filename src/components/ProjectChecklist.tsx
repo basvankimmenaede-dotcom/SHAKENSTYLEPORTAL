@@ -102,15 +102,30 @@ export default function ProjectChecklist({
     setCreating(false);
   }
 
+  function emitProgress(nextItems: PlanningChecklistItem[]) {
+    if (!checklist) return;
+    const required = nextItems.filter((row) => row.is_required);
+    const scope = required.length ? required : nextItems;
+    window.dispatchEvent(new CustomEvent('project-checklist-progress', {
+      detail: {
+        checklistId: checklist.id,
+        done: scope.filter((row) => row.completed).length,
+        total: scope.length,
+      },
+    }));
+  }
+
   async function toggleItem(item: PlanningChecklistItem) {
     if (pendingIds.has(item.id)) return;
 
     const nextCompleted = !item.completed;
     setError('');
 
-    setItems((current) =>
-      current.map((row) => row.id === item.id ? { ...row, completed: nextCompleted } : row),
-    );
+    setItems((current) => {
+      const next = current.map((row) => row.id === item.id ? { ...row, completed: nextCompleted } : row);
+      emitProgress(next);
+      return next;
+    });
     setPendingIds((current) => {
       const next = new Set(current);
       next.add(item.id);
@@ -125,9 +140,11 @@ export default function ProjectChecklist({
       });
 
       if (!response.ok) {
-        setItems((current) =>
-          current.map((row) => row.id === item.id ? { ...row, completed: item.completed } : row),
-        );
+        setItems((current) => {
+          const next = current.map((row) => row.id === item.id ? { ...row, completed: item.completed } : row);
+          emitProgress(next);
+          return next;
+        });
         const result = await response.json().catch(() => ({}));
         setError(result.error || 'Checklist kon niet worden bijgewerkt.');
       }
