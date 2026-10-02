@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireModulePermission } from '@/lib/auth';
 import { completePlanningTodoistTask } from '@/lib/todoist';
+import { amsterdamDateKey } from '@/lib/closingChecklist';
 
 export async function PATCH(
   request: Request,
@@ -16,13 +17,23 @@ export async function PATCH(
 
     const { data: item, error: readError } = await supabase
       .from('closing_checklist_items')
-      .select('id,closing_checklist_id,item_type')
+      .select('id,closing_checklist_id,item_type,closing_checklists(checklist_date)')
       .eq('id', itemId)
       .single();
     if (readError) throw readError;
 
     if (item.item_type === 'heading') {
       return NextResponse.json({ ok: false, error: 'Een kop kan niet worden afgevinkt.' }, { status: 400 });
+    }
+
+    const parent = Array.isArray(item.closing_checklists)
+      ? item.closing_checklists[0]
+      : item.closing_checklists;
+    if (!parent || String(parent.checklist_date) !== amsterdamDateKey()) {
+      return NextResponse.json(
+        { ok: false, error: 'Oude afsluitlijsten zijn alleen-lezen.' },
+        { status: 409 },
+      );
     }
 
     const now = new Date().toISOString();

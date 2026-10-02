@@ -11,6 +11,7 @@ import {
   type RentmanPlanningCrewAssignment,
 } from '@/lib/rentman';
 import {
+  createPlanningTodoistTask,
   findRentmanProjectNumber,
   getPlanningTodoistTasks,
   todoistTaskDate,
@@ -303,7 +304,50 @@ export default async function PlanningPage() {
   const closingTodayDone = closingTodayItems.filter((item) => item.completed).length;
   const closingTodayTotal = closingTodayItems.length;
 
+  let ensuredClosingTaskId: string | null = null;
+  if (closingRequired && closingToday && closingToday.status !== 'completed') {
+    try {
+      const marker = `SHAKENSTYLE afsluitlijst · ${closingTodayDate}`;
+      const linkedTaskId = closingToday.todoist_task_id ? String(closingToday.todoist_task_id) : null;
+      let closingTask = linkedTaskId
+        ? allTodoistTasks.find((task) => String(task.id) === linkedTaskId) ?? null
+        : null;
 
+      if (!closingTask) {
+        closingTask = allTodoistTasks.find((task) => String(task.description ?? '').includes(marker)) ?? null;
+      }
+
+      if (!closingTask) {
+        closingTask = await createPlanningTodoistTask({
+          content: 'Afsluitlijst afronden',
+          dueDate: closingTodayDate,
+          description: marker,
+        });
+        allTodoistTasks.push(closingTask);
+      }
+
+      ensuredClosingTaskId = String(closingTask.id);
+
+      if (linkedTaskId !== ensuredClosingTaskId) {
+        await supabase
+          .from('closing_checklists')
+          .update({ todoist_task_id: ensuredClosingTaskId })
+          .eq('id', closingToday.id);
+      }
+
+      await supabase
+        .from('planning_task_assignments')
+        .upsert({
+          todoist_task_id: ensuredClosingTaskId,
+          assignee_profile_id: null,
+          assigned_by: user.id,
+          task_area: 'both',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'todoist_task_id' });
+    } catch {
+      // Planning blijft bruikbaar als Todoist tijdelijk niet bereikbaar is.
+    }
+  }
 
   if (canManageBilling && planning.allProjects.length) {
     await syncBillingQueueOncePerDay({
@@ -381,6 +425,7 @@ export default async function PlanningPage() {
       row.task_area === 'warehouse' ? 'warehouse' : row.task_area === 'both' ? 'both' : 'office',
     ] as const),
   );
+  if (ensuredClosingTaskId) taskAreaById.set(ensuredClosingTaskId, 'both');
   const todoistTasks = profile.role === 'warehouse'
     ? allTodoistTasks.filter((task) => {
         const area = taskAreaById.get(task.id);
@@ -406,7 +451,7 @@ export default async function PlanningPage() {
   }
 
   const weekDays = planning.today
-    ? Array.from({ length: 7 }, (_, index) => addDays(planning.today, index))
+    ? Array.from({ length: 10 }, (_, index) => addDays(planning.today, index))
     : [];
 
   const projectById = new Map(planning.allProjects.map((project) => [project.id, project]));
@@ -669,7 +714,7 @@ export default async function PlanningPage() {
               <span>Rentman</span>
               <h2>Projecten agenda</h2>
             </div>
-            <strong>7 dagen</strong>
+            <strong>10 dagen</strong>
           </div>
 
           <div className="planningAgendaList">
@@ -919,7 +964,7 @@ export default async function PlanningPage() {
           <section className="planningOpsCard planningCrewCard">
             <div className="planningOpsHeader">
               <span>Personeel (Rentman)</span>
-              <strong>{weeklyCrewCount} deze week</strong>
+              <strong>{weeklyCrewCount} komende 10 dagen</strong>
             </div>
 
             <div className="planningCrewDays">
@@ -1021,7 +1066,7 @@ export default async function PlanningPage() {
                 );
               })}
               {!weekDays.some((dateKey) => (crewByDay.get(dateKey) ?? []).length > 0) ? (
-                <div className="compactEmpty">Geen geplande personeelsactiviteiten in deze week.</div>
+                <div className="compactEmpty">Geen geplande personeelsactiviteiten in de komende 10 dagen.</div>
               ) : null}
             </div>
           </section>

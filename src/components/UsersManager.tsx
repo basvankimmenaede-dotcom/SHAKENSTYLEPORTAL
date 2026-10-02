@@ -95,6 +95,8 @@ export default function UsersManager({
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'invited' | 'inactive'>('all');
   const [tab, setTab] = useState<'general' | 'rights' | 'portal' | 'account'>('general');
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState<'customer' | 'warehouse' | 'admin'>('customer');
 
   const counts = useMemo(() => {
     const active = users.filter((user) => statusOf(user).key === 'active').length;
@@ -140,26 +142,87 @@ export default function UsersManager({
           <h1>Gebruikers & rechten</h1>
           <p>Beheer gebruikers, rollen, moduletoegang en merktoegang vanuit één overzicht.</p>
         </div>
-        <details className="usersInvitePanel">
-          <summary className="button orange">Nieuwe gebruiker</summary>
-          <form action={inviteCustomer} className="usersInviteForm">
-            <div className="field">
-              <label htmlFor="invite-email">E-mailadres</label>
-              <input id="invite-email" name="email" className="input" type="email" required placeholder="naam@klant.nl" />
-            </div>
-            <div className="field">
-              <label htmlFor="invite-distributor">Organisatie</label>
-              <select id="invite-distributor" name="distributor_id" className="select" required defaultValue="">
-                <option value="" disabled>Kies organisatie</option>
-                {distributors.map((distributor) => (
-                  <option value={distributor.id} key={distributor.id}>{distributor.name}</option>
-                ))}
-              </select>
-            </div>
-            <button className="button orange" type="submit">Uitnodiging sturen</button>
-          </form>
-        </details>
+        <button
+          className="button orange"
+          type="button"
+          onClick={() => {
+            setInviteRole('customer');
+            setInviteOpen(true);
+          }}
+        >
+          Nieuwe gebruiker
+        </button>
       </section>
+
+      {inviteOpen ? (
+        <div
+          className="planningTaskCreateBackdrop"
+          data-planning-modal-open="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setInviteOpen(false);
+          }}
+        >
+          <section className="planningTaskCreateModal" role="dialog" aria-modal="true" aria-labelledby="new-user-title">
+            <button className="planningTaskCreateClose" type="button" onClick={() => setInviteOpen(false)}>×</button>
+            <h2 id="new-user-title">Nieuwe gebruiker</h2>
+            <p className="muted">Vul eerst de basisgegevens en rol in. De standaardrol is altijd Customer.</p>
+
+            <form action={inviteCustomer} className="usersInviteForm" onSubmit={() => setInviteOpen(false)}>
+              <div className="field">
+                <label htmlFor="invite-name">Weergavenaam</label>
+                <input id="invite-name" name="full_name" className="input" placeholder="Naam gebruiker" required />
+              </div>
+
+              <div className="field">
+                <label htmlFor="invite-email">E-mailadres</label>
+                <input id="invite-email" name="email" className="input" type="email" required placeholder="naam@bedrijf.nl" />
+              </div>
+
+              <div className="field">
+                <label htmlFor="invite-role">Rol</label>
+                <select
+                  id="invite-role"
+                  name="role"
+                  className="select"
+                  value={inviteRole}
+                  onChange={(event) => setInviteRole(event.target.value as 'customer' | 'warehouse' | 'admin')}
+                >
+                  <option value="customer">Customer</option>
+                  <option value="warehouse">Magazijn</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              {inviteRole === 'customer' ? (
+                <div className="field">
+                  <label htmlFor="invite-distributor">Organisatie</label>
+                  <select id="invite-distributor" name="distributor_id" className="select" required defaultValue="">
+                    <option value="" disabled>Kies organisatie</option>
+                    {distributors.map((distributor) => (
+                      <option value={distributor.id} key={distributor.id}>{distributor.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              {inviteRole === 'admin' ? (
+                <label className="usersBrandOption">
+                  <input type="checkbox" name="confirm_admin" required />
+                  <span>
+                    <strong>Ja, deze gebruiker moet Admin worden</strong>
+                    <small>Admins krijgen automatisch volledige toegang tot alle onderdelen.</small>
+                  </span>
+                </label>
+              ) : null}
+
+              <div className="planningTaskCreateActions">
+                <button className="button secondary" type="button" onClick={() => setInviteOpen(false)}>Annuleren</button>
+                <button className="button orange" type="submit">Gebruiker uitnodigen</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       <section className="usersMetricGrid">
         <div className="usersMetricCard"><span>Totaal</span><strong>{counts.total}</strong><small>gebruikers</small></div>
@@ -278,7 +341,7 @@ export default function UsersManager({
               </div>
 
               <div className="usersGeneralGrid">
-                <form action={assignUserProfile} className="usersProfilePanel">
+                <form action={assignUserProfile} className="usersProfilePanel" key={`profile-${selectedUser.id}`}>
                   <input type="hidden" name="user_id" value={selectedUser.id} />
                   <div className="field">
                     <label>Weergavenaam</label>

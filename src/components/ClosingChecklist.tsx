@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Item = {
@@ -18,20 +18,28 @@ type Item = {
 export default function ClosingChecklist({
   items,
   canManage,
+  readOnly = false,
 }: {
   items: Item[];
   canManage: boolean;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(items);
   const [pending, setPending] = useState<Set<number>>(() => new Set());
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    setRows(items);
+    setPending(new Set());
+    setError('');
+  }, [items]);
+
   const actionableRows = rows.filter((row) => row.item_type !== 'heading');
   const done = actionableRows.filter((row) => row.completed).length;
 
   async function toggle(item: Item) {
-    if (!canManage || pending.has(item.id)) return;
+    if (readOnly || !canManage || pending.has(item.id)) return;
     const nextCompleted = !item.completed;
     setError('');
     setRows((current) => current.map((row) => row.id === item.id ? { ...row, completed: nextCompleted } : row));
@@ -62,7 +70,7 @@ export default function ClosingChecklist({
     <section className="closingChecklistCard">
       <div className="closingChecklistCardHeader">
         <div>
-          <span>Vandaag afronden</span>
+          <span>{readOnly ? 'Historie · alleen lezen' : 'Vandaag afronden'}</span>
           <h2>Afsluitlijst</h2>
         </div>
         <strong>{done}/{actionableRows.length}</strong>
@@ -90,7 +98,7 @@ export default function ClosingChecklist({
                     className={item.completed ? 'closingChecklistRow complete' : 'closingChecklistRow'}
                     key={item.id}
                     onClick={() => toggle(item)}
-                    disabled={!canManage || busy}
+                    disabled={readOnly || !canManage || busy}
                   >
                     <span className="closingCheckBox">{item.completed ? '✓' : ''}</span>
                     <span className="closingChecklistLabel">{item.label}</span>

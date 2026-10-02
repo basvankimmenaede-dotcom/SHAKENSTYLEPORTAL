@@ -19,7 +19,7 @@ export default async function ClosingChecklistPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { supabase, user, profile, permissionLevel } = await requireModulePermission('checklists', 'view');
+  const { supabase, profile, permissionLevel } = await requireModulePermission('checklists', 'view');
   const admin = createAdminClient();
   const params = await searchParams;
   const today = amsterdamDateKey();
@@ -154,7 +154,7 @@ export default async function ClosingChecklistPage({
           <span>De afsluitlijstverplichting start vanaf {requiredFrom}.</span>
         </section>
       ) : list ? (
-        <ClosingChecklist items={items} canManage={canManage} />
+        <ClosingChecklist items={items} canManage={canManage && selectedDate === today} readOnly={selectedDate < today} />
       ) : (
         <section className="closingDayState missed">
           <strong>Niet afgerond</strong>
@@ -162,7 +162,7 @@ export default async function ClosingChecklistPage({
         </section>
       )}
 
-      {profile.role === 'admin' && !weekend ? (
+      {profile.role === 'admin' && !weekend && selectedDate === today ? (
         <section className="card closingExemptionCard">
           <div>
             <span className="usersAdminEyebrow">Daginstelling</span>

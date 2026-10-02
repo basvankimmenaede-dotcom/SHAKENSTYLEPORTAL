@@ -146,13 +146,20 @@ export async function inviteCustomer(formData: FormData) {
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const admin = createAdminClient();
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const fullName = String(formData.get('full_name') ?? '').trim();
+  const requestedRole = String(formData.get('role') ?? 'customer');
+  const role = ['customer', 'warehouse', 'admin'].includes(requestedRole) ? requestedRole : 'customer';
   const distributorRaw = String(formData.get('distributor_id') ?? '');
   const distributorId = distributorRaw ? Number(distributorRaw) : null;
-  if (!email || !distributorId) return;
+  const confirmAdmin = formData.get('confirm_admin') === 'on';
+
+  if (!email || !fullName) return;
+  if (role === 'customer' && !distributorId) throw new Error('Kies een organisatie voor deze klant.');
+  if (role === 'admin' && !confirmAdmin) throw new Error('Bevestig expliciet dat deze gebruiker Admin moet worden.');
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.shakenstyle.com').replace(/\/$/, '');
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    data: { full_name: email },
+    data: { full_name: fullName },
     redirectTo: `${appUrl}/activate`,
   });
   if (error) throw new Error(error.message);
@@ -160,12 +167,12 @@ export async function inviteCustomer(formData: FormData) {
   if (data.user?.id) {
     await admin.from('profiles').upsert({
       id: data.user.id,
-      full_name: email,
-      role: 'customer',
-      distributor_id: distributorId,
+      full_name: fullName,
+      role,
+      distributor_id: role === 'customer' ? distributorId : null,
     });
 
-    const defaults = defaultPermissionsForRole('customer').map((permission) => ({
+    const defaults = defaultPermissionsForRole(role).map((permission) => ({
       user_id: data.user!.id,
       ...permission,
       updated_at: new Date().toISOString(),
@@ -175,7 +182,6 @@ export async function inviteCustomer(formData: FormData) {
 
   revalidatePath('/admin/users');
 }
-
 
 export async function saveUserPermissions(formData: FormData) {
   await requireAdmin();
