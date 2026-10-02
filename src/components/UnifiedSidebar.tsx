@@ -50,7 +50,7 @@ export default function UnifiedSidebar({
         { href: '/admin/brands', label: 'Merken & materialen', match: ['/admin/brands'] },
         { href: '/admin/distributors', label: 'Distributeurs', match: ['/admin/distributors'] },
         { href: '/admin/users', label: 'Gebruikers & rechten', match: ['/admin/users'] },
-        { href: '/planning/instellingen', label: 'Instellingen', match: ['/planning/instellingen'] },
+        { href: '/planning/instellingen', label: 'Instellingen', match: ['/planning/instellingen', '/planning/templates', '/planning/afsluitlijst/beheer', '/planning/tv'] },
         { href: '/portal', label: 'Klantenportaal', match: ['/portal'] },
       ]
     : internalItems.length
@@ -80,16 +80,31 @@ export default function UnifiedSidebar({
       </div>
 
       <nav className="uiSidebarNav">
-        {items.map((item) => (
-          <Link
-            href={item.href}
-            className={isActive(item) ? 'uiSidebarLink active' : 'uiSidebarLink'}
-            key={item.href}
-          >
-            <span className="uiSidebarDot" />
-            <span>{item.label}</span>
-          </Link>
-        ))}
+        {items.map((item) => {
+          const isSettings = role === 'admin' && item.href === '/planning/instellingen';
+          return isSettings ? (
+            <div className="uiSidebarSettings" key={item.href}>
+              <Link href={item.href} className={isActive(item) ? 'uiSidebarLink active' : 'uiSidebarLink'}>
+                <span className="uiSidebarDot" />
+                <span>Instellingen</span>
+              </Link>
+              <Link href="/planning/instellingen" className={pathname === '/planning/instellingen' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>Algemeen</Link>
+              <Link href="/planning/instellingen#terugkerende-taken" className="uiSidebarSubLink">Terugkerende taken</Link>
+              <Link href="/planning/templates" className={pathname === '/planning/templates' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>Checklist-templates</Link>
+              <Link href="/planning/afsluitlijst/beheer" className={pathname === '/planning/afsluitlijst/beheer' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>Afsluitlijst (template)</Link>
+              <Link href="/planning/tv" className={pathname === '/planning/tv' ? 'uiSidebarSubLink active' : 'uiSidebarSubLink'}>TV-weergave</Link>
+            </div>
+          ) : (
+            <Link
+              href={item.href}
+              className={isActive(item) ? 'uiSidebarLink active' : 'uiSidebarLink'}
+              key={item.href}
+            >
+              <span className="uiSidebarDot" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="uiSidebarFooter">

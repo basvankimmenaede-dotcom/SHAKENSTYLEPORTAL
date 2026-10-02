@@ -5936,3 +5936,107 @@ tr:last-child td { border-bottom: 0; }
 .closingDangerZone{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
 .closingDangerZone>span{font-weight:700;color:var(--muted)}
 @media(max-width:700px){.closingHeaderActions{width:100%;justify-content:flex-end;flex-wrap:wrap}.closingTaskCard{align-items:flex-start;flex-direction:column}.closingTaskCard .button{width:100%}.closingModalFooterSplit{align-items:stretch;flex-direction:column}.closingDangerZone{align-items:flex-start;flex-direction:column}}
+
+
+/* v9.0 — SHAKENSTYLE premium operations UI */
+:root{
+  --ui-bg:#f6f4f1;
+  --ui-panel:#fff;
+  --ui-panel-soft:#faf8f5;
+  --ui-text:#151412;
+  --ui-muted:#817a72;
+  --ui-border:#e8e3dc;
+  --ui-accent:#f37021;
+  --ui-accent-soft:#fff3eb;
+  --ui-shadow:0 8px 28px rgba(43,36,30,.045);
+  --ui-radius:16px;
+  --ui-page-max:1680px;
+}
+.uiAppMain{background:var(--ui-bg);min-width:0}
+.uiAppMain>.container,.uiAppMain>.accountPage{width:min(calc(100% - 44px),var(--ui-page-max));max-width:var(--ui-page-max);padding:30px 0 64px}
+.uiAppMain .hero,.uiAppMain .usersAdminHeader,.uiAppMain .planningCompactHeader,.uiAppMain .billingHero,.uiAppMain .closingPageHeader,.uiAppMain .rentmanChangesHeader,.uiAppMain .checklistAdminHeader{min-height:92px;align-items:flex-end;margin-bottom:22px}
+.uiAppMain .hero h1,.uiAppMain .usersAdminHeader h1,.uiAppMain .planningCompactHeader h1,.uiAppMain .billingHero h1,.uiAppMain .closingPageHeader h1,.uiAppMain .rentmanChangesHeader h1,.uiAppMain .checklistAdminHeader h1{font-size:clamp(38px,3.8vw,58px);line-height:.96;letter-spacing:-.055em}
+.uiAppMain .hero p,.uiAppMain .usersAdminHeader p,.uiAppMain .billingHero p,.uiAppMain .closingPageHeader p,.uiAppMain .rentmanChangesHeader p,.uiAppMain .checklistAdminHeader p{font-size:12px;line-height:1.55;color:var(--ui-muted)}
+.uiAppMain .card,.uiAppMain .tableWrap,.uiAppMain .usersDetail,.uiAppMain .usersDirectory,.uiAppMain .planningCompactColumn,.uiAppMain .planningOpsCard,.uiAppMain .closingChecklistCard,.uiAppMain .rentmanChangeTable,.uiAppMain .billingPanel,.uiAppMain .checklistDirectory,.uiAppMain .checklistDetail{border:1px solid var(--ui-border);border-radius:var(--ui-radius);background:#fff;box-shadow:var(--ui-shadow)}
+.uiAppMain .card{padding:20px}
+.uiAppMain .button{min-height:38px;padding:0 14px;border-radius:10px;font-size:10px;font-weight:850}
+.uiAppMain .button.orange{box-shadow:0 5px 14px rgba(243,112,33,.16)}
+.uiAppMain .input,.uiAppMain .select{min-height:42px;border-radius:10px;border-color:var(--ui-border);background:#fff}
+.uiAppMain .tableWrap{overflow:hidden}
+.uiAppMain table th{height:42px;background:var(--ui-panel-soft);font-size:9px}
+.uiAppMain table td{padding:14px 15px;font-size:11px}
+.uiAppMain .grid{gap:14px}
+.uiAppMain .grid .card{transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.uiAppMain a.card:hover{transform:translateY(-2px);border-color:#d8d0c7;box-shadow:0 12px 32px rgba(43,36,30,.07)}
+.uiAppMain .metric{font-size:34px;line-height:1}
+.uiAppMain .notice{border:1px solid #f3d1b9;border-left:3px solid var(--ui-accent);background:#fff8f3;border-radius:12px}
+
+/* Sidebar: calmer navigation with a real settings group */
+.uiSidebar{background:#151513}
+.uiSidebarLink{border-radius:10px}
+.uiSidebarLink.active{background:#292622;box-shadow:inset 3px 0 0 var(--ui-accent)}
+.uiSidebarSettings{margin:5px 8px 0;padding:6px 0 8px;border-radius:12px;background:rgba(255,255,255,.035)}
+.uiSidebarSettingsTitle{display:flex;align-items:center;gap:9px;padding:9px 13px;color:#fff;font-size:10px;font-weight:800}
+.uiSidebarSubLink{display:block;margin:1px 7px;padding:8px 12px 8px 29px;border-radius:8px;color:#aaa39c;font-size:9px;font-weight:650}
+.uiSidebarSubLink:hover{color:#fff;background:rgba(255,255,255,.04)}
+.uiSidebarSubLink.active{color:#ff8b45;background:rgba(243,112,33,.08)}
+
+/* Planning: spacious first, dense only inside rows */
+.uiAppMain .planningCompactPage{padding-top:28px}
+.uiAppMain .planningCompactHeader{margin-bottom:16px}
+.uiAppMain .planningWeekStrip{display:grid;grid-template-columns:repeat(10,minmax(112px,1fr));gap:8px;overflow-x:auto;padding-bottom:3px;margin-bottom:18px}
+.uiAppMain .planningWeekDay{min-width:112px;min-height:92px;padding:12px;border-radius:14px}
+.uiAppMain .planningWeekCounts{gap:7px}
+.uiAppMain .planningWeekStat b{font-size:17px}
+.uiAppMain .planningClosingBanner{margin-bottom:16px}
+.uiAppMain .planningActionBanner{margin-bottom:16px}
+.uiAppMain .planningCompactGrid{grid-template-columns:minmax(520px,1.15fr) minmax(430px,.95fr) minmax(320px,.68fr);gap:14px;align-items:start}
+.uiAppMain .planningCompactColumn,.uiAppMain .planningOpsCard{border-radius:16px}
+.uiAppMain .planningColumnHeader,.uiAppMain .planningOpsHeader{min-height:64px;padding:15px 17px}
+.uiAppMain .planningColumnHeader h2{font-size:18px}
+.uiAppMain .planningAgendaDayHeader,.uiAppMain .planningCrewDayHeader{min-height:38px;padding:10px 16px}
+.uiAppMain .compactProjectRow{min-height:72px;padding:11px 15px}
+.uiAppMain .todoistTask{padding:13px 15px}
+.uiAppMain .planningCrewRowButton{padding:12px 14px}
+.uiAppMain .planningOpsColumn{gap:14px}
+.uiAppMain .planningTaskBillingColumn{gap:14px}
+
+/* Product/brand portal: premium catalogue */
+.uiAppMain .brandGrid{gap:14px}
+.uiAppMain .brandCard{border-color:var(--ui-border);border-radius:16px;box-shadow:var(--ui-shadow)}
+.uiAppMain .itemGrid{gap:14px}
+.uiAppMain .itemCard{border-color:var(--ui-border);border-radius:16px;box-shadow:var(--ui-shadow)}
+.uiAppMain .equipmentCategoryHeader{padding:0 2px 12px}
+.uiAppMain .equipmentCategoryHeader h2{font-size:26px}
+
+/* Settings hub */
+.settingsHubGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.settingsHubCard{display:grid;gap:8px;min-height:150px;padding:18px;border:1px solid var(--ui-border);border-radius:16px;background:#fff;box-shadow:var(--ui-shadow);transition:.16s ease}
+.settingsHubCard:hover{transform:translateY(-2px);border-color:#d8d0c7}
+.settingsHubIcon{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;background:var(--ui-accent-soft);color:var(--ui-accent);font-size:17px;font-weight:900}
+.settingsHubCard strong{font-size:14px}
+.settingsHubCard span{color:var(--ui-muted);font-size:10px;line-height:1.5}
+.settingsSectionLabel{margin:24px 0 10px;color:var(--ui-muted);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+
+/* Admin list pages */
+.uiAppMain .distributorBrandCard{padding:18px}
+.uiAppMain .brandAccessGrid{gap:8px}
+.uiAppMain .brandAccessOption{border-color:var(--ui-border);background:var(--ui-panel-soft)}
+.uiAppMain .usersWorkspace{gap:14px}
+.uiAppMain .usersMetricGrid{gap:12px}
+.uiAppMain .usersMetricCard{border-radius:14px}
+
+/* Consistent modals */
+.planningTaskCreateBackdrop{backdrop-filter:blur(4px);background:rgba(18,16,14,.36)}
+.planningTaskCreateModal,.rentmanChangeModal,.rentmanChangeDetailModal,.closingManageModal{border:1px solid rgba(255,255,255,.5);border-radius:20px;box-shadow:0 28px 90px rgba(20,17,14,.24)}
+
+@media(max-width:1320px){
+ .uiAppMain .planningCompactGrid{grid-template-columns:minmax(480px,1.1fr) minmax(390px,.9fr)}
+ .uiAppMain .planningOpsColumn{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .settingsHubGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:920px){
+ .uiAppMain .planningCompactGrid{grid-template-columns:1fr}
+ .uiAppMain .planningOpsColumn{grid-column:auto;grid-template-columns:1fr}
+ .settingsHubGrid{grid-template-columns:1fr}
+}

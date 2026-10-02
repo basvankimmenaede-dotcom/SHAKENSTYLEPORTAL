@@ -614,7 +614,8 @@ export default async function PlanningPage() {
     : { configured: false, projects: [] as RentmanPlanningProject[] };
   const overdueReturnProjects = rentmanReturnResult.projects;
 
-  const weeklyCrewCount = weekDays.reduce(
+  const crewPreviewDays = weekDays.slice(0, 3);
+  const previewCrewCount = crewPreviewDays.reduce(
     (sum, dateKey) => sum + (crewByDay.get(dateKey)?.length ?? 0),
     0,
   );
@@ -964,11 +965,11 @@ export default async function PlanningPage() {
           <section className="planningOpsCard planningCrewCard">
             <div className="planningOpsHeader">
               <span>Personeel (Rentman)</span>
-              <strong>{weeklyCrewCount} komende 10 dagen</strong>
+              <strong>{previewCrewCount} komende 3 dagen</strong>
             </div>
 
             <div className="planningCrewDays">
-              {weekDays.map((dateKey) => {
+              {crewPreviewDays.map((dateKey) => {
                 const assignmentGroups = crewGroupsByDay.get(dateKey) ?? [];
                 if (!assignmentGroups.length) return null;
 
