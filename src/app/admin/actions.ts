@@ -48,6 +48,7 @@ export async function assignUserProfile(formData: FormData) {
   const admin = createAdminClient();
   const userId = String(formData.get('user_id') ?? '');
   const distributorRaw = String(formData.get('distributor_id') ?? '');
+  const fullName = String(formData.get('full_name') ?? '').trim();
   const role = String(formData.get('role') ?? 'customer');
   const distributorId = distributorRaw ? Number(distributorRaw) : null;
 
@@ -62,6 +63,7 @@ export async function assignUserProfile(formData: FormData) {
   await admin
     .from('profiles')
     .update({
+      full_name: fullName || null,
       role,
       distributor_id: role === 'customer' ? distributorId : null,
     })
