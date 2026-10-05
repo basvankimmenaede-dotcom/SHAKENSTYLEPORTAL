@@ -19,17 +19,21 @@ function AcceptInviteForm() {
     let active = true;
 
     async function prepareInviteSession() {
-      const supabase = createClient();
+      // Capture invite credentials BEFORE creating the Supabase browser client.
+      // The client may consume/clean the auth hash as soon as it initializes.
+      const rawHash = window.location.hash;
+      const hashParams = new URLSearchParams(rawHash.replace(/^#/, ''));
+      const hashAccessToken = hashParams.get('access_token');
+      const hashRefreshToken = hashParams.get('refresh_token');
+      const hashType = hashParams.get('type');
+
       const code = searchParams.get('code');
       const verified = searchParams.get('verified') === '1';
       const expectedUserId = searchParams.get('invite_user');
       const tokenHash = searchParams.get('token_hash');
       const queryType = searchParams.get('type');
 
-      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-      const hashAccessToken = hashParams.get('access_token');
-      const hashRefreshToken = hashParams.get('refresh_token');
-      const hashType = hashParams.get('type');
+      const supabase = createClient();
 
       try {
         // SECURITY: never accept a pre-existing browser session as proof of an invite.
