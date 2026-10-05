@@ -5,6 +5,39 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import BrandLogo from '@/components/BrandLogo';
 
+function inviteUserIdFromAccessToken(accessToken: string) {
+  try {
+    const parts = accessToken.split('.');
+    if (parts.length < 2) return null;
+    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const payload = JSON.parse(window.atob(padded)) as { sub?: unknown };
+    return typeof payload.sub === 'string' && payload.sub ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+async function waitForVerifiedInviteUser(
+  supabase: ReturnType<typeof createClient>,
+  expectedUserId: string,
+) {
+  const deadline = Date.now() + 3500;
+
+  while (Date.now() < deadline) {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session?.user?.id === expectedUserId) {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error && user?.id === expectedUserId) return user;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+
+  throw new Error('De invite-sessie kon niet aan de juiste gebruiker worden gekoppeld.');
+}
+
 function AcceptInviteForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,42 +66,56 @@ function AcceptInviteForm() {
       const tokenHash = searchParams.get('token_hash');
       const queryType = searchParams.get('type');
 
-      const supabase = createClient();
-
       try {
-        // SECURITY: never accept a pre-existing browser session as proof of an invite.
-        // The invite itself must establish or prove the session identity.
+        // SECURITY: for implicit invite links, derive only the expected user id
+        // from the invite access token. Supabase is allowed to process the hash
+        // exactly once; we never call setSession() with those same tokens.
         if (hashAccessToken && hashRefreshToken && hashType === 'invite') {
-          const { data, error: sessionError } = await supabase.auth.setSession({
-            access_token: hashAccessToken,
-            refresh_token: hashRefreshToken,
-          });
-          if (sessionError || !data.session?.user?.id) throw sessionError ?? new Error('Invite session ontbreekt.');
-          invitedUserIdRef.current = data.session.user.id;
+          const expectedInviteUserId = inviteUserIdFromAccessToken(hashAccessToken);
+          if (!expectedInviteUserId) throw new Error('Invite gebruiker ontbreekt.');
+
+          const supabase = createClient();
+          const user = await waitForVerifiedInviteUser(supabase, expectedInviteUserId);
+          invitedUserIdRef.current = user.id;
           window.history.replaceState({}, '', window.location.pathname + window.location.search);
           return;
         }
 
         if (code) {
+          const supabase = createClient();
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError || !data.session?.user?.id) throw exchangeError ?? new Error('Invite session ontbreekt.');
-          invitedUserIdRef.current = data.session.user.id;
+
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (userError || !user || user.id !== data.session.user.id) {
+            throw new Error('Invite gebruiker kon niet worden geverifieerd.');
+          }
+
+          invitedUserIdRef.current = user.id;
           window.history.replaceState({}, '', window.location.pathname);
           return;
         }
 
         if (tokenHash && queryType === 'invite') {
+          const supabase = createClient();
           const { data, error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: 'invite',
           });
           if (verifyError || !data.user?.id) throw verifyError ?? new Error('Invite gebruiker ontbreekt.');
-          invitedUserIdRef.current = data.user.id;
+
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (userError || !user || user.id !== data.user.id) {
+            throw new Error('Invite gebruiker kon niet worden geverifieerd.');
+          }
+
+          invitedUserIdRef.current = user.id;
           window.history.replaceState({}, '', window.location.pathname);
           return;
         }
 
         if (verified && expectedUserId) {
+          const supabase = createClient();
           const { data: { user }, error: userError } = await supabase.auth.getUser();
           if (userError || !user || user.id !== expectedUserId) {
             throw new Error('De actieve sessie hoort niet bij deze uitnodiging.');
