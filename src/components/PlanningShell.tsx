@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import UnifiedSidebar from './UnifiedSidebar';
+import ToastProvider from './ToastProvider';
 
 export default function PlanningShell({
   children,
@@ -25,6 +26,7 @@ export default function PlanningShell({
   }
 
   return (
+    <ToastProvider>
     <div className="uiAppShell">
       <UnifiedSidebar
         mode={role === 'admin' ? 'admin' : 'planning'}
@@ -37,5 +39,6 @@ export default function PlanningShell({
       />
       <div className="uiAppMain">{children}</div>
     </div>
+    </ToastProvider>
   );
 }
