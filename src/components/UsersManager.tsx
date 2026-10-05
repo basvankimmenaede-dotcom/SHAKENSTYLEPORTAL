@@ -64,9 +64,24 @@ function initials(value: string) {
     .join('') || 'U';
 }
 
+const ACTIVATION_FLOW_ROLLOUT = new Date('2026-10-05T09:20:00Z').getTime();
+
 function statusOf(user: UserItem) {
-  if (user.lastSignInAt) return { key: 'active', label: 'Actief' };
-  if (user.confirmedAt) return { key: 'confirmed', label: 'Geactiveerd' };
+  const invitedAt = user.invitedAt ? new Date(user.invitedAt).getTime() : 0;
+  const confirmedAt = user.confirmedAt ? new Date(user.confirmedAt).getTime() : 0;
+  const lastSignInAt = user.lastSignInAt ? new Date(user.lastSignInAt).getTime() : 0;
+
+  // Accounts from before the new activation flow keep their known active state.
+  if (invitedAt > 0 && invitedAt < ACTIVATION_FLOW_ROLLOUT && lastSignInAt) {
+    return { key: 'active', label: 'Actief' };
+  }
+
+  // Opening an invite creates a Supabase session immediately. That is not yet
+  // a completed activation. A later login proves the password setup was completed.
+  if (confirmedAt && lastSignInAt > confirmedAt + 5000) {
+    return { key: 'active', label: 'Actief' };
+  }
+  if (confirmedAt) return { key: 'started', label: 'Activatie gestart' };
   if (user.invitedAt) return { key: 'invited', label: 'Uitgenodigd' };
   return { key: 'inactive', label: 'Inactief' };
 }
@@ -104,7 +119,7 @@ export default function UsersManager({
 
   const counts = useMemo(() => {
     const active = users.filter((user) => statusOf(user).key === 'active').length;
-    const invited = users.filter((user) => ['invited', 'confirmed'].includes(statusOf(user).key)).length;
+    const invited = users.filter((user) => ['invited', 'started'].includes(statusOf(user).key)).length;
     const inactive = users.length - active - invited;
     return { total: users.length, active, invited, inactive };
   }, [users]);
@@ -115,7 +130,7 @@ export default function UsersManager({
       const status = statusOf(user).key;
       const matchesStatus = statusFilter === 'all'
         || (statusFilter === 'active' && status === 'active')
-        || (statusFilter === 'invited' && ['invited', 'confirmed'].includes(status))
+        || (statusFilter === 'invited' && ['invited', 'started'].includes(status))
         || (statusFilter === 'inactive' && status === 'inactive');
       const matchesQuery = !needle
         || user.email.toLowerCase().includes(needle)
@@ -398,8 +413,8 @@ export default function UsersManager({
 
                   {status.key === 'invited' ? (
                     <p>De uitnodiging is verstuurd, maar het account is nog niet geactiveerd.</p>
-                  ) : status.key === 'confirmed' ? (
-                    <p>Het account is geactiveerd, maar deze gebruiker heeft nog niet ingelogd.</p>
+                  ) : status.key === 'started' ? (
+                    <p>De uitnodigingslink is geopend, maar de activatie is nog niet afgerond.</p>
                   ) : status.key === 'active' ? (
                     <p>Het account is actief en is al gebruikt om in te loggen.</p>
                   ) : (
