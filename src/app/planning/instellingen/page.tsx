@@ -4,10 +4,22 @@ import { updateFuelCardDistanceSetting } from '../actions';
 import SettingsNav from '@/components/SettingsNav';
 import RecurringTasksSettings from '@/components/RecurringTasksSettings';
 
+type RecurringTaskSetting = {
+  title?: string;
+  active?: boolean;
+  task_area?: 'office' | 'warehouse' | 'both';
+  weekday?: number;
+};
+
+type RecurringTaskSettings = {
+  closing?: RecurringTaskSetting;
+  billing?: RecurringTaskSetting;
+};
+
 export default async function PlanningSettingsPage(){
   const {supabase}=await requireAdmin();
   const {data:settings}=await supabase.from('planning_settings').select('fuel_card_distance_km,recurring_tasks').eq('id',1).maybeSingle();
-  const fuelCardDistanceKm=Number(settings?.fuel_card_distance_km??150); const recurring=(settings?.recurring_tasks??{}) as Record<string,any>;
+  const fuelCardDistanceKm=Number(settings?.fuel_card_distance_km??150); const recurring=(settings?.recurring_tasks??{}) as RecurringTaskSettings;
   return <main className="container settingsPage">
     <section className="usersAdminHeader"><div><span className="usersAdminEyebrow">Beheer</span><h1>Instellingen</h1><p>Beheer vaste processen, checklists en weergave-instellingen vanuit één omgeving.</p></div><Link className="button secondary" href="/planning">Terug naar planning</Link></section>
     <section className="settingsWorkspace"><SettingsNav active="general"/><div className="settingsEditorPane settingsMain">

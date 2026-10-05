@@ -65,14 +65,6 @@ function shortDate(dateKey?: string | null) {
   }).format(date);
 }
 
-function dayLabel(dateKey: string, today: string) {
-  if (dateKey === today) return 'Vandaag';
-  if (dateKey === addDays(today, 1)) return 'Morgen';
-  return new Intl.DateTimeFormat('nl-NL', {
-    timeZone: 'Europe/Amsterdam',
-    weekday: 'short',
-  }).format(new Date(`${dateKey}T12:00:00+02:00`));
-}
 
 function dayLongLabel(dateKey: string, today: string) {
   if (dateKey === today) return 'Vandaag';
@@ -264,8 +256,13 @@ export default async function PlanningPage() {
   const crewAssignments = crewResult.value;
   const equipmentGroups = equipmentGroupsResult.value;
   const fuelCardDistanceKm = Number(planningSettingsResult.data?.fuel_card_distance_km ?? 150);
-  const recurringTaskSettings = (planningSettingsResult.data?.recurring_tasks ?? {}) as Record<string, any>;
-  const closingRecurring = recurringTaskSettings.closing ?? {
+  type RecurringTaskSetting = {
+    title?: string;
+    active?: boolean;
+    task_area?: 'office' | 'warehouse' | 'both';
+  };
+  const recurringTaskSettings = (planningSettingsResult.data?.recurring_tasks ?? {}) as Record<string, RecurringTaskSetting>;
+  const closingRecurring: RecurringTaskSetting = recurringTaskSettings.closing ?? {
     title: 'Afsluitlijst afronden',
     active: true,
     task_area: 'both',
@@ -609,7 +606,6 @@ export default async function PlanningPage() {
       return aDate.localeCompare(bDate);
     });
 
-  const todayActionCount = todayActionTasks.length;
 
 
   const noDateTasks = todoistTasks
