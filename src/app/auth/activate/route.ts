@@ -11,14 +11,17 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({
+  const { data, error } = await supabase.auth.verifyOtp({
     token_hash: tokenHash,
     type: 'invite',
   });
 
-  if (error) {
+  if (error || !data.user?.id) {
     return NextResponse.redirect(new URL('/activate?error=used-or-expired', request.url), 303);
   }
 
-  return NextResponse.redirect(new URL('/accept-invite', request.url), 303);
+  const next = new URL('/accept-invite', request.url);
+  next.searchParams.set('verified', '1');
+  next.searchParams.set('invite_user', data.user.id);
+  return NextResponse.redirect(next, 303);
 }

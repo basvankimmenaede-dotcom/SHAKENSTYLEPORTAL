@@ -4,62 +4,41 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import BrandLogo from '@/components/BrandLogo';
-import { createClient } from '@/lib/supabase/client';
 
 function ActivateBridge() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState('');
-  const tokenHash = searchParams.get('token_hash') ?? '';
-  const type = searchParams.get('type') ?? '';
-  const code = searchParams.get('code');
 
   useEffect(() => {
+    const tokenHash = searchParams.get('token_hash');
+    const type = searchParams.get('type');
+    const code = searchParams.get('code');
+    const hash = window.location.hash;
+    const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+    const hasInviteHash = hashParams.get('type') === 'invite'
+      && Boolean(hashParams.get('access_token'))
+      && Boolean(hashParams.get('refresh_token'));
+
+    // SECURITY: never use an already logged-in browser session as an invite.
+    // Only explicit invite credentials are forwarded.
     if (tokenHash && type === 'invite') {
-      setChecking(false);
+      router.replace('/accept-invite?' + searchParams.toString());
+      return;
+    }
+    if (code) {
+      router.replace('/accept-invite?' + searchParams.toString());
+      return;
+    }
+    if (hasInviteHash) {
+      router.replace('/accept-invite' + hash);
       return;
     }
 
-    let active = true;
-    async function continueExistingInvite() {
-      const supabase = createClient();
-
-      try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        if (existingSession) {
-          router.replace('/accept-invite');
-          return;
-        }
-
-        if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (!exchangeError) {
-            router.replace('/accept-invite');
-            return;
-          }
-        }
-
-        // Standard Supabase invite links may return the session in the URL hash.
-        // Give the browser client time to process that hash before showing recovery UI.
-        await new Promise((resolve) => setTimeout(resolve, 900));
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          router.replace('/accept-invite');
-          return;
-        }
-
-        if (active) {
-          setError('Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd of er is inmiddels een nieuwere uitnodiging verstuurd.');
-        }
-      } finally {
-        if (active) setChecking(false);
-      }
-    }
-
-    void continueExistingInvite();
-    return () => { active = false; };
-  }, [code, router, tokenHash, type]);
+    setError('Deze uitnodiging bevat geen geldige activatiegegevens. Vraag SHAKENSTYLE om een nieuwe uitnodiging.');
+    setChecking(false);
+  }, [router, searchParams]);
 
   return (
     <main className="loginPage">
@@ -68,26 +47,10 @@ function ActivateBridge() {
         <h1>SHAKENSTYLE Portal</h1>
 
         {checking ? (
-          <>
-            <p className="muted">Je uitnodiging wordt gecontroleerd...</p>
-            <p className="muted">Een moment geduld.</p>
-          </>
-        ) : tokenHash && type === 'invite' ? (
-          <>
-            <p className="muted">Je bent uitgenodigd voor het SHAKENSTYLE Portal.</p>
-            <form method="post" action="/auth/activate">
-              <input type="hidden" name="token_hash" value={tokenHash} />
-              <input type="hidden" name="type" value="invite" />
-              <button className="button orange" type="submit" style={{ width: '100%' }}>
-                Account activeren
-              </button>
-            </form>
-          </>
+          <p className="muted">Je uitnodiging wordt veilig gecontroleerd...</p>
         ) : (
           <>
-            <div className="error">
-              {error || 'Deze link kan niet meer worden gebruikt.'}
-            </div>
+            <div className="error">{error}</div>
             <div className="activationRecoveryActions">
               <Link href="/login" className="button orange">Inloggen</Link>
               <a
