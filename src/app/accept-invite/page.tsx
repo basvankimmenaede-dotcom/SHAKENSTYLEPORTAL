@@ -47,7 +47,7 @@ function AcceptInviteForm() {
     try {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return setError('Je uitnodiging is ongeldig of verlopen. Vraag SHAKENSTYLE om een nieuwe uitnodiging.');
+      if (!session) return setError('Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd of er is inmiddels een nieuwere uitnodiging verstuurd.');
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) return setError('Je account kon niet worden geactiveerd. Probeer het opnieuw of vraag een nieuwe uitnodiging.');
       router.replace('/portal');

@@ -1,43 +1,80 @@
+'use client';
+
 import Link from 'next/link';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import BrandLogo from '@/components/BrandLogo';
+import { createClient } from '@/lib/supabase/client';
 
-type ActivateSearchParams = {
-  token_hash?: string;
-  type?: string;
-  error?: string;
-};
+function ActivateBridge() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [checking, setChecking] = useState(true);
+  const [error, setError] = useState('');
+  const tokenHash = searchParams.get('token_hash') ?? '';
+  const type = searchParams.get('type') ?? '';
+  const code = searchParams.get('code');
 
-export default async function ActivatePage({
-  searchParams,
-}: {
-  searchParams: Promise<ActivateSearchParams>;
-}) {
-  const params = await searchParams;
-  const tokenHash = typeof params.token_hash === 'string' ? params.token_hash : '';
-  const type = typeof params.type === 'string' ? params.type : '';
-  const error = typeof params.error === 'string' ? params.error : '';
-  const canActivate = Boolean(tokenHash && type === 'invite');
+  useEffect(() => {
+    if (tokenHash && type === 'invite') {
+      setChecking(false);
+      return;
+    }
 
-  const errorMessage = error
-    ? 'Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd of er is inmiddels een nieuwere uitnodiging verstuurd.'
-    : null;
+    let active = true;
+    async function continueExistingInvite() {
+      const supabase = createClient();
+
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (existingSession) {
+          router.replace('/accept-invite');
+          return;
+        }
+
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (!exchangeError) {
+            router.replace('/accept-invite');
+            return;
+          }
+        }
+
+        // Standard Supabase invite links may return the session in the URL hash.
+        // Give the browser client time to process that hash before showing recovery UI.
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          router.replace('/accept-invite');
+          return;
+        }
+
+        if (active) {
+          setError('Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd of er is inmiddels een nieuwere uitnodiging verstuurd.');
+        }
+      } finally {
+        if (active) setChecking(false);
+      }
+    }
+
+    void continueExistingInvite();
+    return () => { active = false; };
+  }, [code, router, tokenHash, type]);
 
   return (
     <main className="loginPage">
       <section className="loginCard">
         <div className="loginBrand"><BrandLogo dark /></div>
         <h1>SHAKENSTYLE Portal</h1>
-        <p className="muted">
-          Je bent uitgenodigd voor het SHAKENSTYLE Portal. Klik hieronder om je uitnodiging te bevestigen.
-        </p>
 
-        {errorMessage ? <div className="error">{errorMessage}</div> : null}
-
-        {!errorMessage && canActivate ? (
+        {checking ? (
           <>
-            <div className="notice" style={{ marginBottom: 18 }}>
-              Deze extra stap voorkomt dat e-mailbeveiliging je activatielink automatisch gebruikt.
-            </div>
+            <p className="muted">Je uitnodiging wordt gecontroleerd...</p>
+            <p className="muted">Een moment geduld.</p>
+          </>
+        ) : tokenHash && type === 'invite' ? (
+          <>
+            <p className="muted">Je bent uitgenodigd voor het SHAKENSTYLE Portal.</p>
             <form method="post" action="/auth/activate">
               <input type="hidden" name="token_hash" value={tokenHash} />
               <input type="hidden" name="type" value="invite" />
@@ -46,26 +83,27 @@ export default async function ActivatePage({
               </button>
             </form>
           </>
-        ) : null}
-
-        {!errorMessage && !canActivate ? (
-          <div className="error">Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd.</div>
-        ) : null}
-
-        {errorMessage || !canActivate ? (
-          <div className="activationRecoveryActions">
-            <Link href="/login" className="button orange">Inloggen</Link>
-            <a
-              href="mailto:info@shakenstyle.com?subject=Nieuwe%20uitnodiging%20SHAKENSTYLE%20Portal"
-              className="button secondary"
-            >
-              Hulp nodig?
-            </a>
-          </div>
         ) : (
-          <Link href="/login" className="textButton">Ik heb al een account</Link>
+          <>
+            <div className="error">
+              {error || 'Deze link kan niet meer worden gebruikt.'}
+            </div>
+            <div className="activationRecoveryActions">
+              <Link href="/login" className="button orange">Inloggen</Link>
+              <a
+                href="mailto:info@shakenstyle.com?subject=Nieuwe%20uitnodiging%20SHAKENSTYLE%20Portal"
+                className="button secondary"
+              >
+                Hulp nodig?
+              </a>
+            </div>
+          </>
         )}
       </section>
     </main>
   );
+}
+
+export default function ActivatePage() {
+  return <Suspense fallback={null}><ActivateBridge /></Suspense>;
 }

@@ -160,7 +160,7 @@ export async function inviteCustomer(formData: FormData) {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.shakenstyle.com').replace(/\/$/, '');
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
-    redirectTo: `${appUrl}/activate`,
+    redirectTo: `${appUrl}/accept-invite`,
   });
   if (error) throw new Error(error.message);
 
@@ -203,7 +203,7 @@ export async function resendUserInvite(formData: FormData) {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.shakenstyle.com').replace(/\/$/, '');
   const { error } = await admin.auth.admin.inviteUserByEmail(user.email, {
     data: user.user_metadata ?? {},
-    redirectTo: `${appUrl}/activate`,
+    redirectTo: `${appUrl}/accept-invite`,
   });
 
   if (error) {
