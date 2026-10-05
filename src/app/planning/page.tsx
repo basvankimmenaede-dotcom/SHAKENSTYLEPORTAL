@@ -254,7 +254,7 @@ export default async function PlanningPage() {
       .select('todoist_task_id,assignee_profile_id,task_area'),
     supabase
       .from('planning_settings')
-      .select('fuel_card_distance_km')
+      .select('fuel_card_distance_km,recurring_tasks')
       .eq('id', 1)
       .maybeSingle(),
   ]);
@@ -264,6 +264,12 @@ export default async function PlanningPage() {
   const crewAssignments = crewResult.value;
   const equipmentGroups = equipmentGroupsResult.value;
   const fuelCardDistanceKm = Number(planningSettingsResult.data?.fuel_card_distance_km ?? 150);
+  const recurringTaskSettings = (planningSettingsResult.data?.recurring_tasks ?? {}) as Record<string, any>;
+  const closingRecurring = recurringTaskSettings.closing ?? {
+    title: 'Afsluitlijst afronden',
+    active: true,
+    task_area: 'both',
+  };
   rentmanError = planningResult.error;
   todoistError = todoistResult.error;
 
@@ -304,7 +310,7 @@ export default async function PlanningPage() {
   const closingTodayTotal = closingTodayItems.length;
 
   let ensuredClosingTaskId: string | null = null;
-  if (closingRequired && closingToday && closingToday.status !== 'completed') {
+  if (closingRecurring.active !== false && closingRequired && closingToday && closingToday.status !== 'completed') {
     try {
       const marker = `SHAKENSTYLE afsluitlijst · ${closingTodayDate}`;
       const linkedTaskId = closingToday.todoist_task_id ? String(closingToday.todoist_task_id) : null;
@@ -318,7 +324,7 @@ export default async function PlanningPage() {
 
       if (!closingTask) {
         closingTask = await createPlanningTodoistTask({
-          content: 'Afsluitlijst afronden',
+          content: String(closingRecurring.title || 'Afsluitlijst afronden'),
           dueDate: closingTodayDate,
           description: marker,
         });
@@ -340,7 +346,9 @@ export default async function PlanningPage() {
           todoist_task_id: ensuredClosingTaskId,
           assignee_profile_id: null,
           assigned_by: user.id,
-          task_area: 'both',
+          task_area: ['office', 'warehouse', 'both'].includes(String(closingRecurring.task_area))
+            ? String(closingRecurring.task_area)
+            : 'both',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'todoist_task_id' });
     } catch {

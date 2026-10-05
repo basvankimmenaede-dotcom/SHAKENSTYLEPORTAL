@@ -6286,3 +6286,55 @@ table td{font-size:12px}
   .uiAppMain>.container,.uiAppMain>.accountPage{width:min(calc(100% - 28px),1680px)}
   .settingsWorkspace{grid-template-columns:1fr}
 }
+
+
+/* v10 — structural settings/navigation system */
+.uiSidebarLink{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:9px;padding:0 12px!important}
+.uiSidebarIcon{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;color:#8e8881;transition:.16s ease}
+.uiSidebarLink:hover .uiSidebarIcon{color:#fff;background:rgba(255,255,255,.055)}
+.uiSidebarLink.active .uiSidebarIcon{color:#ff8a43;background:rgba(243,111,33,.1)}
+.uiSidebarLink.active{font-weight:750}
+.settingsWorkspace{grid-template-columns:232px minmax(0,1fr);gap:18px;align-items:start}
+.settingsEditorPane{min-width:0;display:grid;gap:16px}
+.settingsLocalNav{position:sticky;top:20px}
+.settingsLocalNav a{display:flex!important}
+.settingsNavItemMain{display:flex;align-items:center;gap:10px;min-width:0}
+.settingsLocalNav a>span:last-child{color:#b4ada5;font-size:16px}
+.settingsLocalNav a.active .settingsNavItemMain svg{color:var(--orange)}
+.settingsMain{display:grid;gap:16px}
+.settingsInlineLinks{padding:18px 22px}
+.settingsInlineLinks>a{display:grid;grid-template-columns:minmax(180px,.5fr) minmax(260px,1fr) auto;gap:18px;align-items:center;padding:15px 16px;border:1px solid var(--line);border-radius:11px;background:#faf9f7}
+.settingsInlineLinks span{color:var(--muted);font-size:11px}.settingsInlineLinks b{color:var(--orange-dark);font-size:11px}
+.recurringSettingsList{display:grid}
+.recurringSettingCard{display:grid;grid-template-columns:44px minmax(0,1fr);gap:13px;padding:17px 22px;border-top:1px solid #eee9e3}
+.recurringSettingCard:first-child{border-top:0}
+.recurringSettingIcon{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:var(--orange-soft);color:var(--orange-dark)}
+.recurringSettingMain{min-width:0;display:grid;gap:12px}
+.recurringSettingTitle{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.recurringSettingTitle>div{display:grid;gap:4px}.recurringSettingTitle strong{font-size:13px}.recurringSettingTitle span{font-size:10px;color:var(--muted)}
+.recurringSettingForm{display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(140px,.7fr) minmax(140px,.7fr) auto;gap:10px;align-items:end;padding:14px;border-radius:12px;background:#faf9f7;border:1px solid var(--line)}
+.recurringSettingForm .field{margin:0}.recurringActiveControl{display:flex;align-items:center;gap:7px;min-height:42px;font-size:11px;font-weight:750}
+.recurringSettingActions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}
+.compactButton{width:max-content;min-height:34px!important;font-size:10px!important}
+.uiToast{position:fixed;top:22px;right:24px;z-index:9999;display:flex;align-items:center;gap:10px;min-width:260px;max-width:420px;padding:13px 15px;border-radius:12px;background:#fff;border:1px solid #dce9df;box-shadow:0 18px 50px rgba(30,27,24,.15);font-size:12px;font-weight:750;animation:toastIn .18s ease-out}
+.uiToast.success{color:#23663c;background:#f5fbf7;border-color:#cee7d6}.uiToast.error{color:#983828;background:#fff6f4;border-color:#f0d1cc}.uiToast.info{color:#2a5f88;background:#f4f9fd;border-color:#d5e5f1}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.checklistAdminPage{min-width:0}
+.checklistAdminPage>.checklistAdminHeader{margin-top:0}
+.checklistWorkspace{grid-template-columns:300px minmax(0,1fr)}
+.checklistDetail .usersDetailTabs{overflow-x:auto}
+.checklistDetail .usersDetailTabs button{white-space:nowrap}
+.checklistStatsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.checklistStatsGrid>div{display:grid;gap:5px;padding:16px;border:1px solid var(--line);border-radius:12px;background:#faf9f7}
+.checklistStatsGrid span{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:800}.checklistStatsGrid strong{font-size:28px}
+.checklistStatsBreakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.checklistStatsBreakdown>div{display:flex;justify-content:space-between;padding:11px 13px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:11px}
+.settingsCallout{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;padding:15px;border-radius:12px;background:#fff8f3;border:1px solid #f2d4bf;margin-bottom:15px}
+.settingsCalloutIcon{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;background:#fff;color:var(--orange);font-size:20px;font-weight:800}
+.settingsCallout p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+.checklistLinkingForm{max-width:720px}
+.closingManageWorkspace{margin:0;grid-template-columns:280px minmax(0,1fr)}
+.closingManageWorkspace .usersDetail{min-width:0}
+@media(max-width:1100px){.recurringSettingForm{grid-template-columns:1fr 1fr}.recurringSettingActions{grid-column:1/-1}.checklistStatsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.settingsWorkspace{grid-template-columns:1fr}.settingsLocalNav{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}.settingsLocalNavTitle{grid-column:1/-1}.checklistWorkspace,.closingManageWorkspace{grid-template-columns:1fr}}
+@media(max-width:620px){.recurringSettingForm,.checklistStatsGrid,.checklistStatsBreakdown{grid-template-columns:1fr}.settingsInlineLinks>a{grid-template-columns:1fr}.uiToast{left:14px;right:14px;top:14px;min-width:0}}

@@ -58,7 +58,7 @@ export default function ChecklistTemplatesManager({
   const [selectedId, setSelectedId] = useState(templates[0]?.id ?? 0);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [tab, setTab] = useState<'general' | 'items'>('items');
+  const [tab, setTab] = useState<'general' | 'items' | 'linking' | 'stats'>('items');
 
   const counts = useMemo(() => ({
     total: templates.length,
@@ -86,7 +86,7 @@ export default function ChecklistTemplatesManager({
     ?? templates[0];
 
   return (
-    <main className="container checklistAdminPage">
+    <div className="settingsEditorPane checklistAdminPage">
       <section className="checklistAdminHeader">
         <div>
           <span className="usersAdminEyebrow">Planningbeheer</span>
@@ -193,6 +193,8 @@ export default function ChecklistTemplatesManager({
             <nav className="usersDetailTabs">
               <button type="button" className={tab === 'general' ? 'active' : ''} onClick={() => setTab('general')}>Algemeen</button>
               <button type="button" className={tab === 'items' ? 'active' : ''} onClick={() => setTab('items')}>Checklist-items</button>
+              <button type="button" className={tab === 'linking' ? 'active' : ''} onClick={() => setTab('linking')}>Koppeling</button>
+              <button type="button" className={tab === 'stats' ? 'active' : ''} onClick={() => setTab('stats')}>Statistieken</button>
             </nav>
 
             {tab === 'general' ? (
@@ -237,6 +239,62 @@ export default function ChecklistTemplatesManager({
                     <button className="button orange" type="submit">Template opslaan</button>
                   </div>
                 </form>
+              </div>
+            ) : null}
+
+            {tab === 'linking' ? (
+              <div className="usersDetailPanel">
+                <div className="usersDetailSectionHeader">
+                  <div>
+                    <h3>Rentman-koppeling</h3>
+                    <p>Bepaal voor welk Rentman-projecttype deze checklist standaard wordt gebruikt.</p>
+                  </div>
+                </div>
+                <form key={`link-${selected.id}`} action={updateChecklistTemplate} className="checklistLinkingForm">
+                  <input type="hidden" name="template_id" value={selected.id} />
+                  <input type="hidden" name="name" value={selected.name} />
+                  <input type="hidden" name="description" value={selected.description ?? ''} />
+                  <input type="hidden" name="is_active" value={selected.is_active ? 'on' : ''} />
+                  <div className="settingsCallout">
+                    <span className="settingsCalloutIcon">↔</span>
+                    <div>
+                      <strong>Automatische templatekeuze</strong>
+                      <p>Koppel deze checklist aan een projecttype zodat de juiste template sneller wordt voorgesteld.</p>
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label>Rentman-projecttype</label>
+                    <select className="select" name="rentman_project_type_id" defaultValue={selected.rentman_project_type_id ?? ''}>
+                      <option value="">Geen standaard projecttype</option>
+                      {projectTypes.map((type) => <option value={type.id} key={type.id}>{type.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="usersPanelFooter">
+                    <button className="button orange" type="submit">Koppeling opslaan</button>
+                  </div>
+                </form>
+              </div>
+            ) : null}
+
+            {tab === 'stats' ? (
+              <div className="usersDetailPanel">
+                <div className="usersDetailSectionHeader">
+                  <div>
+                    <h3>Template-overzicht</h3>
+                    <p>Controleer in één oogopslag hoe deze checklist is opgebouwd.</p>
+                  </div>
+                </div>
+                <div className="checklistStatsGrid">
+                  <div><span>Items</span><strong>{selected.checklist_template_items.length}</strong></div>
+                  <div><span>Verplicht</span><strong>{selected.checklist_template_items.filter((item) => item.is_required).length}</strong></div>
+                  <div><span>Met To Do</span><strong>{selected.checklist_template_items.filter((item) => item.deadline_offset_days !== null).length}</strong></div>
+                  <div><span>Magazijn / beide</span><strong>{selected.checklist_template_items.filter((item) => item.task_area !== 'office').length}</strong></div>
+                </div>
+                <div className="checklistStatsBreakdown">
+                  <div><span>Kantoor</span><b>{selected.checklist_template_items.filter((item) => item.task_area === 'office').length}</b></div>
+                  <div><span>Magazijn</span><b>{selected.checklist_template_items.filter((item) => item.task_area === 'warehouse').length}</b></div>
+                  <div><span>Beide</span><b>{selected.checklist_template_items.filter((item) => item.task_area === 'both').length}</b></div>
+                </div>
               </div>
             ) : null}
 
@@ -346,6 +404,6 @@ export default function ChecklistTemplatesManager({
           </section>
         </section>
       )}
-    </main>
+    </div>
   );
 }
