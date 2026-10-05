@@ -6065,3 +6065,64 @@ a.planningMetricCard{transition:.16s ease}a.planningMetricCard:hover{transform:t
 @media(max-width:1380px){.planningMetricStrip{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.settingsWorkspace{grid-template-columns:1fr}.settingsLocalNav{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}.settingsLocalNavTitle{grid-column:1/-1}.settingsLinkGrid{grid-template-columns:1fr}.planningMetricStrip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.planningMetricStrip{grid-template-columns:1fr 1fr}.planningMetricCard{grid-template-columns:34px minmax(0,1fr);padding:10px}.planningMetricIcon{width:32px;height:32px}.settingsFormRow{grid-template-columns:1fr}}
+
+
+/* v9.2 — user invite modal must stay one compact surface */
+.planningTaskCreateModal .usersInviteForm{
+  position:static;
+  top:auto;
+  right:auto;
+  z-index:auto;
+  width:100%;
+  display:grid;
+  gap:12px;
+  margin:18px 0 0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.planningTaskCreateModal:has(.usersInviteForm){
+  width:min(560px,calc(100vw - 40px));
+  max-height:min(760px,calc(100vh - 40px));
+  overflow:auto;
+}
+.planningTaskCreateModal:has(.usersInviteForm) h2{
+  margin-bottom:6px;
+  font-size:26px;
+}
+.planningTaskCreateModal:has(.usersInviteForm)>p{
+  margin:0;
+  max-width:460px;
+  font-size:11px;
+  line-height:1.5;
+}
+.planningTaskCreateModal .usersInviteForm .field{
+  margin-bottom:0;
+}
+.planningTaskCreateModal .usersInviteForm .input,
+.planningTaskCreateModal .usersInviteForm .select{
+  min-height:46px;
+}
+.planningTaskCreateModal .usersInviteForm .planningTaskCreateActions{
+  position:sticky;
+  bottom:-22px;
+  margin:6px -22px -22px;
+  padding:14px 22px 22px;
+  border-top:1px solid var(--ui-border,#e8e3dc);
+  background:#fff;
+}
+@media(max-width:640px){
+  .planningTaskCreateModal:has(.usersInviteForm){
+    width:100%;
+    max-height:92svh;
+  }
+  .planningTaskCreateModal .usersInviteForm .planningTaskCreateActions{
+    bottom:-20px;
+    margin-left:-16px;
+    margin-right:-16px;
+    margin-bottom:-20px;
+    padding:12px 16px max(16px,env(safe-area-inset-bottom));
+  }
+}
