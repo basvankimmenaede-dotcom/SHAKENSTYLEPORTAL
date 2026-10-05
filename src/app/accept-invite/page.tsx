@@ -24,12 +24,12 @@ function AcceptInviteForm() {
         if (existingSession) return;
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError && active) setError('Deze uitnodiging is ongeldig of verlopen. Vraag SHAKENSTYLE om een nieuwe uitnodiging.');
+          if (exchangeError && active) setError('Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd of er is een nieuwere uitnodiging verstuurd.');
           return;
         }
         await new Promise((resolve) => setTimeout(resolve, 300));
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session && active) setError('Deze uitnodiging is ongeldig of verlopen. Vraag SHAKENSTYLE om een nieuwe uitnodiging.');
+        if (!session && active) setError('Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd of er is een nieuwere uitnodiging verstuurd.');
       } finally {
         if (active) setCheckingLink(false);
       }
@@ -72,7 +72,14 @@ function AcceptInviteForm() {
             <button className="button orange" type="submit" disabled={loading} style={{ width: '100%' }}>{loading ? 'Account activeren...' : 'Account activeren'}</button>
           </form>
         ) : null}
-        {!checkingLink && error ? <button type="button" className="textButton" onClick={() => router.replace('/login')}>Terug naar inloggen</button> : null}
+        {!checkingLink && error ? (
+          <div className="activationRecoveryActions">
+            <button type="button" className="button orange" onClick={() => router.replace('/login')}>Inloggen</button>
+            <a className="button secondary" href="mailto:info@shakenstyle.com?subject=Nieuwe%20uitnodiging%20SHAKENSTYLE%20Portal">
+              Hulp nodig?
+            </a>
+          </div>
+        ) : null}
       </section>
     </main>
   );

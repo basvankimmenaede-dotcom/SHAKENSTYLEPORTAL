@@ -183,6 +183,65 @@ export async function inviteCustomer(formData: FormData) {
   revalidatePath('/admin/users');
 }
 
+
+export async function resendUserInvite(formData: FormData) {
+  await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const userId = String(formData.get('user_id') ?? '').trim();
+  if (!userId) return { ok: false, message: 'Gebruiker ontbreekt.' };
+
+  const { data, error: userError } = await admin.auth.admin.getUserById(userId);
+  const user = data.user;
+  if (userError || !user?.email) {
+    return { ok: false, message: 'Dit account kon niet worden gevonden.' };
+  }
+  if (user.confirmed_at) {
+    return { ok: false, message: 'Dit account is al geactiveerd. Gebruik eventueel een wachtwoordreset.' };
+  }
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.shakenstyle.com').replace(/\/$/, '');
+  const { error } = await admin.auth.admin.inviteUserByEmail(user.email, {
+    data: user.user_metadata ?? {},
+    redirectTo: `${appUrl}/activate`,
+  });
+
+  if (error) {
+    return { ok: false, message: 'De nieuwe uitnodiging kon niet worden verstuurd. Probeer het over een minuut opnieuw.' };
+  }
+
+  revalidatePath('/admin/users');
+  return { ok: true, message: 'Nieuwe uitnodiging verstuurd.' };
+}
+
+export async function sendUserPasswordReset(formData: FormData) {
+  await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const userId = String(formData.get('user_id') ?? '').trim();
+  if (!userId) return { ok: false, message: 'Gebruiker ontbreekt.' };
+
+  const { data, error: userError } = await admin.auth.admin.getUserById(userId);
+  const user = data.user;
+  if (userError || !user?.email) {
+    return { ok: false, message: 'Dit account kon niet worden gevonden.' };
+  }
+  if (!user.confirmed_at) {
+    return { ok: false, message: 'Dit account is nog niet geactiveerd. Verstuur eerst een nieuwe uitnodiging.' };
+  }
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.shakenstyle.com').replace(/\/$/, '');
+  const { error } = await admin.auth.resetPasswordForEmail(user.email, {
+    redirectTo: `${appUrl}/reset-password`,
+  });
+
+  if (error) {
+    return { ok: false, message: 'De resetmail kon niet worden verstuurd. Probeer het later opnieuw.' };
+  }
+
+  return { ok: true, message: 'Wachtwoordreset verstuurd.' };
+}
+
 export async function saveUserPermissions(formData: FormData) {
   await requireAdmin();
   const { createAdminClient } = await import('@/lib/supabase/admin');

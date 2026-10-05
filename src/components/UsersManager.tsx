@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
   assignUserProfile,
   deletePortalUser,
   inviteCustomer,
+  resendUserInvite,
+  sendUserPasswordReset,
   saveUserBrandAccess,
   saveUserPermissions,
   setUserPassword,
@@ -64,7 +66,7 @@ function initials(value: string) {
 
 function statusOf(user: UserItem) {
   if (user.lastSignInAt) return { key: 'active', label: 'Actief' };
-  if (user.confirmedAt) return { key: 'confirmed', label: 'Bevestigd' };
+  if (user.confirmedAt) return { key: 'confirmed', label: 'Geactiveerd' };
   if (user.invitedAt) return { key: 'invited', label: 'Uitgenodigd' };
   return { key: 'inactive', label: 'Inactief' };
 }
@@ -97,6 +99,8 @@ export default function UsersManager({
   const [tab, setTab] = useState<'general' | 'rights' | 'portal' | 'account'>('general');
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteRole, setInviteRole] = useState<'customer' | 'warehouse' | 'admin'>('customer');
+  const [accountMessage, setAccountMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [accountPending, startAccountTransition] = useTransition();
 
   const counts = useMemo(() => {
     const active = users.filter((user) => statusOf(user).key === 'active').length;
@@ -271,6 +275,7 @@ export default function UsersManager({
                   onClick={() => {
                     setSelectedUserId(user.id);
                     setTab('general');
+                    setAccountMessage(null);
                   }}
                   key={user.id}
                 >
@@ -379,17 +384,71 @@ export default function UsersManager({
                   </div>
                 </form>
 
-                <div className="usersAccountStatusCard">
-                  <span>Accountstatus</span>
-                  <strong>{status.label}</strong>
-                  <p>
-                    {status.key === 'active'
-                      ? 'Deze gebruiker heeft het account geactiveerd en kan inloggen.'
-                      : status.key === 'invited' || status.key === 'confirmed'
-                        ? 'De uitnodiging is verstuurd, maar de activatie is nog niet volledig afgerond.'
-                        : 'Dit account is nog niet actief gebruikt.'}
-                  </p>
-                  <small>Laatste login: {formatDateTime(selectedUser.lastSignInAt)}</small>
+                <div className="usersAccountStatusCard usersInviteStatusCard">
+                  <span>Account & uitnodiging</span>
+                  <div className="usersInviteStatusHeadline">
+                    <strong>{status.label}</strong>
+                    <i className={`usersStatusDot ${status.key}`} />
+                  </div>
+                  <div className="usersInviteTimeline">
+                    <div><small>Uitnodiging</small><b>{formatDateTime(selectedUser.invitedAt)}</b></div>
+                    <div><small>Activatie</small><b>{formatDateTime(selectedUser.confirmedAt)}</b></div>
+                    <div><small>Laatste login</small><b>{formatDateTime(selectedUser.lastSignInAt)}</b></div>
+                  </div>
+
+                  {status.key === 'invited' ? (
+                    <p>De uitnodiging is verstuurd, maar het account is nog niet geactiveerd.</p>
+                  ) : status.key === 'confirmed' ? (
+                    <p>Het account is geactiveerd, maar deze gebruiker heeft nog niet ingelogd.</p>
+                  ) : status.key === 'active' ? (
+                    <p>Het account is actief en is al gebruikt om in te loggen.</p>
+                  ) : (
+                    <p>Voor dit account is nog geen activatiestatus beschikbaar.</p>
+                  )}
+
+                  {accountMessage ? (
+                    <div className={accountMessage.ok ? 'usersAccountActionMessage success' : 'usersAccountActionMessage error'}>
+                      {accountMessage.text}
+                    </div>
+                  ) : null}
+
+                  <div className="usersAccountQuickActions">
+                    {!selectedUser.confirmedAt ? (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        disabled={accountPending}
+                        onClick={() => {
+                          setAccountMessage(null);
+                          const formData = new FormData();
+                          formData.set('user_id', selectedUser.id);
+                          startAccountTransition(async () => {
+                            const result = await resendUserInvite(formData);
+                            setAccountMessage({ ok: result.ok, text: result.message });
+                          });
+                        }}
+                      >
+                        {accountPending ? 'Versturen...' : 'Nieuwe uitnodiging versturen'}
+                      </button>
+                    ) : (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        disabled={accountPending}
+                        onClick={() => {
+                          setAccountMessage(null);
+                          const formData = new FormData();
+                          formData.set('user_id', selectedUser.id);
+                          startAccountTransition(async () => {
+                            const result = await sendUserPasswordReset(formData);
+                            setAccountMessage({ ok: result.ok, text: result.message });
+                          });
+                        }}
+                      >
+                        {accountPending ? 'Versturen...' : 'Wachtwoordreset versturen'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -474,7 +533,7 @@ export default function UsersManager({
           {tab === 'account' ? (
             <div className="usersDetailPanel">
               <div className="usersDetailSectionHeader">
-                <div><h3>Accountbeheer</h3><p>Wachtwoord en accountstatus beheren.</p></div>
+                <div><h3>Accountbeheer</h3><p>Beheer wachtwoord en account. Uitnodigingen en activatiestatus staan onder Algemeen.</p></div>
               </div>
 
               <div className="usersAccountGrid">

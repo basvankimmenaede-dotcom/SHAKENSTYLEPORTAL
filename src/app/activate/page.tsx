@@ -19,9 +19,7 @@ export default async function ActivatePage({
   const canActivate = Boolean(tokenHash && type === 'invite');
 
   const errorMessage = error
-    ? error === 'invalid'
-      ? 'Deze activatielink is niet compleet. Vraag SHAKENSTYLE om een nieuwe uitnodiging.'
-      : 'Deze activatielink is al gebruikt of verlopen. Als je account al actief is, kun je gewoon inloggen.'
+    ? 'Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd of er is inmiddels een nieuwere uitnodiging verstuurd.'
     : null;
 
   return (
@@ -51,10 +49,22 @@ export default async function ActivatePage({
         ) : null}
 
         {!errorMessage && !canActivate ? (
-          <div className="error">Deze activatielink is ongeldig of niet compleet.</div>
+          <div className="error">Deze link kan niet meer worden gebruikt. Je account is mogelijk al geactiveerd.</div>
         ) : null}
 
-        <Link href="/login" className="textButton">Ik heb al een account</Link>
+        {errorMessage || !canActivate ? (
+          <div className="activationRecoveryActions">
+            <Link href="/login" className="button orange">Inloggen</Link>
+            <a
+              href="mailto:info@shakenstyle.com?subject=Nieuwe%20uitnodiging%20SHAKENSTYLE%20Portal"
+              className="button secondary"
+            >
+              Hulp nodig?
+            </a>
+          </div>
+        ) : (
+          <Link href="/login" className="textButton">Ik heb al een account</Link>
+        )}
       </section>
     </main>
   );
