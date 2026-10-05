@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root {
   --bg: #f7f6f3;
@@ -19,7 +19,7 @@
 html { background: var(--bg); }
 body {
   margin: 0;
-  font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Manrope', 'Helvetica Neue', Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -6143,3 +6143,146 @@ a.planningMetricCard{transition:.16s ease}a.planningMetricCard:hover{transform:t
 .activationRecoveryActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
 .activationRecoveryActions .button{display:flex;align-items:center;justify-content:center;text-align:center}
 @media(max-width:700px){.usersInviteTimeline{grid-template-columns:1fr}.activationRecoveryActions{grid-template-columns:1fr}}
+
+
+/* v9.4 — unified SHAKENSTYLE design system */
+:root{
+  --bg:#f7f5f2;
+  --panel:#ffffff;
+  --ink:#171613;
+  --muted:#77716a;
+  --line:#e8e3dc;
+  --black:#171613;
+  --black-2:#24221f;
+  --orange:#f36f21;
+  --orange-dark:#d85b10;
+  --orange-soft:#fff3eb;
+  --danger:#b63b31;
+  --shadow:0 8px 28px rgba(35,30,25,.055);
+  --shadow-hover:0 14px 36px rgba(35,30,25,.085);
+  --radius-sm:8px;
+  --radius-md:11px;
+  --radius-lg:14px;
+  --radius-xl:18px;
+}
+body{font-family:'Manrope','Helvetica Neue',Arial,sans-serif;letter-spacing:-.008em}
+h1,h2,h3,h4,strong{letter-spacing:-.025em}
+.uiAppMain{background:#f7f5f2}
+.uiAppMain>.container,.uiAppMain>.accountPage{width:min(calc(100% - 48px),1680px);padding-top:32px}
+.uiAppMain .hero h1,.uiAppMain .usersAdminHeader h1,.uiAppMain .planningCompactHeader h1,.uiAppMain .billingHero h1,.uiAppMain .closingPageHeader h1,.uiAppMain .rentmanChangesHeader h1,.uiAppMain .checklistAdminHeader h1{
+  font-weight:800;font-size:clamp(38px,3.4vw,56px);line-height:.98;letter-spacing:-.052em
+}
+.uiAppMain .hero p,.uiAppMain .usersAdminHeader p,.uiAppMain .billingHero p,.uiAppMain .closingPageHeader p,.uiAppMain .rentmanChangesHeader p,.uiAppMain .checklistAdminHeader p{
+  font-size:13px;line-height:1.55
+}
+
+/* One button scale across the portal */
+.button{
+  min-height:40px;padding:0 15px;border-radius:10px;font-size:12px;font-weight:750;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  transition:transform .14s ease,box-shadow .14s ease,background .14s ease,border-color .14s ease
+}
+.button:hover{transform:translateY(-1px)}
+.button.orange{box-shadow:0 5px 14px rgba(243,111,33,.15)}
+.button.orange:hover{box-shadow:0 8px 18px rgba(243,111,33,.2)}
+.button.secondary{border-color:#dfd9d1;background:#fff}
+.button.danger,.dangerButton{box-shadow:none}
+.textButton{font-size:12px;text-decoration:none}
+.input,.select,textarea.input{
+  min-height:42px;padding:10px 12px;border-radius:10px;border-color:#e3ddd6;
+  transition:border-color .14s ease,box-shadow .14s ease
+}
+.field{gap:6px;margin-bottom:14px}.field label{font-size:12px;font-weight:750}
+.input:focus,.select:focus{border-color:#f3a16d;box-shadow:0 0 0 3px rgba(243,111,33,.1)}
+
+/* Calm, tactile surfaces */
+.card,.tableWrap,.planningCompactColumn,.planningOpsCard,.usersDirectory,.usersDetail,.settingsPanel,.checklistDirectory,.checklistDetail{
+  border-radius:14px!important;border-color:#e8e3dc!important;box-shadow:var(--shadow)!important
+}
+.card,.itemCard,.brandCard,.planningMetricCard,.settingsPanel,.usersMetricCard{
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease
+}
+a.card:hover,a.itemCard:hover,a.brandCard:hover,a.planningMetricCard:hover{
+  transform:translateY(-2px);border-color:#d8d0c7!important;box-shadow:var(--shadow-hover)!important
+}
+.badge{padding:5px 8px;font-size:10px;font-weight:750}
+table th{font-size:10px;letter-spacing:.045em}
+table td{font-size:12px}
+
+/* Sidebar: quieter and more premium */
+.uiSidebar{background:#171613}
+.uiSidebarLink{min-height:42px;border-radius:9px;font-size:12px}
+.uiSidebarLink.active{background:#2a2723;box-shadow:inset 3px 0 0 var(--orange)}
+.uiSidebarSettings{background:rgba(255,255,255,.025);border-radius:10px}
+.uiSidebarSubLink{font-size:10px;min-height:34px;display:flex;align-items:center}
+
+/* Settings becomes a workspace rather than a second dashboard */
+.settingsWorkspace{grid-template-columns:220px minmax(0,1fr);gap:18px}
+.settingsLocalNav{padding:8px;border-radius:14px;box-shadow:var(--shadow)}
+.settingsLocalNavTitle{padding:9px 10px 12px;font-size:9px}
+.settingsLocalNav a{min-height:40px;padding:0 11px;border-radius:8px;font-size:11px}
+.settingsPanel{overflow:hidden}
+.settingsPanelHeader{padding:20px 22px}
+.settingsPanelHeader h2{font-size:24px}
+.settingsPanelHeader p{font-size:11px}
+.settingsFormRow{padding:18px 22px}
+.settingsRecurringRow{min-height:76px;padding:13px 22px}
+.settingsRecurringRow strong{font-size:12px}
+.settingsRecurringRow span{font-size:10px}
+.settingsLinkGrid{padding:18px 22px}
+.settingsLinkGrid>a{min-height:112px;border-radius:11px}
+
+/* Planning remains roomy in busy periods */
+.planningMetricStrip{gap:12px;margin-bottom:20px}
+.planningMetricCard{min-height:96px;border-radius:14px;padding:15px}
+.planningWeekStrip{gap:9px;margin-bottom:20px}
+.planningWeekDay{min-height:96px;border-radius:13px}
+.uiAppMain .planningCompactGrid{gap:16px}
+.uiAppMain .planningColumnHeader,.uiAppMain .planningOpsHeader{min-height:66px}
+.uiAppMain .compactProjectRow{min-height:76px}
+.uiAppMain .todoistTask{padding:14px 16px}
+
+/* Cleaner user management */
+.usersMetricCard{border-radius:13px!important}
+.usersDirectoryRow{transition:background .14s ease,border-color .14s ease}
+.usersDetailTabs button,.usersDirectoryTabs button{font-family:inherit}
+.usersPanelFooter .button{min-width:128px}
+
+/* Customer catalogue: visual, but from the same system */
+.itemCard,.brandCard{border-radius:14px!important}
+.itemBody h3{font-size:18px;line-height:1.28}
+.itemMore{font-size:11px}
+.equipmentCategoryHeader h2{font-weight:800}
+
+/* Attachments: never crush long filenames */
+.attachmentCard{grid-template-columns:88px minmax(0,1fr);min-height:112px;border-radius:12px;padding:11px}
+.attachmentMeta{min-width:0;overflow:hidden}
+.attachmentMeta strong{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  overflow:hidden;text-overflow:ellipsis;white-space:normal;overflow-wrap:anywhere;
+  font-size:13px;line-height:1.35
+}
+.attachmentMeta span,.attachmentMeta small{font-size:10px;line-height:1.4}
+
+/* Auth polish */
+.loginPage{background:#151513}
+.loginCard{border-radius:20px;padding:30px;border:1px solid rgba(255,255,255,.12)}
+.loginCard h1{font-weight:800;letter-spacing:-.045em}
+.loginCard .button{min-height:44px}
+.activationSuccess{display:grid;gap:3px;padding:13px 14px}
+.activationSuccess strong{font-size:13px}.activationSuccess span{font-size:11px;font-weight:550;line-height:1.45}
+
+/* Modal rhythm */
+.planningTaskCreateModal,.rentmanChangeModal,.rentmanChangeDetailModal,.closingManageModal{
+  border-radius:18px;box-shadow:0 28px 90px rgba(20,17,14,.22)
+}
+.planningTaskCreateBackdrop{backdrop-filter:blur(5px);background:rgba(18,16,14,.38)}
+
+/* Motion is functional, never decorative */
+@media (prefers-reduced-motion:no-preference){
+  .uiAppMain button,.uiAppMain a,.uiSidebar a{transition-duration:.16s}
+}
+@media(max-width:900px){
+  .uiAppMain>.container,.uiAppMain>.accountPage{width:min(calc(100% - 28px),1680px)}
+  .settingsWorkspace{grid-template-columns:1fr}
+}

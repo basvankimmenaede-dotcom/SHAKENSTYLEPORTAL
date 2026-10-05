@@ -416,7 +416,7 @@ export default function UsersManager({
                   ) : status.key === 'started' ? (
                     <p>De uitnodigingslink is geopend, maar de activatie is nog niet afgerond.</p>
                   ) : status.key === 'active' ? (
-                    <p>Het account is actief en is al gebruikt om in te loggen.</p>
+                    <p>Jouw account is actief en is al gebruikt om in te loggen.</p>
                   ) : (
                     <p>Voor dit account is nog geen activatiestatus beschikbaar.</p>
                   )}

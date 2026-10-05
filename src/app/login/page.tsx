@@ -42,6 +42,12 @@ function LoginForm() {
         <h1>Storage Portal</h1>
         <p className="muted">Log in om jouw opgeslagen merken en materialen te bekijken.</p>
         {searchParams.get('error') === 'profile' ? <div className="error">Je account bestaat, maar heeft nog geen portalprofiel. Neem contact op met SHAKENSTYLE.</div> : null}
+        {searchParams.get('activated') === 'success' ? (
+          <div className="success activationSuccess">
+            <strong>Account succesvol aangemaakt</strong>
+            <span>Je wachtwoord is ingesteld. Log hieronder in met je e-mailadres en nieuwe wachtwoord.</span>
+          </div>
+        ) : null}
         {searchParams.get('reset') === 'success' ? <div className="success">Je wachtwoord is gewijzigd. Je kunt nu inloggen.</div> : null}
         {searchParams.get('error') === 'reset-link' ? <div className="error">Deze resetlink is ongeldig of verlopen. Vraag via ‘Wachtwoord vergeten?’ een nieuwe link aan.</div> : null}
         {error ? <div className="error">{error}</div> : null}
