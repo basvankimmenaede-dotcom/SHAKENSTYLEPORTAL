@@ -57,8 +57,6 @@ function AcceptInviteForm() {
       const rawHash = window.location.hash;
       const hashParams = new URLSearchParams(rawHash.replace(/^#/, ''));
       const hashAccessToken = hashParams.get('access_token');
-      const hashRefreshToken = hashParams.get('refresh_token');
-      const hashType = hashParams.get('type');
 
       const code = searchParams.get('code');
       const verified = searchParams.get('verified') === '1';
@@ -70,10 +68,13 @@ function AcceptInviteForm() {
         // SECURITY: for implicit invite links, derive only the expected user id
         // from the invite access token. Supabase is allowed to process the hash
         // exactly once; we never call setSession() with those same tokens.
-        if (hashAccessToken && hashRefreshToken && hashType === 'invite') {
+        if (hashAccessToken) {
           const expectedInviteUserId = inviteUserIdFromAccessToken(hashAccessToken);
           if (!expectedInviteUserId) throw new Error('Invite gebruiker ontbreekt.');
 
+          // Supabase's browser client processes the implicit-flow hash itself.
+          // We only use the token payload to remember which user MUST emerge
+          // from that verified session; we never set or rotate the session twice.
           const supabase = createClient();
           const user = await waitForVerifiedInviteUser(supabase, expectedInviteUserId);
           invitedUserIdRef.current = user.id;
