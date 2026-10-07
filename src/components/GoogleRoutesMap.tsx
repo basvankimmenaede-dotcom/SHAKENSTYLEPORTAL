@@ -15,6 +15,7 @@ type RouteSummary = {
   durationMinutes: number;
   reordered: boolean;
   orderedStops?: string[];
+  orderedStopKeys?: string[];
   error?: string;
 };
 
@@ -22,6 +23,7 @@ type Props = {
   apiKey: string;
   baseAddress: string;
   owners: LogisticsOwner[];
+  onOptimizationChange?: (ownerId: number, orderedStopKeys: string[] | null) => void;
 };
 
 declare global {
@@ -98,7 +100,7 @@ function formatDuration(minutes: number) {
   return rest ? `${hours}u ${rest}m` : `${hours}u`;
 }
 
-export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) {
+export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimizationChange }: Props) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
@@ -221,11 +223,14 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
               ? route.optimizedIntermediateWaypointIndices
               : [];
             const reordered = optimized.length > 1 && optimized.some((value: number, index: number) => value !== index);
+            const optimizedStops = reordered
+              ? optimized.map((value: number) => waypointStops[value]).filter(Boolean)
+              : [];
             const orderedStops = reordered
-              ? optimized
-                  .map((value: number) => waypointStops[value])
-                  .filter(Boolean)
-                  .map((stop: LogisticsOwner['stops'][number]) => `#${stop.projectNumber} · ${stop.city || stop.locationName}`)
+              ? optimizedStops.map((stop: LogisticsOwner['stops'][number]) => `#${stop.projectNumber} · ${stop.city || stop.locationName}`)
+              : undefined;
+            const orderedStopKeys = reordered
+              ? optimizedStops.map((stop: LogisticsOwner['stops'][number]) => `${stop.id}:${stop.projectId}`)
               : undefined;
 
             routeSummaries.push({
@@ -236,6 +241,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
               durationMinutes: Number(route.durationMillis || 0) / 60000,
               reordered,
               orderedStops,
+              orderedStopKeys,
             });
           } catch (routeError) {
             routeSummaries.push({
@@ -338,14 +344,21 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
                   <button
                     type="button"
                     className={selectedOptimizations.includes(summary.id) ? 'routeSelect selected' : 'routeSelect'}
-                    onClick={() => setSelectedOptimizations((current) =>
-                      current.includes(summary.id)
-                        ? current.filter((id) => id !== summary.id)
-                        : [...current, summary.id]
-                    )}
+                    onClick={() => {
+                      const isSelected = selectedOptimizations.includes(summary.id);
+                      setSelectedOptimizations((current) =>
+                        isSelected
+                          ? current.filter((id) => id !== summary.id)
+                          : [...current, summary.id]
+                      );
+                      onOptimizationChange?.(
+                        summary.id,
+                        isSelected ? null : (summary.orderedStopKeys || null),
+                      );
+                    }}
                   >
                     <Sparkles size={13} />
-                    {selectedOptimizations.includes(summary.id) ? 'Geselecteerd' : 'Selecteer route'}
+                    {selectedOptimizations.includes(summary.id) ? 'Toegepast' : 'Pas volgorde toe'}
                   </button>
                 ) : null}
               </div>
