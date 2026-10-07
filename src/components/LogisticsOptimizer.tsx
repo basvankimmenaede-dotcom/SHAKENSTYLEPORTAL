@@ -151,6 +151,14 @@ export default function LogisticsOptimizer({
     return rest ? `${hours}u ${rest}m` : `${hours}u`;
   }
 
+  function addMinutesToTime(value: string | null, minutes: number) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setMinutes(date.getMinutes() + minutes);
+    return date.toISOString();
+  }
+
   function routeStartTime(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
     const firstStop = owner.stops[0];
     const firstLeg = analysis?.legs[0];
@@ -411,23 +419,69 @@ export default function LogisticsOptimizer({
 
                   {owner.stops.map((stop, stopIndex) => {
                     const leg = analysis?.legs[stopIndex];
+                    const previousStop = stopIndex > 0 ? owner.stops[stopIndex - 1] : null;
+                    const warehouseArrival = leg?.viaWarehouse && previousStop
+                      ? addMinutesToTime(previousStop.end, leg.viaWarehouse.returnDurationMinutes)
+                      : null;
+                    const warehouseDeparture = leg?.viaWarehouse
+                      ? addMinutesToTime(stop.start, -leg.viaWarehouse.outboundDurationMinutes)
+                      : null;
+
                     return (
                       <div className="timelineSegment" key={`${owner.id}-${stop.id}-${stop.projectId}`}>
-                        <div className={`travelLeg ${leg?.status || 'travel'}`}>
-                          <span className="travelLine" />
-                          <div>
-                            <strong>{leg?.skipped ? (leg.note || 'Geen transport in Rentman') : leg ? `${formatTravel(leg.durationMinutes)} · ${Math.round(leg.distanceKm)} km` : 'Route berekenen…'}</strong>
-                            {!leg?.skipped && leg?.slackMinutes !== null && leg?.slackMinutes !== undefined ? (
-                              <small>
-                                {leg.slackMinutes < 0
-                                  ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
-                                  : leg.slackMinutes < 10
-                                    ? `${Math.round(leg.slackMinutes)} min marge · krap`
-                                    : `${Math.round(leg.slackMinutes)} min marge`}
-                              </small>
-                            ) : null}
+                        {leg?.viaWarehouse ? (
+                          <>
+                            <div className="travelLeg return">
+                              <span className="travelLine" />
+                              <div>
+                                <strong>{formatTravel(leg.viaWarehouse.returnDurationMinutes)} · {Math.round(leg.viaWarehouse.returnDistanceKm)} km</strong>
+                                <small>Terug naar magazijn</small>
+                              </div>
+                            </div>
+                            <div className="timelineMiddleWarehouse">
+                              <span className="timelineDot warehouse" />
+                              <div>
+                                <strong>Magazijn</strong>
+                                <small>
+                                  {warehouseArrival && warehouseDeparture
+                                    ? `${formatTime(warehouseArrival)} aankomst · ${formatTime(warehouseDeparture)} vertrek`
+                                    : 'Terug naar zaak · daarna opnieuw vertrekken'}
+                                </small>
+                              </div>
+                            </div>
+                            <div className={`travelLeg ${leg.status || 'travel'}`}>
+                              <span className="travelLine" />
+                              <div>
+                                <strong>{formatTravel(leg.viaWarehouse.outboundDurationMinutes)} · {Math.round(leg.viaWarehouse.outboundDistanceKm)} km</strong>
+                                {leg.slackMinutes !== null && leg.slackMinutes !== undefined ? (
+                                  <small>
+                                    {leg.slackMinutes < 0
+                                      ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
+                                      : leg.slackMinutes < 10
+                                        ? `${Math.round(leg.slackMinutes)} min marge · krap`
+                                        : `${Math.round(leg.slackMinutes)} min marge`}
+                                  </small>
+                                ) : null}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className={`travelLeg ${leg?.status || 'travel'}`}>
+                            <span className="travelLine" />
+                            <div>
+                              <strong>{leg?.skipped ? (leg.note || 'Geen transport in Rentman') : leg ? `${formatTravel(leg.durationMinutes)} · ${Math.round(leg.distanceKm)} km` : 'Route berekenen…'}</strong>
+                              {!leg?.skipped && leg?.slackMinutes !== null && leg?.slackMinutes !== undefined ? (
+                                <small>
+                                  {leg.slackMinutes < 0
+                                    ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
+                                    : leg.slackMinutes < 10
+                                      ? `${Math.round(leg.slackMinutes)} min marge · krap`
+                                      : `${Math.round(leg.slackMinutes)} min marge`}
+                                </small>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
+                        )}
                         <div className="timelineStop">
                           <span className="timelineDot">{stopIndex + 1}</span>
                           <div>
@@ -674,9 +728,9 @@ export default function LogisticsOptimizer({
         .routeTitle{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:7px;padding:10px 11px;background:#f8f7f4;font-size:9px;border-bottom:1px solid #eee9e3}
         .routeTitle span{margin-left:auto;color:var(--muted)}
         .timelineBadge{padding:4px 6px;border-radius:999px;font-size:7px;white-space:nowrap}.timelineBadge.good{background:#e5f4e9;color:#2f6f44}.timelineBadge.tight{background:#fff0bd;color:#8a6500}.timelineBadge.conflict{background:#f9dfdb;color:#9e4037}
-        .timelineStart,.timelineEnd,.timelineStop{display:grid;grid-template-columns:28px minmax(0,1fr);gap:9px;align-items:center;padding:10px 12px}
-        .timelineStart,.timelineEnd{background:#fcfbf9}.timelineStart>div,.timelineEnd>div,.timelineStop>div{display:grid;gap:2px;min-width:0}
-        .timelineStart strong,.timelineEnd strong,.timelineStop strong{font-size:9px}.timelineStart small,.timelineEnd small,.timelineStop span,.timelineStop small{font-size:8px;color:var(--muted)}
+        .timelineStart,.timelineEnd,.timelineStop,.timelineMiddleWarehouse{display:grid;grid-template-columns:28px minmax(0,1fr);gap:9px;align-items:center;padding:10px 12px}
+        .timelineStart,.timelineEnd{background:#fcfbf9}.timelineMiddleWarehouse{background:#f7f5f1;border-top:1px solid #eee9e3;border-bottom:1px solid #eee9e3}.timelineStart>div,.timelineEnd>div,.timelineStop>div,.timelineMiddleWarehouse>div{display:grid;gap:2px;min-width:0}
+        .timelineStart strong,.timelineEnd strong,.timelineStop strong,.timelineMiddleWarehouse strong{font-size:9px}.timelineStart small,.timelineEnd small,.timelineStop span,.timelineStop small,.timelineMiddleWarehouse small{font-size:8px;color:var(--muted)}
         .timelineStop strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .timelineDot{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--orange-soft);color:var(--orange-dark);font-size:8px;font-weight:900;border:1px solid #f6d2bc;position:relative;z-index:1}
         .timelineDot.warehouse{background:#ece9e4;color:#56514b;border-color:#ded9d2}
