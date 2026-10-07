@@ -517,6 +517,7 @@ export type RentmanPlanningCrewAssignment = {
     displayname?: string;
     name?: string;
     project?: string | null;
+    subproject?: string | null;
     group?: {
       id?: number;
       displayname?: string;
@@ -527,6 +528,7 @@ export type RentmanPlanningCrewAssignment = {
     usageperiod_start?: string | null;
     usageperiod_end?: string | null;
   } | null;
+  transport?: string | null;
   crewmember?: {
     id: number;
     displayname?: string;
@@ -542,7 +544,7 @@ export async function getPlanningCrewAssignments() {
   const windowStart = addDays(today, -1);
   const windowEnd = addDays(today, 8);
   const params = new URLSearchParams({
-    fields: 'id,function,crewmember',
+    fields: 'id,function,crewmember,transport',
     expand: 'function,function.group,crewmember',
     sort: '-id',
     limit: '1500',
@@ -592,6 +594,7 @@ export type RentmanPlanningProjectVehicle = {
   function?: {
     id?: number;
     project?: string | null;
+    subproject?: string | null;
     displayname?: string;
     name?: string;
     planperiod_start?: string | null;
@@ -604,6 +607,7 @@ export type RentmanPlanningProjectVehicle = {
       name?: string;
     } | string | null;
   } | null;
+  transport?: string | null;
   vehicle?: {
     id?: number;
     displayname?: string;
@@ -614,13 +618,13 @@ export type RentmanPlanningProjectVehicle = {
 
 export async function getPlanningProjectVehicles() {
   return rentmanPlanningFetchAll<RentmanPlanningProjectVehicle>(
-    '/projectvehicles?fields=id,function,vehicle&expand=function,vehicle&sort=-id&limit=1500',
+    '/projectvehicles?fields=id,function,vehicle,transport&expand=function,vehicle&sort=-id&limit=1500',
   );
 }
 
 export async function getPlanningProjectVehiclesForProject(projectId: number) {
   return rentmanPlanningFetchAll<RentmanPlanningProjectVehicle>(
-    `/projects/${projectId}/projectvehicles?fields=id,function,vehicle&expand=function,vehicle&limit=300`,
+    `/projects/${projectId}/projectvehicles?fields=id,function,vehicle,transport&expand=function,vehicle&limit=300`,
   );
 }
 
@@ -699,7 +703,7 @@ export async function getPlanningProjectFunctionsForRange(startDate: string, end
 
 export async function getPlanningCrewAssignmentsForRange(startDate: string, endDate: string) {
   const params = new URLSearchParams({
-    fields: 'id,function,crewmember',
+    fields: 'id,function,crewmember,transport',
     expand: 'function,crewmember',
     sort: '+id',
     limit: '1500',
@@ -724,6 +728,7 @@ export type RentmanPlanningSubproject = {
     visit_number?: string;
     visit_postalcode?: string;
     visit_city?: string;
+    distance?: number | null;
   } | null;
   loc_contact?: {
     displayname?: string;
@@ -739,6 +744,12 @@ export type RentmanPlanningSubproject = {
   planperiod_start?: string | null;
   planperiod_end?: string | null;
 };
+
+export async function getPlanningSubprojects() {
+  return rentmanPlanningFetchAll<RentmanPlanningSubproject>(
+    '/subprojects?fields=id,name,project,location,loc_contact,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end&expand=location,loc_contact&limit=1500',
+  );
+}
 
 export async function getPlanningSubprojectsForProject(projectId: number) {
   return rentmanPlanningFetchAll<RentmanPlanningSubproject>(
