@@ -151,6 +151,26 @@ export default function LogisticsOptimizer({
     return rest ? `${hours}u ${rest}m` : `${hours}u`;
   }
 
+  function routeStartTime(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
+    const firstStop = owner.stops[0];
+    const firstLeg = analysis?.legs[0];
+    if (!firstStop?.start || !firstLeg || firstLeg.skipped) return null;
+    const start = new Date(firstStop.start);
+    if (Number.isNaN(start.getTime())) return null;
+    start.setMinutes(start.getMinutes() - firstLeg.durationMinutes);
+    return start.toISOString();
+  }
+
+  function routeEndTime(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
+    const lastStop = owner.stops[owner.stops.length - 1];
+    const returnLeg = analysis?.legs[owner.stops.length];
+    if (!lastStop?.end || !returnLeg || returnLeg.skipped) return null;
+    const end = new Date(lastStop.end);
+    if (Number.isNaN(end.getTime())) return null;
+    end.setMinutes(end.getMinutes() + returnLeg.durationMinutes);
+    return end.toISOString();
+  }
+
   function approveSuggestion(id: string) {
     setApproved((current) => current.includes(id) ? current : [...current, id]);
   }
@@ -324,7 +344,10 @@ export default function LogisticsOptimizer({
 
                   <div className="timelineStart">
                     <span className="timelineDot warehouse" />
-                    <div><strong>Magazijn</strong><small>Start van de dagroute</small></div>
+                    <div>
+                      <strong>Magazijn</strong>
+                      <small>{routeStartTime(owner, analysis) ? `${formatTime(routeStartTime(owner, analysis))} · Start van de dagroute` : 'Start van de dagroute'}</small>
+                    </div>
                   </div>
 
                   {owner.stops.map((stop, stopIndex) => {
@@ -375,7 +398,10 @@ export default function LogisticsOptimizer({
                   ) : null}
                   <div className="timelineEnd">
                     <span className="timelineDot warehouse" />
-                    <div><strong>Magazijn</strong><small>Einde van de dagroute</small></div>
+                    <div>
+                      <strong>Magazijn</strong>
+                      <small>{routeEndTime(owner, analysis) ? `${formatTime(routeEndTime(owner, analysis))} · Einde van de dagroute` : 'Einde van de dagroute'}</small>
+                    </div>
                   </div>
                 </div>
               );
