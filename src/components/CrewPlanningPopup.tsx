@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { FileText } from 'lucide-react';
 
 type TimelineItem = {
   id: number;
@@ -372,6 +373,7 @@ export default function CrewPlanningPopup(props: Props) {
   ]);
 
   const role = [props.functionName, props.groupName].filter(Boolean).join(' · ');
+  const hasNotes = Boolean(props.notes?.trim());
   const people = props.people?.length ? props.people : [{ name: props.name, initials: props.initials }];
   const displayName = people.length === 1
     ? people[0].name
@@ -413,6 +415,15 @@ export default function CrewPlanningPopup(props: Props) {
                 aria-label={`Brandstofpas nodig · ${props.roundTripDistanceKm ?? '—'} kilometer retour`}
               >
                 <span className="planningFuelCardIcon" aria-hidden="true" />
+              </span>
+            ) : null}
+            {hasNotes ? (
+              <span
+                className="planningNotesBadge"
+                title="Notitie aanwezig"
+                aria-label="Notitie aanwezig"
+              >
+                <FileText size={13} strokeWidth={2} aria-hidden="true" />
               </span>
             ) : null}
           </strong>
