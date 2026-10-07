@@ -14,6 +14,7 @@ type RouteSummary = {
   distanceKm: number;
   durationMinutes: number;
   reordered: boolean;
+  orderedStops?: string[];
   error?: string;
 };
 
@@ -102,6 +103,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [summaries, setSummaries] = useState<RouteSummary[]>([]);
+  const [selectedOptimizations, setSelectedOptimizations] = useState<number[]>([]);
 
   const activeOwners = useMemo(
     () => owners.filter((owner) => owner.stops.some((stop) => stop.address || stop.city)),
@@ -149,7 +151,10 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
 
         for (let ownerIndex = 0; ownerIndex < activeOwners.length; ownerIndex += 1) {
           const owner = activeOwners[ownerIndex];
-          const waypoints = owner.stops
+          const waypointStops = owner.stops.filter(
+            (stop) => stop.address || stop.locationName || stop.city,
+          );
+          const waypoints = waypointStops
             .map((stop) => stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '))
             .filter(Boolean);
 
@@ -216,6 +221,12 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
               ? route.optimizedIntermediateWaypointIndices
               : [];
             const reordered = optimized.length > 1 && optimized.some((value: number, index: number) => value !== index);
+            const orderedStops = reordered
+              ? optimized
+                  .map((value: number) => waypointStops[value])
+                  .filter(Boolean)
+                  .map((stop) => `#${stop.projectNumber} · ${stop.city || stop.locationName}`)
+              : undefined;
 
             routeSummaries.push({
               id: owner.id,
@@ -224,6 +235,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
               distanceKm: Number(route.distanceMeters || 0) / 1000,
               durationMinutes: Number(route.durationMillis || 0) / 60000,
               reordered,
+              orderedStops,
             });
           } catch (routeError) {
             routeSummaries.push({
@@ -311,13 +323,31 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
                   {summary.error ? (
                     <small>{summary.error}</small>
                   ) : (
-                    <small>
-                      {Math.round(summary.distanceKm)} km · {formatDuration(summary.durationMinutes)}
-                      {summary.reordered ? ' · betere volgorde gevonden' : ''}
-                    </small>
+                    <>
+                      <small>
+                        {Math.round(summary.distanceKm)} km · {formatDuration(summary.durationMinutes)}
+                        {summary.reordered ? ' · betere volgorde gevonden' : ''}
+                      </small>
+                      {summary.reordered && summary.orderedStops?.length ? (
+                        <small className="optimizedOrder">{summary.orderedStops.join(' → ')}</small>
+                      ) : null}
+                    </>
                   )}
                 </div>
-                {summary.reordered ? <Sparkles size={14} aria-label="Betere volgorde gevonden" /> : null}
+                {summary.reordered ? (
+                  <button
+                    type="button"
+                    className={selectedOptimizations.includes(summary.id) ? 'routeSelect selected' : 'routeSelect'}
+                    onClick={() => setSelectedOptimizations((current) =>
+                      current.includes(summary.id)
+                        ? current.filter((id) => id !== summary.id)
+                        : [...current, summary.id]
+                    )}
+                  >
+                    <Sparkles size={13} />
+                    {selectedOptimizations.includes(summary.id) ? 'Geselecteerd' : 'Selecteer route'}
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>
@@ -333,10 +363,13 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
         .googleRoutesTopbar{position:absolute;top:12px;left:12px;z-index:4;display:flex;gap:6px;flex-wrap:wrap}
         .googleRoutesTopbar span{display:flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid rgba(0,0,0,.1);border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 5px 18px rgba(0,0,0,.08);font-size:8px;font-weight:900}
         .googleRoutesLegend{position:absolute;left:12px;bottom:12px;z-index:4;width:min(340px,calc(100% - 24px));display:grid;gap:5px;padding:8px;border:1px solid rgba(0,0,0,.1);border-radius:12px;background:rgba(255,255,255,.96);box-shadow:0 8px 24px rgba(0,0,0,.1)}
-        .routeLegendItem{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 6px;border-radius:8px}
+        .routeLegendItem{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px;border-radius:9px}
         .routeLegendItem:hover{background:#f7f5f2}.routeLegendItem.error{opacity:.65}
-        .routeLegendItem i{width:8px;height:28px;border-radius:999px}.routeLegendItem>div{min-width:0;display:grid;gap:1px}
+        .routeLegendItem i{width:8px;height:32px;border-radius:999px}.routeLegendItem>div{min-width:0;display:grid;gap:2px}
         .routeLegendItem strong{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.routeLegendItem small{color:var(--muted);font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .routeLegendItem .optimizedOrder{color:#514b45;font-weight:700}
+        .routeSelect{display:flex;align-items:center;gap:4px;border:1px solid #e4ddd5;border-radius:8px;background:#fff;padding:6px 7px;color:#6b645d;font-size:7px;font-weight:900;cursor:pointer;white-space:nowrap}
+        .routeSelect:hover{border-color:#f37021;color:#d85b10}.routeSelect.selected{border-color:#f37021;background:#fff0e6;color:#d85b10}
         .spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
         @media(max-width:820px){.googleRoutesWrap,.googleRoutesCanvas{min-height:420px}.googleRoutesLegend{width:calc(100% - 24px)}}
       `}</style>
