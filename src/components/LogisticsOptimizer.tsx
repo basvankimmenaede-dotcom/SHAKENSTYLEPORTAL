@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronRight, Copy, Fuel, Map, Route, Truck, UserRound, X } from 'lucide-react';
-import GoogleRoutesMap from './GoogleRoutesMap';
+import GoogleRoutesMap, { type LogisticsRouteAnalysis } from './GoogleRoutesMap';
 
 export type LogisticsStop = {
   id: number;
@@ -105,7 +105,7 @@ export default function LogisticsOptimizer({
 }: Props) {
   const [approved, setApproved] = useState<string[]>([]);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | 'all'>('all');
-  const [optimizedOrders, setOptimizedOrders] = useState<Record<number, string[]>>({});
+  const [routeAnalyses, setRouteAnalyses] = useState<Record<number, LogisticsRouteAnalysis>>({});
 
   const visibleOwners = useMemo(
     () => selectedOwnerId === 'all' ? owners : owners.filter((owner) => owner.id === selectedOwnerId),
@@ -116,35 +116,27 @@ export default function LogisticsOptimizer({
   const activeOwners = owners.filter((owner) => owner.stops.length > 0);
   const referenceDistance = activeOwners.reduce((sum, owner) => sum + owner.referenceDistanceKm, 0);
   const mapStops = visibleOwners.flatMap((owner) => owner.stops);
-  const optimizedOwnerIds = Object.keys(optimizedOrders).map(Number);
-  const approvedCount = approved.length + optimizedOwnerIds.length;
+  const visibleAnalyses = visibleOwners
+    .map((owner) => routeAnalyses[owner.id])
+    .filter((analysis): analysis is LogisticsRouteAnalysis => Boolean(analysis));
+  const plannedDistance = visibleAnalyses.reduce((sum, analysis) => sum + analysis.distanceKm, 0);
+  const plannedDuration = visibleAnalyses.reduce((sum, analysis) => sum + analysis.durationMinutes, 0);
+  const conflictCount = visibleAnalyses.reduce((sum, analysis) => sum + analysis.conflictCount, 0);
+  const tightCount = visibleAnalyses.reduce((sum, analysis) => sum + analysis.tightCount, 0);
 
-  function stopKey(stop: LogisticsStop) {
-    return `${stop.id}:${stop.projectId}`;
-  }
-
-  function orderedStopsForOwner(owner: LogisticsOwner) {
-    const order = optimizedOrders[owner.id];
-    if (!order?.length) return owner.stops;
-
-    const rank = new globalThis.Map<string, number>(order.map((key, index) => [key, index] as [string, number]));
-    return [...owner.stops].sort((a, b) => {
-      const aRank = rank.get(stopKey(a));
-      const bRank = rank.get(stopKey(b));
-      if (aRank === undefined && bRank === undefined) return 0;
-      if (aRank === undefined) return 1;
-      if (bRank === undefined) return -1;
-      return aRank - bRank;
-    });
-  }
-
-  function updateOptimizedOrder(ownerId: number, order: string[] | null) {
-    setOptimizedOrders((current) => {
+  function updateRouteAnalyses(analyses: LogisticsRouteAnalysis[]) {
+    setRouteAnalyses((current) => {
       const next = { ...current };
-      if (order?.length) next[ownerId] = order;
-      else delete next[ownerId];
+      for (const analysis of analyses) next[analysis.ownerId] = analysis;
       return next;
     });
+  }
+
+  function formatTravel(minutes: number) {
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const rest = Math.round(minutes % 60);
+    return rest ? `${hours}u ${rest}m` : `${hours}u`;
   }
 
   function approveSuggestion(id: string) {
@@ -156,23 +148,11 @@ export default function LogisticsOptimizer({
   }
 
   async function copyActions() {
-    const suggestionLines = approvedSuggestions.flatMap((suggestion) => [
+    const lines = approvedSuggestions.flatMap((suggestion) => [
       suggestion.title,
       ...suggestion.actionLines.map((line) => `- ${line}`),
       '',
     ]);
-    const optimizationLines = optimizedOwnerIds.flatMap((ownerId) => {
-      const owner = owners.find((item) => item.id === ownerId);
-      if (!owner) return [];
-      const orderedStops = orderedStopsForOwner(owner);
-      return [
-        `Google route-optimalisatie · ${owner.name}`,
-        ...orderedStops.map((stop, index) => `- ${index + 1}. #${stop.projectNumber} · ${stop.city || stop.locationName}`),
-        '- Volgorde handmatig controleren/doorgeven in Rentman.',
-        '',
-      ];
-    });
-    const lines = [...suggestionLines, ...optimizationLines];
     if (!lines.length) return;
     const text = lines.join('\n').trim();
     try {
@@ -260,14 +240,14 @@ export default function LogisticsOptimizer({
           <p>in de geselecteerde weergave</p>
         </article>
         <article>
-          <span>Referentieafstand</span>
-          <strong>{Math.round(referenceDistance)} <small>km</small></strong>
-          <p>Rentman-retourafstanden opgeteld</p>
+          <span>Geplande route</span>
+          <strong>{plannedDistance ? Math.round(plannedDistance) : '—'} <small>{plannedDistance ? 'km' : ''}</small></strong>
+          <p>{plannedDistance ? `${formatTravel(plannedDuration)} reistijd · vs. ${Math.round(referenceDistance)} km losse retourritten` : 'Google berekent de dagroute'}</p>
         </article>
         <article>
-          <span>Voorstellen</span>
-          <strong>{suggestions.length + optimizedOwnerIds.length}</strong>
-          <p>{approvedCount} geselecteerd/goedgekeurd</p>
+          <span>Aansluitingen</span>
+          <strong>{conflictCount ? conflictCount : tightCount ? tightCount : visibleAnalyses.length ? 0 : '—'}</strong>
+          <p>{conflictCount ? 'niet haalbaar' : tightCount ? 'krap gepland' : visibleAnalyses.length ? 'geen conflicten gevonden' : 'wordt berekend'}</p>
         </article>
       </section>
 
@@ -304,7 +284,11 @@ export default function LogisticsOptimizer({
                   </span>
                   <span className="ownerStats">
                     <b>{owner.stops.length} stop{owner.stops.length === 1 ? '' : 's'}</b>
-                    <small>{owner.stops.length ? `${Math.round(owner.referenceDistanceKm)} km ref.` : 'Niet gepland'}</small>
+                    <small>{owner.stops.length
+                      ? routeAnalyses[owner.id]
+                        ? `${Math.round(routeAnalyses[owner.id].distanceKm)} km route`
+                        : 'Route berekenen…'
+                      : 'Niet gepland'}</small>
                   </span>
                   {owner.fuelCardRequired ? <Fuel size={15} aria-label="Brandstofpas controleren" /> : null}
                 </button>
@@ -313,27 +297,71 @@ export default function LogisticsOptimizer({
           </div>
 
           <div className="routeList">
-            {visibleOwners.filter((owner) => owner.stops.length > 0).map((owner) => (
-              <div className="routeGroup" key={owner.id}>
-                <div className="routeTitle">
-                  {viewMode === 'vehicle' ? <Truck size={16} /> : <UserRound size={16} />}
-                  <strong>{owner.name}</strong>
-                  {optimizedOrders[owner.id]?.length ? <b className="optimizedBadge">Google volgorde actief</b> : null}
-                  <span>{owner.stops.length} stops</span>
-                </div>
-                {orderedStopsForOwner(owner).map((stop, stopIndex) => (
-                  <div className="stopRow" key={`${owner.id}-${stop.id}-${stop.projectId}`}>
-                    <span className="stopNumber">{stopIndex + 1}</span>
-                    <div>
-                      <strong>#{stop.projectNumber} · {stop.projectName}</strong>
-                      <span>{formatTime(stop.start)} · {stop.city || stop.locationName}</span>
-                      <small>{stop.groupName !== '—' ? `${stop.groupName} · ` : ''}{stop.functionName}</small>
-                    </div>
-                    {stop.warehouseDistanceKm !== null ? <b>{Math.round(stop.warehouseDistanceKm)} km</b> : null}
+            {visibleOwners.filter((owner) => owner.stops.length > 0).map((owner) => {
+              const analysis = routeAnalyses[owner.id];
+              return (
+                <div className="routeGroup" key={owner.id}>
+                  <div className="routeTitle">
+                    {viewMode === 'vehicle' ? <Truck size={16} /> : <UserRound size={16} />}
+                    <strong>{owner.name}</strong>
+                    {analysis?.conflictCount ? <b className="timelineBadge conflict">{analysis.conflictCount} conflict</b> : null}
+                    {!analysis?.conflictCount && analysis?.tightCount ? <b className="timelineBadge tight">{analysis.tightCount} krap</b> : null}
+                    {!analysis?.conflictCount && !analysis?.tightCount && analysis ? <b className="timelineBadge good">Haalbaar</b> : null}
+                    <span>{owner.stops.length} stops</span>
                   </div>
-                ))}
-              </div>
-            ))}
+
+                  <div className="timelineStart">
+                    <span className="timelineDot warehouse" />
+                    <div><strong>Magazijn</strong><small>Start van de dagroute</small></div>
+                  </div>
+
+                  {owner.stops.map((stop, stopIndex) => {
+                    const leg = analysis?.legs[stopIndex];
+                    return (
+                      <div className="timelineSegment" key={`${owner.id}-${stop.id}-${stop.projectId}`}>
+                        <div className={`travelLeg ${leg?.status || 'travel'}`}>
+                          <span className="travelLine" />
+                          <div>
+                            <strong>{leg ? `${formatTravel(leg.durationMinutes)} · ${Math.round(leg.distanceKm)} km` : 'Route berekenen…'}</strong>
+                            {leg?.slackMinutes !== null && leg?.slackMinutes !== undefined ? (
+                              <small>
+                                {leg.slackMinutes < 0
+                                  ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
+                                  : leg.slackMinutes < 10
+                                    ? `${Math.round(leg.slackMinutes)} min marge · krap`
+                                    : `${Math.round(leg.slackMinutes)} min marge`}
+                              </small>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="timelineStop">
+                          <span className="timelineDot">{stopIndex + 1}</span>
+                          <div>
+                            <strong>#{stop.projectNumber} · {stop.projectName}</strong>
+                            <span>{formatTime(stop.start)}–{formatTime(stop.end)} · {stop.city || stop.locationName}</span>
+                            <small>{stop.groupName !== '—' ? `${stop.groupName} · ` : ''}{stop.functionName}</small>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {analysis?.legs[owner.stops.length] ? (
+                    <div className="travelLeg return">
+                      <span className="travelLine" />
+                      <div>
+                        <strong>{formatTravel(analysis.legs[owner.stops.length].durationMinutes)} · {Math.round(analysis.legs[owner.stops.length].distanceKm)} km</strong>
+                        <small>Terug naar magazijn</small>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="timelineEnd">
+                    <span className="timelineDot warehouse" />
+                    <div><strong>Magazijn</strong><small>Einde van de dagroute</small></div>
+                  </div>
+                </div>
+              );
+            })}
             {!activeOwners.length ? <div className="emptyState">Geen planning gevonden voor deze dag.</div> : null}
           </div>
         </section>
@@ -352,7 +380,7 @@ export default function LogisticsOptimizer({
               apiKey={googleMapsApiKey}
               baseAddress={logisticsBaseAddress}
               owners={visibleOwners}
-              onOptimizationChange={updateOptimizedOrder}
+              onAnalysisChange={updateRouteAnalyses}
             />
           ) : (
             <div className="mapPlaceholder">
@@ -373,7 +401,7 @@ export default function LogisticsOptimizer({
           )}
           <p className="mapNote">
             <AlertTriangle size={14} />
-            Google Routes optimaliseert de stopvolgorde binnen de geselecteerde bus of persoon. Wisselen tussen voertuigen blijft voorlopig een advies en wordt niet automatisch in Rentman aangepast.
+            Rentman bepaalt de volgorde en tijden. Google controleert de daadwerkelijke reistijd tussen opeenvolgende werkzaamheden en signaleert krappe of onhaalbare aansluitingen.
           </p>
           <p className="mapNote">Start/eindpunt: {logisticsBaseAddress} · Brandstofpasgrens: {fuelCardThresholdKm} km retour.</p>
         </section>
@@ -425,12 +453,12 @@ export default function LogisticsOptimizer({
             <h2>Rentman-actielijst</h2>
             <p>De portal wijzigt Rentman niet. Na goedkeuren staat hier exact wat je handmatig moet controleren of aanpassen.</p>
           </div>
-          <button type="button" className="button secondary" onClick={copyActions} disabled={!approvedSuggestions.length && !optimizedOwnerIds.length}>
+          <button type="button" className="button secondary" onClick={copyActions} disabled={!approvedSuggestions.length}>
             <Copy size={15} /> Kopieer actielijst
           </button>
         </div>
 
-        {approvedSuggestions.length || optimizedOwnerIds.length ? (
+        {approvedSuggestions.length ? (
           <div className="actionGrid">
             {approvedSuggestions.map((suggestion) => (
               <article key={suggestion.id}>
@@ -439,21 +467,6 @@ export default function LogisticsOptimizer({
                 {suggestion.actionLines.map((line) => <p key={line}><Check size={14} /> {line}</p>)}
               </article>
             ))}
-            {optimizedOwnerIds.map((ownerId) => {
-              const owner = owners.find((item) => item.id === ownerId);
-              if (!owner) return null;
-              const orderedStops = orderedStopsForOwner(owner);
-              return (
-                <article key={`route-${ownerId}`} className="routeActionCard">
-                  <span>GOOGLE ROUTE · GESELECTEERD</span>
-                  <strong>{owner.name} · nieuwe stopvolgorde</strong>
-                  {orderedStops.map((stop, index) => (
-                    <p key={stopKey(stop)}><Check size={14} /> {index + 1}. #{stop.projectNumber} · {stop.city || stop.locationName}</p>
-                  ))}
-                  <p><Check size={14} /> Controleer en verwerk deze volgorde handmatig in Rentman.</p>
-                </article>
-              );
-            })}
           </div>
         ) : (
           <div className="emptyAction">Keur een voorstel goed om de concrete Rentman-acties hier te tonen.</div>
@@ -525,15 +538,21 @@ export default function LogisticsOptimizer({
         .ownerMain strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .ownerMain small,.ownerStats small{font-size:8px;color:var(--muted)}
         .ownerStats{text-align:right}.ownerStats b{font-size:8px;white-space:nowrap}
-        .routeList{display:grid;max-height:385px;overflow:auto}
-        .routeGroup{border-bottom:1px solid var(--line)}.routeGroup:last-child{border-bottom:0}
-        .routeTitle{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:7px;padding:9px 11px;background:#f8f7f4;font-size:9px}
+        .routeList{display:grid;max-height:520px;overflow:auto}
+        .routeGroup{border-bottom:1px solid var(--line);padding-bottom:10px}.routeGroup:last-child{border-bottom:0}
+        .routeTitle{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:7px;padding:10px 11px;background:#f8f7f4;font-size:9px;border-bottom:1px solid #eee9e3}
         .routeTitle span{margin-left:auto;color:var(--muted)}
-        .stopRow{display:grid;grid-template-columns:23px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 11px;border-top:1px solid #efede8}
-        .stopNumber{width:21px;height:21px;display:grid;place-items:center;border-radius:50%;background:var(--orange-soft);color:var(--orange-dark);font-size:8px;font-weight:900}
-        .stopRow>div{min-width:0;display:grid;gap:2px}
-        .stopRow strong{font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .stopRow span,.stopRow small{font-size:8px;color:var(--muted)}.stopRow>b{font-size:8px;color:var(--muted);white-space:nowrap}
+        .timelineBadge{padding:4px 6px;border-radius:999px;font-size:7px;white-space:nowrap}.timelineBadge.good{background:#e5f4e9;color:#2f6f44}.timelineBadge.tight{background:#fff0bd;color:#8a6500}.timelineBadge.conflict{background:#f9dfdb;color:#9e4037}
+        .timelineStart,.timelineEnd,.timelineStop{display:grid;grid-template-columns:28px minmax(0,1fr);gap:9px;align-items:center;padding:10px 12px}
+        .timelineStart,.timelineEnd{background:#fcfbf9}.timelineStart>div,.timelineEnd>div,.timelineStop>div{display:grid;gap:2px;min-width:0}
+        .timelineStart strong,.timelineEnd strong,.timelineStop strong{font-size:9px}.timelineStart small,.timelineEnd small,.timelineStop span,.timelineStop small{font-size:8px;color:var(--muted)}
+        .timelineStop strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .timelineDot{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--orange-soft);color:var(--orange-dark);font-size:8px;font-weight:900;border:1px solid #f6d2bc;position:relative;z-index:1}
+        .timelineDot.warehouse{background:#ece9e4;color:#56514b;border-color:#ded9d2}
+        .travelLeg{display:grid;grid-template-columns:28px minmax(0,1fr);gap:9px;align-items:center;padding:4px 12px;min-height:42px}
+        .travelLeg>div{display:grid;gap:2px;min-width:0}.travelLeg strong{font-size:8px;color:#5d5751}.travelLeg small{font-size:8px;color:var(--muted)}
+        .travelLine{width:2px;height:34px;background:#d9d4cd;justify-self:center;border-radius:999px}.travelLeg.good .travelLine{background:#7fbe91}.travelLeg.tight .travelLine{background:#e4b13b}.travelLeg.conflict .travelLine{background:#cf5a4e}.travelLeg.return .travelLine{background:#aaa39b}
+        .travelLeg.good small{color:#347043}.travelLeg.tight small{color:#8a6500;font-weight:800}.travelLeg.conflict small{color:#a33e34;font-weight:900}
 
         .mapPanel{background:#fff}
         .mapPlaceholder{position:relative;min-height:500px;display:grid;place-items:center;background:#eef0ed;overflow:hidden}
@@ -560,7 +579,7 @@ export default function LogisticsOptimizer({
         .actionHeader h2{margin:5px 0;font-size:21px}.actionHeader :global(.button){display:inline-flex;align-items:center;gap:7px}.actionHeader :global(.button:disabled){opacity:.45}
         .actionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
         .actionGrid article{padding:12px;border:1px solid #cfe0d2;border-radius:12px;background:#f8fcf9;display:grid;gap:6px}
-        .actionGrid article>span{font-size:8px;font-weight:900;color:#347043}.actionGrid article>strong{font-size:10px}.actionGrid p{display:flex;gap:6px;margin:0;font-size:8px;color:#4e5c51}.actionGrid .routeActionCard{border-color:#f2d4bf;background:#fff8f3}.actionGrid .routeActionCard>span{color:#d85b10}
+        .actionGrid article>span{font-size:8px;font-weight:900;color:#347043}.actionGrid article>strong{font-size:10px}.actionGrid p{display:flex;gap:6px;margin:0;font-size:8px;color:#4e5c51}
         .emptyState,.emptyAction{padding:20px;color:var(--muted);font-size:9px;text-align:center}.emptyAction{margin-top:14px;border:1px dashed var(--line);border-radius:12px}
 
         @media(max-width:1380px){
