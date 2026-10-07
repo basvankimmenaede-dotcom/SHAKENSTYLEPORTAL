@@ -17,6 +17,12 @@ export type LogisticsRouteLegAnalysis = {
   status: 'good' | 'tight' | 'conflict' | 'travel';
   skipped?: boolean;
   note?: string;
+  viaWarehouse?: {
+    returnDurationMinutes: number;
+    returnDistanceKm: number;
+    outboundDurationMinutes: number;
+    outboundDistanceKm: number;
+  };
 };
 
 export type LogisticsRouteAnalysis = {
@@ -361,6 +367,8 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
               if (inbound) {
                 let slackMinutes: number | null = inbound.slackMinutes;
 
+                let viaWarehouse: LogisticsRouteLegAnalysis['viaWarehouse'];
+
                 if (stopIndex > 0) {
                   const previousStop = waypointStops[stopIndex - 1];
                   const previousStopNodeIndex = routeNodes.findIndex(
@@ -370,12 +378,31 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
                     (node) => node.kind === 'stop' && node.stopIndex === stopIndex,
                   );
 
-                  if (previousStop?.end && stop.start && previousStopNodeIndex >= 0 && currentStopNodeIndex > previousStopNodeIndex) {
-                    const travelBetweenStops = googleLegs
-                      .slice(previousStopNodeIndex, currentStopNodeIndex)
-                      .reduce((sum: number, segment: any) => sum + segment.durationMinutes, 0);
-                    const availableMinutes = (new Date(stop.start).getTime() - new Date(previousStop.end).getTime()) / 60000;
-                    if (Number.isFinite(availableMinutes)) slackMinutes = availableMinutes - travelBetweenStops;
+                  if (previousStopNodeIndex >= 0 && currentStopNodeIndex > previousStopNodeIndex) {
+                    const betweenSegments = googleLegs.slice(previousStopNodeIndex, currentStopNodeIndex);
+                    const warehouseNodeIndex = routeNodes
+                      .slice(previousStopNodeIndex + 1, currentStopNodeIndex)
+                      .findIndex((node) => node.kind === 'warehouse');
+
+                    if (warehouseNodeIndex >= 0 && betweenSegments.length >= 2) {
+                      const returnSegment = betweenSegments[0];
+                      const outboundSegment = betweenSegments[betweenSegments.length - 1];
+                      viaWarehouse = {
+                        returnDurationMinutes: returnSegment.durationMinutes,
+                        returnDistanceKm: returnSegment.distanceKm,
+                        outboundDurationMinutes: outboundSegment.durationMinutes,
+                        outboundDistanceKm: outboundSegment.distanceKm,
+                      };
+                    }
+
+                    if (previousStop?.end && stop.start) {
+                      const travelBetweenStops = betweenSegments.reduce(
+                        (sum: number, segment: any) => sum + segment.durationMinutes,
+                        0,
+                      );
+                      const availableMinutes = (new Date(stop.start).getTime() - new Date(previousStop.end).getTime()) / 60000;
+                      if (Number.isFinite(availableMinutes)) slackMinutes = availableMinutes - travelBetweenStops;
+                    }
                   }
                 }
 
@@ -393,6 +420,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
                   durationMinutes: inbound.durationMinutes,
                   slackMinutes,
                   status,
+                  viaWarehouse,
                 });
               } else {
                 legs.push({
