@@ -663,6 +663,37 @@ export async function getPlanningProjectFunctionsForProject(projectId: number) {
 }
 
 
+export async function getPlanningProjectFunctionsForRange(startDate: string, endDate: string) {
+  const params = new URLSearchParams({
+    fields: 'id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount',
+    expand: 'group',
+    sort: '+planperiod_start',
+    limit: '1500',
+  });
+  params.set('planperiod_start[lte]', planningDateTime(endDate, true));
+  params.set('planperiod_end[gte]', planningDateTime(startDate));
+
+  return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
+    `/projectfunctions?${params.toString()}`,
+  );
+}
+
+export async function getPlanningCrewAssignmentsForRange(startDate: string, endDate: string) {
+  const params = new URLSearchParams({
+    fields: 'id,function,crewmember',
+    expand: 'function,crewmember',
+    sort: '+id',
+    limit: '1500',
+  });
+  params.set('planperiod_start[lte]', planningDateTime(endDate, true));
+  params.set('planperiod_end[gte]', planningDateTime(startDate));
+
+  return rentmanPlanningFetchAll<RentmanPlanningCrewAssignment>(
+    `/projectcrew?${params.toString()}`,
+  );
+}
+
+
 export type RentmanPlanningSubproject = {
   id: number;
   name?: string;
