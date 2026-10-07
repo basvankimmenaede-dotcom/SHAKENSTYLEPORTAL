@@ -94,6 +94,25 @@ function transportLabel(value: string | null) {
   return value.replaceAll('_', ' ');
 }
 
+function transportDirections(value: string | null | undefined) {
+  if (!value) return { outbound: true, returnTrip: true };
+  const normalized = value.toLowerCase().trim();
+
+  if (normalized === 'no_transport' || normalized === 'no transport') {
+    return { outbound: false, returnTrip: false };
+  }
+
+  const returnOnly = /(only.*back|return_only|only_return|terug|inbound)/.test(normalized)
+    && !/(round|both|outbound|heen|there|to_location)/.test(normalized);
+  if (returnOnly) return { outbound: false, returnTrip: true };
+
+  const outboundOnly = /(only.*there|outbound_only|only_outbound|heen|there|to_location)/.test(normalized)
+    && !/(round|both|return|terug|inbound)/.test(normalized);
+  if (outboundOnly) return { outbound: true, returnTrip: false };
+
+  return { outbound: true, returnTrip: true };
+}
+
 function totalStops(owners: LogisticsOwner[]) {
   return owners.reduce((sum, owner) => sum + owner.stops.length, 0);
 }
