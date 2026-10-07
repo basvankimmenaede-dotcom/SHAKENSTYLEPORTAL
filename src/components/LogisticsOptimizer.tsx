@@ -675,8 +675,6 @@ export default function LogisticsOptimizer({
                     </div>
                   ) : null}
 
-                    </div>
-                  ) : null}
                 </div>
               );
             })}
