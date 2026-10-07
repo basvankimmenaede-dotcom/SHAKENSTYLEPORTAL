@@ -334,7 +334,16 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
             });
 
             const legs: LogisticsRouteLegAnalysis[] = waypointStops.map((stop, stopIndex) => {
-              const inbound = googleLegs.find((leg) => leg.toNode?.kind === 'stop' && leg.toNode.stopIndex === stopIndex);
+              const inbound = googleLegs.find((leg: {
+                fromNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
+                toNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
+                fromLabel: string;
+                toLabel: string;
+                distanceKm: number;
+                durationMinutes: number;
+                slackMinutes: number | null;
+                status: LogisticsRouteLegAnalysis['status'];
+              }) => leg.toNode?.kind === 'stop' && leg.toNode.stopIndex === stopIndex);
               if (inbound) {
                 return {
                   index: stopIndex,
@@ -360,7 +369,16 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
               };
             });
 
-            const returnLeg = googleLegs.find((leg) => leg.toNode?.kind === 'warehouse');
+            const returnLeg = googleLegs.find((leg: {
+              fromNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
+              toNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
+              fromLabel: string;
+              toLabel: string;
+              distanceKm: number;
+              durationMinutes: number;
+              slackMinutes: number | null;
+              status: LogisticsRouteLegAnalysis['status'];
+            }) => leg.toNode?.kind === 'warehouse');
             legs.push(returnLeg ? {
               index: waypointStops.length,
               fromLabel: returnLeg.fromLabel,
