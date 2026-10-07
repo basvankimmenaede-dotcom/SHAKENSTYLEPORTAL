@@ -6352,3 +6352,101 @@ table td{font-size:12px}
 @media(max-width:1100px){.recurringSettingForm{grid-template-columns:1fr 1fr}.recurringSettingActions{grid-column:1/-1}.checklistStatsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.settingsWorkspace{grid-template-columns:1fr}.settingsLocalNav{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}.settingsLocalNavTitle{grid-column:1/-1}.checklistWorkspace,.closingManageWorkspace{grid-template-columns:1fr}}
 @media(max-width:620px){.recurringSettingForm,.checklistStatsGrid,.checklistStatsBreakdown{grid-template-columns:1fr}.settingsInlineLinks>a{grid-template-columns:1fr}.uiToast{left:14px;right:14px;top:14px;min-width:0}}
+
+
+/* Compact grouped sidebar navigation */
+.uiSidebarNav {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.18) transparent;
+}
+.uiSidebarNav::-webkit-scrollbar { width: 5px; }
+.uiSidebarNav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+}
+.uiSidebarLink {
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+.uiSidebarIcon {
+  width: 20px;
+  display: inline-grid;
+  place-items: center;
+}
+.uiSidebarGroup {
+  border-radius: 11px;
+}
+.uiSidebarGroup > summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 11px;
+  border-radius: 11px;
+  color: rgba(255,255,255,.78);
+  cursor: pointer;
+  list-style: none;
+  font-size: 11px;
+  font-weight: 800;
+}
+.uiSidebarGroup > summary::-webkit-details-marker { display: none; }
+.uiSidebarGroup > summary > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.uiSidebarGroup > summary:hover,
+.uiSidebarGroup[open] > summary {
+  color: #fff;
+  background: rgba(255,255,255,.045);
+}
+.uiSidebarGroup > summary > svg {
+  transition: transform .15s ease;
+}
+.uiSidebarGroup[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.uiSidebarGroupItems {
+  display: grid;
+  gap: 2px;
+  padding: 4px 0 6px 10px;
+}
+.uiSidebarGroupItems .uiSidebarLink {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 10px;
+}
+.uiSidebarGroupItems .uiSidebarLink.active {
+  box-shadow: inset 2px 0 0 var(--ui-accent);
+}
+@media (max-height: 780px) {
+  .uiSidebar {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+  .uiSidebarBrand {
+    min-height: 46px;
+    padding-bottom: 12px;
+  }
+  .uiSidebarNav {
+    padding-top: 10px;
+  }
+  .uiSidebarLink {
+    min-height: 36px;
+  }
+  .uiSidebarFooter {
+    gap: 6px;
+    padding-top: 9px;
+  }
+  .uiSidebarAccount {
+    padding: 5px 7px;
+  }
+  .uiSidebarFooter .ghostButton {
+    min-height: 32px;
+  }
+}
