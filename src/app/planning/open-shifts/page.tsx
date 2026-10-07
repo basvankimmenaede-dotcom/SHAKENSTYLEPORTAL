@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import OpenShiftsExport, { type BartenderExportRow } from '@/components/OpenShiftsExport';
+import OpenShiftsTable, { type OpenShiftTableRow } from '@/components/OpenShiftsTable';
 import { requirePlanningUser } from '@/lib/auth';
 import {
   getPlanningCrewAssignmentsForRange,
@@ -167,7 +168,7 @@ export default async function OpenShiftsPage({
   });
 
   const bartenderRows: BartenderExportRow[] = filteredRows
-    .filter((row) => /bartender/i.test(row.name) && row.open > 0)
+    .filter((row) => /bartender/i.test(`${row.name} ${row.groupName}`) && row.open > 0)
     .map((row) => ({
       projectNumber: String(row.project?.number ?? row.project?.id ?? ''),
       projectName: row.project?.name ?? '',
@@ -249,45 +250,23 @@ export default async function OpenShiftsPage({
           <span>{periodLabel}</span>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table>
-            <thead>
-              <tr>
-                <th>Project</th>
-                <th>Functiegroep</th>
-                <th>Functie</th>
-                <th>Datum</th>
-                <th>Tijd</th>
-                <th>Nodig</th>
-                <th>Gepland</th>
-                <th>Open</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.length ? filteredRows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <strong>#{row.project?.number ?? row.projectId} · {row.project?.name}</strong>
-                    <small>{contactName(row.project?.location)}{projectCity(row.project) ? `, ${projectCity(row.project)}` : ''}</small>
-                  </td>
-                  <td>{row.groupName}</td>
-                  <td>{row.name}</td>
-                  <td>{formatDate(row.start as string)}</td>
-                  <td>{formatTime(row.start as string)}–{formatTime(row.end as string)}</td>
-                  <td>{row.needed}</td>
-                  <td>{row.planned}</td>
-                  <td className={row.open ? styles.openCount : undefined}>{row.open}</td>
-                  <td><span className={`${styles.badge} ${styles[row.status]}`}>{statusLabel(row.status)}</span></td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={9} className={styles.empty}>Geen shifts gevonden binnen deze selectie.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <OpenShiftsTable
+          rows={filteredRows.map((row): OpenShiftTableRow => ({
+            id: row.id,
+            projectNumber: String(row.project?.number ?? row.projectId ?? ''),
+            projectName: row.project?.name ?? '',
+            location: contactName(row.project?.location),
+            city: projectCity(row.project),
+            functionGroup: row.groupName,
+            functionName: row.name,
+            dateLabel: formatDate(row.start as string),
+            timeLabel: `${formatTime(row.start as string)}–${formatTime(row.end as string)}`,
+            needed: row.needed,
+            planned: row.planned,
+            open: row.open,
+            status: row.status,
+          }))}
+        />
       </section>
 
       <section className={styles.exportHint}>

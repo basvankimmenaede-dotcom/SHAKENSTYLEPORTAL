@@ -49,9 +49,36 @@ export default function OpenShiftsExport({
 
   async function copyText() {
     if (!text) return;
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    }
   }
 
   function downloadCsv() {
@@ -73,16 +100,19 @@ export default function OpenShiftsExport({
     const a = document.createElement('a');
     a.href = url;
     a.download = `bartender-shifts-${rows[0]?.dateKey ?? 'export'}.csv`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <button className="button orange" type="button" onClick={copyText} disabled={!rows.length}>
+      <button className="button orange" type="button" onClick={copyText} disabled={!rows.length} title={!rows.length ? 'Geen open bartender-shifts binnen de huidige selectie.' : undefined}>
         {copied ? 'Gekopieerd' : 'Kopieer bartender-uitvraag'}
       </button>
-      <button className="button secondary" type="button" onClick={downloadCsv} disabled={!rows.length}>
+      <button className="button secondary" type="button" onClick={downloadCsv} disabled={!rows.length} title={!rows.length ? 'Geen open bartender-shifts binnen de huidige selectie.' : undefined}>
         CSV downloaden
       </button>
     </div>
