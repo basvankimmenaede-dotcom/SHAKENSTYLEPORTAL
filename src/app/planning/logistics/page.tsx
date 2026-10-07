@@ -5,7 +5,6 @@ import LogisticsOptimizer, {
 } from '@/components/LogisticsOptimizer';
 import { requirePlanningUser } from '@/lib/auth';
 import {
-  getPlanningProjectPeriod,
   getPlanningProjects,
   getPlanningProjectVehicles,
   getPlanningVehicles,
@@ -155,10 +154,14 @@ function buildSuggestions(
     const sourceCandidate = cityStopList
       .map((stop) => ({ stop, route: vehiclesById.get(stop.vehicleId) }))
       .filter((item): item is { stop: LogisticsStop; route: LogisticsVehicle } => Boolean(item.route))
-      .find((item) => item.route.stops.length === 1);
+      .find((item) => item.route.stops.length === 1 && !/eigen vervoer/i.test(item.route.name));
 
     if (sourceCandidate) {
-      const targetStop = cityStopList.find((stop) => stop.vehicleId !== sourceCandidate.stop.vehicleId);
+      const targetStop = cityStopList.find((stop) => {
+        if (stop.vehicleId === sourceCandidate.stop.vehicleId) return false;
+        const route = vehiclesById.get(stop.vehicleId);
+        return Boolean(route && !/eigen vervoer/i.test(route.name));
+      });
       const targetVehicle = targetStop ? vehiclesById.get(targetStop.vehicleId) : null;
       if (targetVehicle) {
         const stop = sourceCandidate.stop;
