@@ -15,6 +15,8 @@ export type LogisticsRouteLegAnalysis = {
   durationMinutes: number;
   slackMinutes: number | null;
   status: 'good' | 'tight' | 'conflict' | 'travel';
+  skipped?: boolean;
+  note?: string;
 };
 
 export type LogisticsRouteAnalysis = {
@@ -115,6 +117,25 @@ function formatDuration(minutes: number) {
   return rest ? `${hours}u ${rest}m` : `${hours}u`;
 }
 
+function transportDirections(value: string | null | undefined) {
+  if (!value) return { outbound: true, returnTrip: true };
+  const normalized = value.toLowerCase().trim();
+
+  if (normalized === 'no_transport' || normalized === 'no transport') {
+    return { outbound: false, returnTrip: false };
+  }
+
+  const returnOnly = /(only.*back|return_only|only_return|terug|inbound)/.test(normalized)
+    && !/(round|both|outbound|heen|there|to_location)/.test(normalized);
+  if (returnOnly) return { outbound: false, returnTrip: true };
+
+  const outboundOnly = /(only.*there|outbound_only|only_outbound|heen|there|to_location)/.test(normalized)
+    && !/(round|both|return|terug|inbound)/.test(normalized);
+  if (outboundOnly) return { outbound: true, returnTrip: false };
+
+  return { outbound: true, returnTrip: true };
+}
+
 export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysisChange }: Props) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -170,19 +191,61 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
           const waypointStops = owner.stops.filter(
             (stop) => stop.address || stop.locationName || stop.city,
           );
-          const waypoints = waypointStops
-            .map((stop) => stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '))
-            .filter(Boolean);
+          const stopLocations = waypointStops.map(
+            (stop) => stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '),
+          );
 
-          if (!waypoints.length) continue;
+          if (!stopLocations.length) continue;
+
+          const firstTransport = transportDirections(waypointStops[0]?.transport);
+          const lastTransport = transportDirections(waypointStops[waypointStops.length - 1]?.transport);
+          const startAtWarehouse = firstTransport.outbound;
+          const endAtWarehouse = lastTransport.returnTrip;
+
+          const routeNodes = [
+            ...(startAtWarehouse ? [{ kind: 'warehouse' as const, location: baseAddress }] : []),
+            ...waypointStops.map((stop, index) => ({
+              kind: 'stop' as const,
+              stop,
+              stopIndex: index,
+              location: stopLocations[index],
+            })),
+            ...(endAtWarehouse ? [{ kind: 'warehouse' as const, location: baseAddress }] : []),
+          ];
+
+          if (routeNodes.length < 2) {
+            routeSummaries.push({
+              id: owner.id,
+              ownerId: owner.id,
+              name: owner.name,
+              ownerName: owner.name,
+              color: ROUTE_COLORS[ownerIndex % ROUTE_COLORS.length],
+              distanceKm: 0,
+              durationMinutes: 0,
+              legs: [{
+                index: 0,
+                fromLabel: 'Geen heenreis',
+                toLabel: `#${waypointStops[0].projectNumber} · ${waypointStops[0].city || waypointStops[0].locationName}`,
+                distanceKm: 0,
+                durationMinutes: 0,
+                slackMinutes: null,
+                status: 'travel',
+                skipped: true,
+                note: 'Geen transport ingesteld in Rentman',
+              }],
+              conflictCount: 0,
+              tightCount: 0,
+            });
+            continue;
+          }
 
           const color = ROUTE_COLORS[ownerIndex % ROUTE_COLORS.length];
 
           try {
             const request: any = {
-              origin: baseAddress,
-              destination: baseAddress,
-              intermediates: waypoints.map((location) => ({ location })),
+              origin: routeNodes[0].location,
+              destination: routeNodes[routeNodes.length - 1].location,
+              intermediates: routeNodes.slice(1, -1).map((node) => ({ location: node.location })),
               travelMode: 'DRIVING',
               optimizeWaypointOrder: false,
               routingPreference: 'TRAFFIC_AWARE',
@@ -237,9 +300,11 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
             (route.path || []).forEach((point: any) => bounds.extend(point));
 
             const routeLegs = Array.isArray(route.legs) ? route.legs : [];
-            const legs: LogisticsRouteLegAnalysis[] = routeLegs.map((leg: any, legIndex: number) => {
-              const fromStop = legIndex === 0 ? null : waypointStops[legIndex - 1] ?? null;
-              const toStop = legIndex < waypointStops.length ? waypointStops[legIndex] ?? null : null;
+            const googleLegs = routeLegs.map((leg: any, legIndex: number) => {
+              const fromNode = routeNodes[legIndex];
+              const toNode = routeNodes[legIndex + 1];
+              const fromStop = fromNode?.kind === 'stop' ? fromNode.stop : null;
+              const toStop = toNode?.kind === 'stop' ? toNode.stop : null;
               const durationMinutes = Number(leg?.durationMillis || 0) / 60000;
               const distanceKm = Number(leg?.distanceMeters || 0) / 1000;
 
@@ -257,6 +322,8 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
 
               return {
                 index: legIndex,
+                fromNode,
+                toNode,
                 fromLabel: fromStop ? `#${fromStop.projectNumber} · ${fromStop.city || fromStop.locationName}` : 'Magazijn',
                 toLabel: toStop ? `#${toStop.projectNumber} · ${toStop.city || toStop.locationName}` : 'Magazijn',
                 distanceKm,
@@ -264,6 +331,54 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
                 slackMinutes,
                 status,
               };
+            });
+
+            const legs: LogisticsRouteLegAnalysis[] = waypointStops.map((stop, stopIndex) => {
+              const inbound = googleLegs.find((leg) => leg.toNode?.kind === 'stop' && leg.toNode.stopIndex === stopIndex);
+              if (inbound) {
+                return {
+                  index: stopIndex,
+                  fromLabel: inbound.fromLabel,
+                  toLabel: inbound.toLabel,
+                  distanceKm: inbound.distanceKm,
+                  durationMinutes: inbound.durationMinutes,
+                  slackMinutes: inbound.slackMinutes,
+                  status: inbound.status,
+                };
+              }
+
+              return {
+                index: stopIndex,
+                fromLabel: stopIndex === 0 ? 'Geen heenreis' : 'Vorige locatie',
+                toLabel: `#${stop.projectNumber} · ${stop.city || stop.locationName}`,
+                distanceKm: 0,
+                durationMinutes: 0,
+                slackMinutes: null,
+                status: 'travel',
+                skipped: true,
+                note: 'Geen heenreis ingesteld in Rentman',
+              };
+            });
+
+            const returnLeg = googleLegs.find((leg) => leg.toNode?.kind === 'warehouse');
+            legs.push(returnLeg ? {
+              index: waypointStops.length,
+              fromLabel: returnLeg.fromLabel,
+              toLabel: 'Magazijn',
+              distanceKm: returnLeg.distanceKm,
+              durationMinutes: returnLeg.durationMinutes,
+              slackMinutes: null,
+              status: 'travel',
+            } : {
+              index: waypointStops.length,
+              fromLabel: `#${waypointStops[waypointStops.length - 1].projectNumber} · ${waypointStops[waypointStops.length - 1].city || waypointStops[waypointStops.length - 1].locationName}`,
+              toLabel: 'Geen terugreis',
+              distanceKm: 0,
+              durationMinutes: 0,
+              slackMinutes: null,
+              status: 'travel',
+              skipped: true,
+              note: 'Geen terugreis ingesteld in Rentman',
             });
 
             routeSummaries.push({
