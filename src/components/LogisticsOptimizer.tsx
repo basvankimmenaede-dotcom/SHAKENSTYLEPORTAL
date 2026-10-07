@@ -113,6 +113,45 @@ function transportDirections(value: string | null | undefined) {
   return { outbound: true, returnTrip: true };
 }
 
+type LogisticsTrip = {
+  index: number;
+  startStopIndex: number;
+  endStopIndex: number;
+  stops: LogisticsStop[];
+};
+
+function buildTrips(owner: LogisticsOwner): LogisticsTrip[] {
+  const trips: LogisticsTrip[] = [];
+  let startStopIndex = 0;
+  let current: LogisticsStop[] = [];
+
+  owner.stops.forEach((stop, stopIndex) => {
+    if (!current.length) startStopIndex = stopIndex;
+    current.push(stop);
+
+    if (transportDirections(stop.transport).returnTrip) {
+      trips.push({
+        index: trips.length,
+        startStopIndex,
+        endStopIndex: stopIndex,
+        stops: current,
+      });
+      current = [];
+    }
+  });
+
+  if (current.length) {
+    trips.push({
+      index: trips.length,
+      startStopIndex,
+      endStopIndex: owner.stops.length - 1,
+      stops: current,
+    });
+  }
+
+  return trips;
+}
+
 function totalStops(owners: LogisticsOwner[]) {
   return owners.reduce((sum, owner) => sum + owner.stops.length, 0);
 }
@@ -198,19 +237,100 @@ export default function LogisticsOptimizer({
     return end.toISOString();
   }
 
-  function googleMapsLegUrl(origin: string, destination: string) {
+  function tripStartTime(trip: LogisticsTrip, analysis?: LogisticsRouteAnalysis) {
+    const firstStop = trip.stops[0];
+    const leg = analysis?.legs[trip.startStopIndex];
+    if (!firstStop?.start || !leg || leg.skipped) return null;
+    const duration = leg.viaWarehouse?.outboundDurationMinutes ?? leg.durationMinutes;
+    return addMinutesToTime(firstStop.start, -duration);
+  }
+
+  function tripEndTime(trip: LogisticsTrip, owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
+    const lastStop = trip.stops[trip.stops.length - 1];
+    if (!lastStop?.end) return null;
+
+    let duration: number | null = null;
+    if (trip.endStopIndex === owner.stops.length - 1) {
+      const returnLeg = analysis?.legs[owner.stops.length];
+      if (returnLeg && !returnLeg.skipped) duration = returnLeg.durationMinutes;
+    } else {
+      duration = analysis?.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDurationMinutes ?? null;
+    }
+
+    return duration === null ? null : addMinutesToTime(lastStop.end, duration);
+  }
+
+  function tripDistanceKm(trip: LogisticsTrip, owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
+    if (!analysis) return 0;
+    let total = 0;
+
+    trip.stops.forEach((_, localIndex) => {
+      const stopIndex = trip.startStopIndex + localIndex;
+      const leg = analysis.legs[stopIndex];
+      if (!leg || leg.skipped) return;
+      total += leg.viaWarehouse?.outboundDistanceKm ?? leg.distanceKm;
+    });
+
+    if (trip.endStopIndex === owner.stops.length - 1) {
+      const returnLeg = analysis.legs[owner.stops.length];
+      if (returnLeg && !returnLeg.skipped) total += returnLeg.distanceKm;
+    } else {
+      total += analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDistanceKm ?? 0;
+    }
+
+    return total;
+  }
+
+  function tripTravelMinutes(trip: LogisticsTrip, owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
+    if (!analysis) return 0;
+    let total = 0;
+
+    trip.stops.forEach((_, localIndex) => {
+      const stopIndex = trip.startStopIndex + localIndex;
+      const leg = analysis.legs[stopIndex];
+      if (!leg || leg.skipped) return;
+      total += leg.viaWarehouse?.outboundDurationMinutes ?? leg.durationMinutes;
+    });
+
+    if (trip.endStopIndex === owner.stops.length - 1) {
+      const returnLeg = analysis.legs[owner.stops.length];
+      if (returnLeg && !returnLeg.skipped) total += returnLeg.durationMinutes;
+    } else {
+      total += analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDurationMinutes ?? 0;
+    }
+
+    return total;
+  }
+
+  function googleMapsTripUrl(trip: LogisticsTrip) {
+    if (!trip.stops.length) return '';
+    const locations = trip.stops.map((stop) =>
+      stop.address || [stop.locationName, stop.city].filter(Boolean).join(', ')
+    ).filter(Boolean);
+    if (!locations.length) return '';
+
+    const firstTransport = transportDirections(trip.stops[0].transport);
+    const lastTransport = transportDirections(trip.stops[trip.stops.length - 1].transport);
+    const origin = firstTransport.outbound ? logisticsBaseAddress : locations[0];
+    const destination = lastTransport.returnTrip ? logisticsBaseAddress : locations[locations.length - 1];
+    const waypointStart = firstTransport.outbound ? 0 : 1;
+    const waypointEnd = lastTransport.returnTrip ? locations.length : Math.max(1, locations.length - 1);
+    const waypoints = locations.slice(waypointStart, waypointEnd);
+
     const params = new URLSearchParams({
       api: '1',
       origin,
       destination,
       travelmode: 'driving',
     });
+    if (waypoints.length) params.set('waypoints', waypoints.join('|'));
     return `https://www.google.com/maps/dir/?${params.toString()}`;
   }
 
-  function whatsappRouteUrl(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
-    const routeStart = routeStartTime(owner, analysis);
-    const routeEnd = routeEndTime(owner, analysis);
+  function whatsappTripUrl(owner: LogisticsOwner, trip: LogisticsTrip, analysis?: LogisticsRouteAnalysis) {
+    const mapsUrl = googleMapsTripUrl(trip);
+    const startTime = tripStartTime(trip, analysis);
+    const endTime = tripEndTime(trip, owner, analysis);
     const dayLabel = new Intl.DateTimeFormat('nl-NL', {
       timeZone: 'Europe/Amsterdam',
       weekday: 'long',
@@ -219,75 +339,29 @@ export default function LogisticsOptimizer({
       year: 'numeric',
     }).format(new Date(`${selectedDate}T12:00:00+02:00`));
 
-    const lines: Array<string | null> = [
-      `*Routes ${dayLabel} – ${owner.name}*`,
+    const lines: string[] = [
+      `*Rit ${trip.index + 1} · ${dayLabel} – ${owner.name}*`,
       '',
     ];
+    if (startTime) lines.push(`Vertrek SHAKENSTYLE: ${formatTime(startTime)}`, '');
 
-    owner.stops.forEach((stop, index) => {
-      const stopLocation = stop.address || [stop.locationName, stop.city].filter(Boolean).join(', ');
-      const transport = transportDirections(stop.transport);
-      const leg = analysis?.legs[index];
-      const previousStop = index > 0 ? owner.stops[index - 1] : null;
-
-      let origin = index === 0
-        ? (transport.outbound ? logisticsBaseAddress : stopLocation)
-        : (leg?.viaWarehouse ? logisticsBaseAddress : (
-          previousStop?.address || [previousStop?.locationName, previousStop?.city].filter(Boolean).join(', ')
-        ));
-      if (!origin) origin = logisticsBaseAddress;
-
-      let destination = stopLocation;
-      if (!destination) destination = logisticsBaseAddress;
-
-      const outboundUrl = transport.outbound
-        ? googleMapsLegUrl(origin, destination)
-        : '';
-
-      const returnUrl = transport.returnTrip
-        ? googleMapsLegUrl(destination, logisticsBaseAddress)
-        : '';
-
-      const outboundDeparture = index === 0
-        ? routeStart
-        : leg?.viaWarehouse
-          ? addMinutesToTime(stop.start, -leg.viaWarehouse.outboundDurationMinutes)
-          : null;
-
+    trip.stops.forEach((stop, index) => {
       lines.push(
         `*${index + 1}. #${stop.projectNumber} – ${stop.projectName}*`,
         `${formatTime(stop.start)}–${formatTime(stop.end)}`,
-        stopLocation,
+        stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '),
+        '',
       );
-
-      if (transport.outbound && outboundUrl) {
-        lines.push(
-          outboundDeparture ? `Heen · vertrek ${formatTime(outboundDeparture)}` : 'Heen',
-          outboundUrl,
-        );
-      }
-
-      if (transport.returnTrip && returnUrl) {
-        const returnDuration = index === owner.stops.length - 1
-          ? analysis?.legs[owner.stops.length]?.durationMinutes
-          : analysis?.legs[index + 1]?.viaWarehouse?.returnDurationMinutes;
-        const expectedArrival = returnDuration
-          ? addMinutesToTime(stop.end, returnDuration)
-          : null;
-        lines.push(
-          expectedArrival ? `Terug naar SHAKENSTYLE · verwacht ${formatTime(expectedArrival)}` : 'Terug naar SHAKENSTYLE',
-          returnUrl,
-        );
-      }
-
-      lines.push('');
     });
 
-    if (routeEnd) lines.push(`Einde dagroute: ${formatTime(routeEnd)}`);
-    if (analysis) lines.push(`Totaal: ${Math.round(analysis.distanceKm)} km · ca. ${formatTravel(analysis.durationMinutes)} reistijd`);
+    if (endTime) lines.push(`Verwacht terug SHAKENSTYLE: ${formatTime(endTime)}`);
+    if (analysis) {
+      lines.push(`Rit: ${Math.round(tripDistanceKm(trip, owner, analysis))} km · ca. ${formatTravel(tripTravelMinutes(trip, owner, analysis))} reistijd`);
+    }
     if (owner.fuelCardRequired) lines.push('⛽ Tankpas meenemen');
+    if (mapsUrl) lines.push('', '*Google Maps route:*', mapsUrl);
 
-    return `https://wa.me/?text=${encodeURIComponent(lines.filter((line): line is string => Boolean(line)).join('\n'))}`;
+    return `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`;
   }
 
   function approveSuggestion(id: string) {
@@ -461,124 +535,148 @@ export default function LogisticsOptimizer({
                     <span>{owner.stops.length} stops</span>
                   </div>
 
-                  <div className="timelineStart">
-                    <span className="timelineDot warehouse" />
-                    <div>
-                      <strong>Magazijn</strong>
-                      <small>{routeStartTime(owner, analysis) ? `${formatTime(routeStartTime(owner, analysis))} · Start van de dagroute` : 'Start van de dagroute'}</small>
-                    </div>
-                  </div>
+                  <div className="tripList">
+                    {buildTrips(owner).map((trip) => {
+                      const tripStart = tripStartTime(trip, analysis);
+                      const tripEnd = tripEndTime(trip, owner, analysis);
+                      const firstLeg = analysis?.legs[trip.startStopIndex];
+                      const tripConflict = trip.stops.some((_, localIndex) => {
+                        const leg = analysis?.legs[trip.startStopIndex + localIndex];
+                        return leg?.status === 'conflict';
+                      });
+                      const tripTight = !tripConflict && trip.stops.some((_, localIndex) => {
+                        const leg = analysis?.legs[trip.startStopIndex + localIndex];
+                        return leg?.status === 'tight';
+                      });
 
-                  {owner.stops.map((stop, stopIndex) => {
-                    const leg = analysis?.legs[stopIndex];
-                    const previousStop = stopIndex > 0 ? owner.stops[stopIndex - 1] : null;
-                    const warehouseArrival = leg?.viaWarehouse && previousStop
-                      ? addMinutesToTime(previousStop.end, leg.viaWarehouse.returnDurationMinutes)
-                      : null;
-                    const warehouseDeparture = leg?.viaWarehouse
-                      ? addMinutesToTime(stop.start, -leg.viaWarehouse.outboundDurationMinutes)
-                      : null;
+                      return (
+                        <section className="tripCard" key={`${owner.id}-trip-${trip.index}`}>
+                          <div className="tripHeader">
+                            <div>
+                              <strong>Rit {trip.index + 1}</strong>
+                              <small>
+                                {tripStart ? formatTime(tripStart) : '—'}–{tripEnd ? formatTime(tripEnd) : '—'}
+                                {' · '}{trip.stops.length} stop{trip.stops.length === 1 ? '' : 's'}
+                              </small>
+                            </div>
+                            {tripConflict ? <b className="timelineBadge conflict">Conflict</b>
+                              : tripTight ? <b className="timelineBadge tight">Krap</b>
+                                : analysis ? <b className="timelineBadge good">Haalbaar</b> : null}
+                          </div>
 
-                    return (
-                      <div className="timelineSegment" key={`${owner.id}-${stop.id}-${stop.projectId}`}>
-                        {leg?.viaWarehouse ? (
-                          <>
-                            <div className="travelLeg return">
-                              <span className="travelLine" />
-                              <div>
-                                <strong>{formatTravel(leg.viaWarehouse.returnDurationMinutes)} · {Math.round(leg.viaWarehouse.returnDistanceKm)} km</strong>
-                                <small>Terug naar magazijn</small>
-                              </div>
+                          <div className="timelineStart">
+                            <span className="timelineDot warehouse" />
+                            <div>
+                              <strong>Magazijn</strong>
+                              <small>{tripStart ? `${formatTime(tripStart)} · Vertrek` : 'Start rit'}</small>
                             </div>
-                            <div className="timelineMiddleWarehouse">
-                              <span className="timelineDot warehouse" />
-                              <div>
-                                <strong>Magazijn</strong>
-                                <small>
-                                  {warehouseArrival && warehouseDeparture
-                                    ? `${formatTime(warehouseArrival)} aankomst · ${formatTime(warehouseDeparture)} vertrek`
-                                    : 'Terug naar zaak · daarna opnieuw vertrekken'}
-                                </small>
+                          </div>
+
+                          {trip.stops.map((stop, localIndex) => {
+                            const stopIndex = trip.startStopIndex + localIndex;
+                            const leg = analysis?.legs[stopIndex];
+                            const outboundDuration = leg?.viaWarehouse?.outboundDurationMinutes ?? leg?.durationMinutes;
+                            const outboundDistance = leg?.viaWarehouse?.outboundDistanceKm ?? leg?.distanceKm;
+
+                            return (
+                              <div className="timelineSegment" key={`${owner.id}-trip-${trip.index}-${stop.id}-${stop.projectId}`}>
+                                <div className={`travelLeg ${leg?.status || 'travel'}`}>
+                                  <span className="travelLine" />
+                                  <div>
+                                    <strong>{leg?.skipped
+                                      ? (leg.note || 'Geen transport in Rentman')
+                                      : outboundDuration !== undefined && outboundDistance !== undefined
+                                        ? `${formatTravel(outboundDuration)} · ${Math.round(outboundDistance)} km`
+                                        : 'Route berekenen…'}</strong>
+                                    {!leg?.skipped && leg?.slackMinutes !== null && leg?.slackMinutes !== undefined && localIndex > 0 ? (
+                                      <small>{leg.slackMinutes < 0
+                                        ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
+                                        : leg.slackMinutes < 10
+                                          ? `${Math.round(leg.slackMinutes)} min marge · krap`
+                                          : `${Math.round(leg.slackMinutes)} min marge`}</small>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                <div className="timelineStop">
+                                  <span className="timelineDot">{localIndex + 1}</span>
+                                  <div>
+                                    <strong>#{stop.projectNumber} · {stop.projectName}</strong>
+                                    <span>{formatTime(stop.start)}–{formatTime(stop.end)} · {stop.city || stop.locationName}</span>
+                                    <small>
+                                      {stop.subprojectName ? `${stop.subprojectName} · ` : ''}
+                                      {stop.groupName !== '—' ? `${stop.groupName} · ` : ''}{stop.functionName}
+                                      {viewMode === 'person' && stop.transport ? ` · ${transportLabel(stop.transport)}` : ''}
+                                    </small>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            <div className={`travelLeg ${leg.status || 'travel'}`}>
-                              <span className="travelLine" />
-                              <div>
-                                <strong>{formatTravel(leg.viaWarehouse.outboundDurationMinutes)} · {Math.round(leg.viaWarehouse.outboundDistanceKm)} km</strong>
-                                {leg.slackMinutes !== null && leg.slackMinutes !== undefined ? (
-                                  <small>
-                                    {leg.slackMinutes < 0
-                                      ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
-                                      : leg.slackMinutes < 10
-                                        ? `${Math.round(leg.slackMinutes)} min marge · krap`
-                                        : `${Math.round(leg.slackMinutes)} min marge`}
-                                  </small>
-                                ) : null}
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <div className={`travelLeg ${leg?.status || 'travel'}`}>
+                            );
+                          })}
+
+                          <div className="travelLeg return">
                             <span className="travelLine" />
                             <div>
-                              <strong>{leg?.skipped ? (leg.note || 'Geen transport in Rentman') : leg ? `${formatTravel(leg.durationMinutes)} · ${Math.round(leg.distanceKm)} km` : 'Route berekenen…'}</strong>
-                              {!leg?.skipped && leg?.slackMinutes !== null && leg?.slackMinutes !== undefined ? (
-                                <small>
-                                  {leg.slackMinutes < 0
-                                    ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
-                                    : leg.slackMinutes < 10
-                                      ? `${Math.round(leg.slackMinutes)} min marge · krap`
-                                      : `${Math.round(leg.slackMinutes)} min marge`}
-                                </small>
-                              ) : null}
+                              <strong>{analysis
+                                ? `${formatTravel(
+                                    trip.endStopIndex === owner.stops.length - 1
+                                      ? (analysis.legs[owner.stops.length]?.durationMinutes ?? 0)
+                                      : (analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDurationMinutes ?? 0)
+                                  )} · ${Math.round(
+                                    trip.endStopIndex === owner.stops.length - 1
+                                      ? (analysis.legs[owner.stops.length]?.distanceKm ?? 0)
+                                      : (analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDistanceKm ?? 0)
+                                  )} km`
+                                : 'Route berekenen…'}</strong>
+                              <small>Terug naar magazijn</small>
                             </div>
                           </div>
-                        )}
-                        <div className="timelineStop">
-                          <span className="timelineDot">{stopIndex + 1}</span>
-                          <div>
-                            <strong>#{stop.projectNumber} · {stop.projectName}</strong>
-                            <span>{formatTime(stop.start)}–{formatTime(stop.end)} · {stop.city || stop.locationName}</span>
-                            <small>
-                              {stop.subprojectName ? `${stop.subprojectName} · ` : ''}
-                              {stop.groupName !== '—' ? `${stop.groupName} · ` : ''}{stop.functionName}
-                              {viewMode === 'person' && stop.transport ? ` · ${transportLabel(stop.transport)}` : ''}
-                            </small>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
 
-                  {analysis?.legs[owner.stops.length] ? (
-                    <div className="travelLeg return">
-                      <span className="travelLine" />
-                      <div>
-                        <strong>{analysis.legs[owner.stops.length].skipped
-                          ? (analysis.legs[owner.stops.length].note || 'Geen terugreis in Rentman')
-                          : `${formatTravel(analysis.legs[owner.stops.length].durationMinutes)} · ${Math.round(analysis.legs[owner.stops.length].distanceKm)} km`}</strong>
-                        <small>{analysis.legs[owner.stops.length].skipped ? 'Rentman transportinstelling' : 'Terug naar magazijn'}</small>
+                          <div className="timelineEnd">
+                            <span className="timelineDot warehouse" />
+                            <div>
+                              <strong>Magazijn</strong>
+                              <small>{tripEnd ? `${formatTime(tripEnd)} · Einde rit` : 'Einde rit'}</small>
+                            </div>
+                          </div>
+
+                          <div className="tripActions">
+                            {viewMode === 'person' ? (
+                              <a
+                                className={analysis ? 'whatsappButton' : 'whatsappButton disabled'}
+                                href={analysis ? whatsappTripUrl(owner, trip, analysis) : undefined}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-disabled={!analysis}
+                                onClick={(event) => { if (!analysis) event.preventDefault(); }}
+                              >
+                                <MessageCircle size={14} />
+                                Deel rit {trip.index + 1} via WhatsApp
+                              </a>
+                            ) : null}
+                            {analysis ? (
+                              <a className="mapsButton" href={googleMapsTripUrl(trip)} target="_blank" rel="noreferrer">
+                                <Map size={14} />
+                                Open rit in Google Maps
+                              </a>
+                            ) : null}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+
+                  {owner.fuelCardRequired ? (
+                    <div className="routeFooter">
+                      <div className="routeImportantNote">
+                        <Fuel size={14} />
+                        <div>
+                          <strong>Belangrijke route-info</strong>
+                          <small>Tankpas meenemen voor deze route.</small>
+                        </div>
                       </div>
                     </div>
                   ) : null}
-                  <div className="timelineEnd">
-                    <span className="timelineDot warehouse" />
-                    <div>
-                      <strong>Magazijn</strong>
-                      <small>{routeEndTime(owner, analysis) ? `${formatTime(routeEndTime(owner, analysis))} · Einde van de dagroute` : 'Einde van de dagroute'}</small>
-                    </div>
-                  </div>
-                  {(owner.fuelCardRequired || viewMode === 'person') ? (
-                    <div className="routeFooter">
-                      {owner.fuelCardRequired ? (
-                        <div className="routeImportantNote">
-                          <Fuel size={14} />
-                          <div>
-                            <strong>Belangrijke route-info</strong>
-                            <small>Tankpas meenemen voor deze route.</small>
-                          </div>
-                        </div>
-                      ) : null}
                       {viewMode === 'person' ? (
                         <a
                           className={analysis ? 'whatsappButton' : 'whatsappButton disabled'}
@@ -777,6 +875,8 @@ export default function LogisticsOptimizer({
         .ownerStats{text-align:right}.ownerStats b{font-size:8px;white-space:nowrap}
         .routeList{display:grid;max-height:520px;overflow:auto}
         .routeGroup{border-bottom:1px solid var(--line);padding-bottom:10px}.routeGroup:last-child{border-bottom:0}
+        .tripList{display:grid;gap:10px;padding:10px}.tripCard{border:1px solid #e7e2dc;border-radius:12px;overflow:hidden;background:#fff}.tripHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;background:#fbfaf8;border-bottom:1px solid #eee9e3}.tripHeader>div{display:grid;gap:2px}.tripHeader strong{font-size:9px}.tripHeader small{font-size:8px;color:var(--muted)}.tripActions{display:grid;grid-template-columns:1fr;gap:6px;padding:8px 10px 10px}.mapsButton{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#514b45;font-size:8px;font-weight:900;text-decoration:none}.mapsButton:hover{background:#f8f6f2}
+
         .routeTitle{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:7px;padding:10px 11px;background:#f8f7f4;font-size:9px;border-bottom:1px solid #eee9e3}
         .routeTitle span{margin-left:auto;color:var(--muted)}
         .timelineBadge{padding:4px 6px;border-radius:999px;font-size:7px;white-space:nowrap}.timelineBadge.good{background:#e5f4e9;color:#2f6f44}.timelineBadge.tight{background:#fff0bd;color:#8a6500}.timelineBadge.conflict{background:#f9dfdb;color:#9e4037}
