@@ -624,6 +624,25 @@ export async function getPlanningProjectVehiclesForProject(projectId: number) {
   );
 }
 
+export type RentmanPlanningVehicle = {
+  id: number;
+  name?: string;
+  displayname?: string;
+  licenseplate?: string | null;
+  in_planner?: boolean;
+  seats?: number | null;
+  payload_capacity?: number | null;
+  distance_cost?: number | null;
+  fixed_cost?: number | null;
+};
+
+export async function getPlanningVehicles() {
+  const vehicles = await rentmanPlanningFetchAll<RentmanPlanningVehicle>(
+    '/vehicles?fields=id,name,displayname,licenseplate,in_planner,seats,payload_capacity,distance_cost,fixed_cost&sort=+name&limit=300',
+  );
+  return vehicles.filter((vehicle) => vehicle.in_planner !== false);
+}
+
 
 export type RentmanPlanningProjectFunction = {
   id: number;
