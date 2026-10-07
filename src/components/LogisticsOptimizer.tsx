@@ -17,6 +17,8 @@ export type LogisticsStop = {
   groupName: string;
   start: string | null;
   end: string | null;
+  subprojectName: string | null;
+  transport: string | null;
   locationName: string;
   address: string;
   city: string;
@@ -80,6 +82,16 @@ function formatTime(value: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function transportLabel(value: string | null) {
+  if (!value) return '';
+  const normalized = value.toLowerCase();
+  if (normalized === 'no_transport') return 'Geen transport';
+  if (/(round|both|heen.*terug|return.*out|out.*return)/.test(normalized)) return 'Heen + terug';
+  if (/(only.*back|return|terug|inbound)/.test(normalized) && !/(out|heen|there|to)/.test(normalized)) return 'Alleen terug';
+  if (/(only.*there|outbound|heen|there|to_location)/.test(normalized)) return 'Alleen heen';
+  return value.replaceAll('_', ' ');
 }
 
 function totalStops(owners: LogisticsOwner[]) {
@@ -339,7 +351,11 @@ export default function LogisticsOptimizer({
                           <div>
                             <strong>#{stop.projectNumber} · {stop.projectName}</strong>
                             <span>{formatTime(stop.start)}–{formatTime(stop.end)} · {stop.city || stop.locationName}</span>
-                            <small>{stop.groupName !== '—' ? `${stop.groupName} · ` : ''}{stop.functionName}</small>
+                            <small>
+                              {stop.subprojectName ? `${stop.subprojectName} · ` : ''}
+                              {stop.groupName !== '—' ? `${stop.groupName} · ` : ''}{stop.functionName}
+                              {viewMode === 'person' && stop.transport ? ` · ${transportLabel(stop.transport)}` : ''}
+                            </small>
                           </div>
                         </div>
                       </div>
