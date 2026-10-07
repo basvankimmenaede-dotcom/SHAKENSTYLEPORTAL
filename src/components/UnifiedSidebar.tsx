@@ -16,7 +16,7 @@ export default function UnifiedSidebar({ mode, role, userLabel, canViewPortal=fa
   const portalLabel=role==='warehouse'?'POS Portaal':'Klantenportaal';
   const internalItems:NavItem[]=[
     ...(canViewPlanning?[{href:'/planning',label:'Planning',icon:CalendarDays,match:['/planning']},
-    {href:'/planning/open-shifts',label:'Open shifts',icon:CalendarClock,match:['/planning/open-shifts']},{href:'/planning/open-shifts',label:'Open shifts',icon:CalendarClock,match:['/planning/open-shifts']}]:[]),
+    {href:'/planning/open-shifts',label:'Open shifts',icon:CalendarClock,match:['/planning/open-shifts']}]:[]),
     ...(canViewBilling?[{href:'/planning/billing',label:'Facturatie',icon:BadgeEuro,match:['/planning/billing']}]:[]),
     ...(canViewChecklists?[{href:'/planning/afsluitlijst',label:'Afsluitlijst',icon:ClipboardCheck,match:['/planning/afsluitlijst']}]:[]),
     ...(canViewPlanning?[{href:'/planning/rentman-wijzigingen',label:'Rentman wijzigingen',icon:SlidersHorizontal,match:['/planning/rentman-wijzigingen']}]:[]),
@@ -25,6 +25,7 @@ export default function UnifiedSidebar({ mode, role, userLabel, canViewPortal=fa
   const items:NavItem[]=role==='admin'?[
     {href:'/admin',label:'Dashboard',icon:Gauge,match:['/admin']},
     {href:'/planning',label:'Planning',icon:CalendarDays,match:['/planning']},
+    {href:'/planning/open-shifts',label:'Open shifts',icon:CalendarClock,match:['/planning/open-shifts']},
     {href:'/planning/billing',label:'Facturatie',icon:BadgeEuro,match:['/planning/billing']},
     {href:'/planning/afsluitlijst',label:'Afsluitlijst',icon:ClipboardCheck,match:['/planning/afsluitlijst']},
     {href:'/planning/rentman-wijzigingen',label:'Rentman wijzigingen',icon:SlidersHorizontal,match:['/planning/rentman-wijzigingen']},

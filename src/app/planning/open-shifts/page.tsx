@@ -138,6 +138,7 @@ export default async function OpenShiftsPage({
       return {
         id: item.id,
         name: item.displayname || item.name || 'Shift',
+        groupName: item.group?.displayname || item.group?.name || '—',
         projectId,
         project,
         start,
@@ -173,6 +174,7 @@ export default async function OpenShiftsPage({
       dateLabel: formatDate(row.start as string),
       dateKey: String(row.start).slice(0, 10),
       timeLabel: `${formatTime(row.start as string)}–${formatTime(row.end as string)}`,
+      functionGroup: row.groupName,
       location: contactName(row.project?.location),
       city: projectCity(row.project),
       open: row.open,
@@ -252,6 +254,7 @@ export default async function OpenShiftsPage({
             <thead>
               <tr>
                 <th>Project</th>
+                <th>Functiegroep</th>
                 <th>Functie</th>
                 <th>Datum</th>
                 <th>Tijd</th>
@@ -268,6 +271,7 @@ export default async function OpenShiftsPage({
                     <strong>#{row.project?.number ?? row.projectId} · {row.project?.name}</strong>
                     <small>{contactName(row.project?.location)}{projectCity(row.project) ? `, ${projectCity(row.project)}` : ''}</small>
                   </td>
+                  <td>{row.groupName}</td>
                   <td>{row.name}</td>
                   <td>{formatDate(row.start as string)}</td>
                   <td>{formatTime(row.start as string)}–{formatTime(row.end as string)}</td>
@@ -278,7 +282,7 @@ export default async function OpenShiftsPage({
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={8} className={styles.empty}>Geen shifts gevonden binnen deze selectie.</td>
+                  <td colSpan={9} className={styles.empty}>Geen shifts gevonden binnen deze selectie.</td>
                 </tr>
               )}
             </tbody>

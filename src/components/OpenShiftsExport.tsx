@@ -8,6 +8,7 @@ export type BartenderExportRow = {
   dateLabel: string;
   dateKey: string;
   timeLabel: string;
+  functionGroup: string;
   location: string;
   city: string;
   open: number;
@@ -40,7 +41,7 @@ export default function OpenShiftsExport({
         lines.push([row.location, row.city].filter(Boolean).join(', '));
         previousProject = projectKey;
       }
-      lines.push(`• ${row.timeLabel} · ${row.open} ${row.open === 1 ? 'plek' : 'plekken'} open`);
+      lines.push(`• ${row.timeLabel} · ${row.functionGroup} · ${row.open} ${row.open === 1 ? 'plek' : 'plekken'} open`);
     }
 
     return lines.join('\n');
@@ -55,10 +56,11 @@ export default function OpenShiftsExport({
 
   function downloadCsv() {
     if (!rows.length) return;
-    const header = ['Datum','Tijd','Projectnummer','Project','Locatie','Plaats','Open plekken'];
+    const header = ['Datum','Tijd','Functiegroep','Projectnummer','Project','Locatie','Plaats','Open plekken'];
     const body = rows.map((row) => [
       row.dateKey,
       row.timeLabel,
+      row.functionGroup,
       row.projectNumber,
       row.projectName,
       row.location,
