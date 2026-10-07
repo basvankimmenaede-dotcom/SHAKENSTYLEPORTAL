@@ -122,31 +122,42 @@ type LogisticsTrip = {
 
 function buildTrips(owner: LogisticsOwner): LogisticsTrip[] {
   const trips: LogisticsTrip[] = [];
-  let startStopIndex = 0;
   let current: LogisticsStop[] = [];
+  let startStopIndex = 0;
 
   owner.stops.forEach((stop, stopIndex) => {
-    if (!current.length) startStopIndex = stopIndex;
+    if (current.length === 0) startStopIndex = stopIndex;
     current.push(stop);
 
-    if (transportDirections(stop.transport).returnTrip) {
+    const transport = transportDirections(stop.transport);
+    if (transport.returnTrip) {
       trips.push({
         index: trips.length,
         startStopIndex,
         endStopIndex: stopIndex,
-        stops: current,
+        stops: [...current],
       });
       current = [];
     }
   });
 
-  if (current.length) {
+  if (current.length > 0) {
     trips.push({
       index: trips.length,
       startStopIndex,
       endStopIndex: owner.stops.length - 1,
-      stops: current,
+      stops: [...current],
     });
+  }
+
+  const stopCount = trips.reduce((sum, trip) => sum + trip.stops.length, 0);
+  if (stopCount !== owner.stops.length) {
+    return [{
+      index: 0,
+      startStopIndex: 0,
+      endStopIndex: owner.stops.length - 1,
+      stops: [...owner.stops],
+    }];
   }
 
   return trips;
@@ -217,25 +228,7 @@ export default function LogisticsOptimizer({
     return date.toISOString();
   }
 
-  function routeStartTime(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
-    const firstStop = owner.stops[0];
-    const firstLeg = analysis?.legs[0];
-    if (!firstStop?.start || !firstLeg || firstLeg.skipped) return null;
-    const start = new Date(firstStop.start);
-    if (Number.isNaN(start.getTime())) return null;
-    start.setMinutes(start.getMinutes() - firstLeg.durationMinutes);
-    return start.toISOString();
-  }
 
-  function routeEndTime(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
-    const lastStop = owner.stops[owner.stops.length - 1];
-    const returnLeg = analysis?.legs[owner.stops.length];
-    if (!lastStop?.end || !returnLeg || returnLeg.skipped) return null;
-    const end = new Date(lastStop.end);
-    if (Number.isNaN(end.getTime())) return null;
-    end.setMinutes(end.getMinutes() + returnLeg.durationMinutes);
-    return end.toISOString();
-  }
 
   function tripStartTime(trip: LogisticsTrip, analysis?: LogisticsRouteAnalysis) {
     const firstStop = trip.stops[0];
@@ -532,7 +525,7 @@ export default function LogisticsOptimizer({
                     {analysis?.conflictCount ? <b className="timelineBadge conflict">{analysis.conflictCount} conflict</b> : null}
                     {!analysis?.conflictCount && analysis?.tightCount ? <b className="timelineBadge tight">{analysis.tightCount} krap</b> : null}
                     {!analysis?.conflictCount && !analysis?.tightCount && analysis ? <b className="timelineBadge good">Haalbaar</b> : null}
-                    <span>{owner.stops.length} stops</span>
+                    <span>{owner.stops.length} stops · {buildTrips(owner).length} rit{buildTrips(owner).length === 1 ? '' : 'ten'}</span>
                   </div>
 
                   <div className="tripList">
@@ -614,31 +607,35 @@ export default function LogisticsOptimizer({
                             );
                           })}
 
-                          <div className="travelLeg return">
-                            <span className="travelLine" />
-                            <div>
-                              <strong>{analysis
-                                ? `${formatTravel(
-                                    trip.endStopIndex === owner.stops.length - 1
-                                      ? (analysis.legs[owner.stops.length]?.durationMinutes ?? 0)
-                                      : (analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDurationMinutes ?? 0)
-                                  )} · ${Math.round(
-                                    trip.endStopIndex === owner.stops.length - 1
-                                      ? (analysis.legs[owner.stops.length]?.distanceKm ?? 0)
-                                      : (analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDistanceKm ?? 0)
-                                  )} km`
-                                : 'Route berekenen…'}</strong>
-                              <small>Terug naar magazijn</small>
-                            </div>
-                          </div>
+                          {transportDirections(trip.stops[trip.stops.length - 1]?.transport).returnTrip ? (
+                            <>
+                              <div className="travelLeg return">
+                                <span className="travelLine" />
+                                <div>
+                                  <strong>{analysis
+                                    ? `${formatTravel(
+                                        trip.endStopIndex === owner.stops.length - 1
+                                          ? (analysis.legs[owner.stops.length]?.durationMinutes ?? 0)
+                                          : (analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDurationMinutes ?? 0)
+                                      )} · ${Math.round(
+                                        trip.endStopIndex === owner.stops.length - 1
+                                          ? (analysis.legs[owner.stops.length]?.distanceKm ?? 0)
+                                          : (analysis.legs[trip.endStopIndex + 1]?.viaWarehouse?.returnDistanceKm ?? 0)
+                                      )} km`
+                                    : 'Route berekenen…'}</strong>
+                                  <small>Terug naar magazijn</small>
+                                </div>
+                              </div>
 
-                          <div className="timelineEnd">
-                            <span className="timelineDot warehouse" />
-                            <div>
-                              <strong>Magazijn</strong>
-                              <small>{tripEnd ? `${formatTime(tripEnd)} · Einde rit` : 'Einde rit'}</small>
-                            </div>
-                          </div>
+                              <div className="timelineEnd">
+                                <span className="timelineDot warehouse" />
+                                <div>
+                                  <strong>Magazijn</strong>
+                                  <small>{tripEnd ? `${formatTime(tripEnd)} · Einde rit` : 'Einde rit'}</small>
+                                </div>
+                              </div>
+                            </>
+                          ) : null}
 
                           <div className="tripActions">
                             {viewMode === 'person' ? (
@@ -677,21 +674,7 @@ export default function LogisticsOptimizer({
                       </div>
                     </div>
                   ) : null}
-                      {viewMode === 'person' ? (
-                        <a
-                          className={analysis ? 'whatsappButton' : 'whatsappButton disabled'}
-                          href={analysis ? whatsappRouteUrl(owner, analysis) : undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-disabled={!analysis}
-                          onClick={(event) => {
-                            if (!analysis) event.preventDefault();
-                          }}
-                        >
-                          <MessageCircle size={14} />
-                          Deel via WhatsApp
-                        </a>
-                      ) : null}
+
                     </div>
                   ) : null}
                 </div>
@@ -873,7 +856,7 @@ export default function LogisticsOptimizer({
         .ownerMain strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .ownerMain small,.ownerStats small{font-size:8px;color:var(--muted)}
         .ownerStats{text-align:right}.ownerStats b{font-size:8px;white-space:nowrap}
-        .routeList{display:grid;max-height:520px;overflow:auto}
+        .routeList{display:grid;overflow:visible}
         .routeGroup{border-bottom:1px solid var(--line);padding-bottom:10px}.routeGroup:last-child{border-bottom:0}
         .tripList{display:grid;gap:10px;padding:10px}.tripCard{border:1px solid #e7e2dc;border-radius:12px;overflow:hidden;background:#fff}.tripHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;background:#fbfaf8;border-bottom:1px solid #eee9e3}.tripHeader>div{display:grid;gap:2px}.tripHeader strong{font-size:9px}.tripHeader small{font-size:8px;color:var(--muted)}.tripActions{display:grid;grid-template-columns:1fr;gap:6px;padding:8px 10px 10px}.mapsButton{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#514b45;font-size:8px;font-weight:900;text-decoration:none}.mapsButton:hover{background:#f8f6f2}
 
