@@ -152,10 +152,81 @@ function stopFromProject({
   };
 }
 
+function normalizedTransport(value: string | null | undefined) {
+  if (!value) return null;
+  const normalized = value.toLowerCase().trim().replaceAll(' ', '_');
+  if (normalized === 'no_transport') return null;
+  return normalized;
+}
+
+function vehicleTransportFromCrew(
+  assignment: RentmanPlanningProjectVehicle,
+  crewAssignments: RentmanPlanningCrewAssignment[],
+) {
+  const projectId = projectIdFromPath(assignment.function?.project);
+  const subprojectId = projectIdFromPath(assignment.function?.subproject);
+  const start = vehicleStart(assignment);
+  const end = vehicleEnd(assignment);
+
+  const candidates = crewAssignments.filter((crewAssignment) => {
+    const crewProjectId = projectIdFromPath(crewAssignment.function?.project);
+    const crewSubprojectId = projectIdFromPath(crewAssignment.function?.subproject);
+    if (!projectId || crewProjectId !== projectId) return false;
+    if ((subprojectId ?? null) !== (crewSubprojectId ?? null)) return false;
+
+    const crewStartValue = crewStart(crewAssignment);
+    const crewEndValue = crewEnd(crewAssignment);
+    if (start && end && crewStartValue && crewEndValue) {
+      return crewStartValue === start && crewEndValue === end;
+    }
+    return true;
+  });
+
+  const transports = candidates
+    .map((candidate) => normalizedTransport(candidate.transport))
+    .filter((value): value is string => Boolean(value));
+
+  const unique = [...new Set(transports)];
+
+  if (unique.length === 1) return unique[0];
+
+  if (unique.includes('round_trip')) return 'round_trip';
+
+  const hasOutbound = unique.some((value) =>
+    value === 'only_way_there' || value === 'only_there' || value === 'outbound_only'
+  );
+  const hasReturn = unique.some((value) =>
+    value === 'only_way_back' || value === 'only_back' || value === 'return_only'
+  );
+
+  if (hasOutbound && hasReturn) return 'round_trip';
+  if (hasOutbound) return 'only_way_there';
+  if (hasReturn) return 'only_way_back';
+
+  const assignmentTransport = normalizedTransport(assignment.transport);
+  if (assignmentTransport) return assignmentTransport;
+
+  if (
+    assignment.function?.twoway === true
+    || (
+      Number(assignment.function?.travel_time_before ?? 0) > 0
+      && Number(assignment.function?.travel_time_after ?? 0) > 0
+    )
+  ) {
+    return 'round_trip';
+  }
+
+  if (Number(assignment.function?.travel_time_before ?? 0) > 0) return 'only_way_there';
+  if (Number(assignment.function?.travel_time_after ?? 0) > 0) return 'only_way_back';
+
+  return null;
+}
+
 function buildVehicleStops(
   assignments: RentmanPlanningProjectVehicle[],
   projectMap: Map<number, RentmanPlanningProject>,
   subprojectMap: Map<number, RentmanPlanningSubproject>,
+  crewAssignments: RentmanPlanningCrewAssignment[],
   day: string,
 ): LogisticsStop[] {
   const stops: LogisticsStop[] = [];
@@ -191,7 +262,7 @@ function buildVehicleStops(
       end,
       location: subproject?.location || project.location,
       subprojectName: subproject?.name || null,
-      transport: assignment.transport || null,
+      transport: vehicleTransportFromCrew(assignment, crewAssignments),
     }));
   }
 
@@ -473,9 +544,9 @@ export default async function LogisticsPage({
   const projectMap = new Map(planning.allProjects.map((project) => [project.id, project]));
   const subprojectMap = new Map(subprojects.map((subproject) => [subproject.id, subproject]));
 
-  const vehicleStops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, selectedDate);
+  const vehicleStops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, crewAssignments, selectedDate);
   const crewStops = buildCrewStops(crewAssignments, projectMap, subprojectMap, selectedDate);
-  const tomorrowVehicleStops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, tomorrow);
+  const tomorrowVehicleStops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, crewAssignments, tomorrow);
 
   const vehicleCatalog = vehiclesCatalog.map((vehicle) => ({
     id: vehicle.id,
@@ -508,7 +579,7 @@ export default async function LogisticsPage({
 
   const days: LogisticsDayStatus[] = Array.from({ length: 7 }, (_, index) => {
     const day = addDays(today, index);
-    const stops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, day);
+    const stops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, crewAssignments, day);
     const status = analyseDay(stops);
     const activeOwners = new Set(stops.map((stop) => stop.ownerId)).size;
     return {
