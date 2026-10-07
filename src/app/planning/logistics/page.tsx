@@ -529,7 +529,8 @@ export default async function LogisticsPage({
       suggestions={suggestions}
       fuelCardThresholdKm={fuelCardThresholdKm}
       days={days}
-      googleMapsConfigured={Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)}
+      googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+      logisticsBaseAddress={process.env.NEXT_PUBLIC_LOGISTICS_BASE_ADDRESS || 'SHAKENSTYLE, Boesingheliede, Netherlands'}
     />
   );
 }
