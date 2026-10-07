@@ -2,20 +2,35 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, LoaderCircle, MapPinned, Route, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, LoaderCircle, MapPinned, Route } from 'lucide-react';
 import type { LogisticsOwner } from './LogisticsOptimizer';
 
 const ROUTE_COLORS = ['#f37021', '#2f6f8f', '#6d5c9a', '#3f7f66', '#9a613e', '#6c737d'];
 
-type RouteSummary = {
+export type LogisticsRouteLegAnalysis = {
+  index: number;
+  fromLabel: string;
+  toLabel: string;
+  distanceKm: number;
+  durationMinutes: number;
+  slackMinutes: number | null;
+  status: 'good' | 'tight' | 'conflict' | 'travel';
+};
+
+export type LogisticsRouteAnalysis = {
+  ownerId: number;
+  ownerName: string;
+  distanceKm: number;
+  durationMinutes: number;
+  legs: LogisticsRouteLegAnalysis[];
+  conflictCount: number;
+  tightCount: number;
+};
+
+type RouteSummary = LogisticsRouteAnalysis & {
   id: number;
   name: string;
   color: string;
-  distanceKm: number;
-  durationMinutes: number;
-  reordered: boolean;
-  orderedStops?: string[];
-  orderedStopKeys?: string[];
   error?: string;
 };
 
@@ -23,7 +38,7 @@ type Props = {
   apiKey: string;
   baseAddress: string;
   owners: LogisticsOwner[];
-  onOptimizationChange?: (ownerId: number, orderedStopKeys: string[] | null) => void;
+  onAnalysisChange?: (analyses: LogisticsRouteAnalysis[]) => void;
 };
 
 declare global {
@@ -100,12 +115,11 @@ function formatDuration(minutes: number) {
   return rest ? `${hours}u ${rest}m` : `${hours}u`;
 }
 
-export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimizationChange }: Props) {
+export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysisChange }: Props) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [summaries, setSummaries] = useState<RouteSummary[]>([]);
-  const [selectedOptimizations, setSelectedOptimizations] = useState<number[]>([]);
 
   const activeOwners = useMemo(
     () => owners.filter((owner) => owner.stops.some((stop) => stop.address || stop.city)),
@@ -170,14 +184,13 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimiz
               destination: baseAddress,
               intermediates: waypoints.map((location) => ({ location })),
               travelMode: 'DRIVING',
-              optimizeWaypointOrder: waypoints.length > 1,
+              optimizeWaypointOrder: false,
               routingPreference: 'TRAFFIC_AWARE',
               fields: [
                 'path',
                 'legs',
                 'distanceMeters',
                 'durationMillis',
-                'optimizedIntermediateWaypointIndices',
               ],
             };
 
@@ -189,9 +202,13 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimiz
                 id: owner.id,
                 name: owner.name,
                 color,
+                ownerId: owner.id,
+                ownerName: owner.name,
                 distanceKm: 0,
                 durationMinutes: 0,
-                reordered: false,
+                legs: [],
+                conflictCount: 0,
+                tightCount: 0,
                 error: 'Geen route gevonden',
               });
               continue;
@@ -219,38 +236,60 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimiz
 
             (route.path || []).forEach((point: any) => bounds.extend(point));
 
-            const optimized = Array.isArray(route.optimizedIntermediateWaypointIndices)
-              ? route.optimizedIntermediateWaypointIndices
-              : [];
-            const reordered = optimized.length > 1 && optimized.some((value: number, index: number) => value !== index);
-            const optimizedStops = reordered
-              ? optimized.map((value: number) => waypointStops[value]).filter(Boolean)
-              : [];
-            const orderedStops = reordered
-              ? optimizedStops.map((stop: LogisticsOwner['stops'][number]) => `#${stop.projectNumber} · ${stop.city || stop.locationName}`)
-              : undefined;
-            const orderedStopKeys = reordered
-              ? optimizedStops.map((stop: LogisticsOwner['stops'][number]) => `${stop.id}:${stop.projectId}`)
-              : undefined;
+            const routeLegs = Array.isArray(route.legs) ? route.legs : [];
+            const legs: LogisticsRouteLegAnalysis[] = routeLegs.map((leg: any, legIndex: number) => {
+              const fromStop = legIndex === 0 ? null : waypointStops[legIndex - 1] ?? null;
+              const toStop = legIndex < waypointStops.length ? waypointStops[legIndex] ?? null : null;
+              const durationMinutes = Number(leg?.durationMillis || 0) / 60000;
+              const distanceKm = Number(leg?.distanceMeters || 0) / 1000;
+
+              let slackMinutes: number | null = null;
+              if (fromStop?.end && toStop?.start) {
+                const availableMinutes = (new Date(toStop.start).getTime() - new Date(fromStop.end).getTime()) / 60000;
+                if (Number.isFinite(availableMinutes)) slackMinutes = availableMinutes - durationMinutes;
+              }
+
+              const status: LogisticsRouteLegAnalysis['status'] =
+                slackMinutes === null ? 'travel'
+                  : slackMinutes < 0 ? 'conflict'
+                    : slackMinutes < 10 ? 'tight'
+                      : 'good';
+
+              return {
+                index: legIndex,
+                fromLabel: fromStop ? `#${fromStop.projectNumber} · ${fromStop.city || fromStop.locationName}` : 'Magazijn',
+                toLabel: toStop ? `#${toStop.projectNumber} · ${toStop.city || toStop.locationName}` : 'Magazijn',
+                distanceKm,
+                durationMinutes,
+                slackMinutes,
+                status,
+              };
+            });
 
             routeSummaries.push({
               id: owner.id,
+              ownerId: owner.id,
               name: owner.name,
+              ownerName: owner.name,
               color,
               distanceKm: Number(route.distanceMeters || 0) / 1000,
               durationMinutes: Number(route.durationMillis || 0) / 60000,
-              reordered,
-              orderedStops,
-              orderedStopKeys,
+              legs,
+              conflictCount: legs.filter((leg) => leg.status === 'conflict').length,
+              tightCount: legs.filter((leg) => leg.status === 'tight').length,
             });
           } catch (routeError) {
             routeSummaries.push({
               id: owner.id,
               name: owner.name,
               color,
+              ownerId: owner.id,
+              ownerName: owner.name,
               distanceKm: 0,
               durationMinutes: 0,
-              reordered: false,
+              legs: [],
+              conflictCount: 0,
+              tightCount: 0,
               error: routeError instanceof Error ? routeError.message : 'Route kon niet worden berekend',
             });
           }
@@ -259,6 +298,15 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimiz
         if (!cancelled) {
           if (!bounds.isEmpty()) map.fitBounds(bounds, 52);
           setSummaries(routeSummaries);
+          onAnalysisChange?.(routeSummaries.filter((summary) => !summary.error).map((summary) => ({
+            ownerId: summary.ownerId,
+            ownerName: summary.ownerName,
+            distanceKm: summary.distanceKm,
+            durationMinutes: summary.durationMinutes,
+            legs: summary.legs,
+            conflictCount: summary.conflictCount,
+            tightCount: summary.tightCount,
+          })));
           setState('ready');
         }
       } catch (mapError) {
@@ -330,37 +378,12 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimiz
                     <small>{summary.error}</small>
                   ) : (
                     <>
-                      <small>
-                        {Math.round(summary.distanceKm)} km · {formatDuration(summary.durationMinutes)}
-                        {summary.reordered ? ' · betere volgorde gevonden' : ''}
-                      </small>
-                      {summary.reordered && summary.orderedStops?.length ? (
-                        <small className="optimizedOrder">{summary.orderedStops.join(' → ')}</small>
-                      ) : null}
+                      <small>{Math.round(summary.distanceKm)} km · {formatDuration(summary.durationMinutes)}</small>
+                      {summary.conflictCount ? <small className="routeConflict">{summary.conflictCount} aansluiting(en) niet haalbaar</small> : null}
+                      {!summary.conflictCount && summary.tightCount ? <small className="routeTight">{summary.tightCount} krappe aansluiting(en)</small> : null}
                     </>
                   )}
                 </div>
-                {summary.reordered ? (
-                  <button
-                    type="button"
-                    className={selectedOptimizations.includes(summary.id) ? 'routeSelect selected' : 'routeSelect'}
-                    onClick={() => {
-                      const isSelected = selectedOptimizations.includes(summary.id);
-                      setSelectedOptimizations((current) =>
-                        isSelected
-                          ? current.filter((id) => id !== summary.id)
-                          : [...current, summary.id]
-                      );
-                      onOptimizationChange?.(
-                        summary.id,
-                        isSelected ? null : (summary.orderedStopKeys || null),
-                      );
-                    }}
-                  >
-                    <Sparkles size={13} />
-                    {selectedOptimizations.includes(summary.id) ? 'Toegepast' : 'Pas volgorde toe'}
-                  </button>
-                ) : null}
               </div>
             ))}
           </div>
@@ -380,9 +403,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onOptimiz
         .routeLegendItem:hover{background:#f7f5f2}.routeLegendItem.error{opacity:.65}
         .routeLegendItem i{width:8px;height:32px;border-radius:999px}.routeLegendItem>div{min-width:0;display:grid;gap:2px}
         .routeLegendItem strong{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.routeLegendItem small{color:var(--muted);font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .routeLegendItem .optimizedOrder{color:#514b45;font-weight:700}
-        .routeSelect{display:flex;align-items:center;gap:4px;border:1px solid #e4ddd5;border-radius:8px;background:#fff;padding:6px 7px;color:#6b645d;font-size:7px;font-weight:900;cursor:pointer;white-space:nowrap}
-        .routeSelect:hover{border-color:#f37021;color:#d85b10}.routeSelect.selected{border-color:#f37021;background:#fff0e6;color:#d85b10}
+        .routeConflict{color:#a33e34!important;font-weight:800}.routeTight{color:#8a6500!important;font-weight:800}
         .spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
         @media(max-width:820px){.googleRoutesWrap,.googleRoutesCanvas{min-height:420px}.googleRoutesLegend{width:calc(100% - 24px)}}
       `}</style>
