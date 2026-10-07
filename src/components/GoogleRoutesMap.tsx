@@ -136,6 +136,49 @@ function transportDirections(value: string | null | undefined) {
   return { outbound: true, returnTrip: true };
 }
 
+type RouteNode =
+  | { kind: 'warehouse'; location: string; reason: 'start' | 'between' | 'end' }
+  | { kind: 'stop'; location: string; stop: LogisticsOwner['stops'][number]; stopIndex: number };
+
+function buildRouteNodes(baseAddress: string, stops: LogisticsOwner['stops']) {
+  const nodes: RouteNode[] = [];
+
+  stops.forEach((stop, index) => {
+    const location = stop.address || [stop.locationName, stop.city].filter(Boolean).join(', ');
+    if (!location) return;
+
+    const transport = transportDirections(stop.transport);
+    const previous = stops[index - 1];
+    const previousTransport = previous ? transportDirections(previous.transport) : null;
+
+    if (index === 0) {
+      if (transport.outbound) nodes.push({ kind: 'warehouse', location: baseAddress, reason: 'start' });
+      nodes.push({ kind: 'stop', location, stop, stopIndex: index });
+      if (transport.returnTrip) {
+        nodes.push({ kind: 'warehouse', location: baseAddress, reason: index === stops.length - 1 ? 'end' : 'between' });
+      }
+      return;
+    }
+
+    const lastNode = nodes[nodes.length - 1];
+    const previousEndedAtWarehouse = lastNode?.kind === 'warehouse';
+
+    if (transport.outbound && !previousEndedAtWarehouse) {
+      nodes.push({ kind: 'warehouse', location: baseAddress, reason: 'between' });
+    } else if (!transport.outbound && previousTransport?.returnTrip && !previousEndedAtWarehouse) {
+      nodes.push({ kind: 'warehouse', location: baseAddress, reason: 'between' });
+    }
+
+    nodes.push({ kind: 'stop', location, stop, stopIndex: index });
+
+    if (transport.returnTrip) {
+      nodes.push({ kind: 'warehouse', location: baseAddress, reason: index === stops.length - 1 ? 'end' : 'between' });
+    }
+  });
+
+  return nodes;
+}
+
 export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysisChange }: Props) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -197,21 +240,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
 
           if (!stopLocations.length) continue;
 
-          const firstTransport = transportDirections(waypointStops[0]?.transport);
-          const lastTransport = transportDirections(waypointStops[waypointStops.length - 1]?.transport);
-          const startAtWarehouse = firstTransport.outbound;
-          const endAtWarehouse = lastTransport.returnTrip;
-
-          const routeNodes = [
-            ...(startAtWarehouse ? [{ kind: 'warehouse' as const, location: baseAddress }] : []),
-            ...waypointStops.map((stop, index) => ({
-              kind: 'stop' as const,
-              stop,
-              stopIndex: index,
-              location: stopLocations[index],
-            })),
-            ...(endAtWarehouse ? [{ kind: 'warehouse' as const, location: baseAddress }] : []),
-          ];
+          const routeNodes = buildRouteNodes(baseAddress, waypointStops);
 
           if (routeNodes.length < 2) {
             routeSummaries.push({
@@ -314,14 +343,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
                 if (Number.isFinite(availableMinutes)) slackMinutes = availableMinutes - durationMinutes;
               }
 
-              const status: LogisticsRouteLegAnalysis['status'] =
-                slackMinutes === null ? 'travel'
-                  : slackMinutes < 0 ? 'conflict'
-                    : slackMinutes < 10 ? 'tight'
-                      : 'good';
-
               return {
-                index: legIndex,
                 fromNode,
                 toNode,
                 fromLabel: fromStop ? `#${fromStop.projectNumber} · ${fromStop.city || fromStop.locationName}` : 'Magazijn',
@@ -329,56 +351,70 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners, onAnalysi
                 distanceKm,
                 durationMinutes,
                 slackMinutes,
-                status,
               };
             });
 
-            const legs: LogisticsRouteLegAnalysis[] = waypointStops.map((stop, stopIndex) => {
-              const inbound = googleLegs.find((leg: {
-                fromNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
-                toNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
-                fromLabel: string;
-                toLabel: string;
-                distanceKm: number;
-                durationMinutes: number;
-                slackMinutes: number | null;
-                status: LogisticsRouteLegAnalysis['status'];
-              }) => leg.toNode?.kind === 'stop' && leg.toNode.stopIndex === stopIndex);
+            const legs: LogisticsRouteLegAnalysis[] = [];
+
+            waypointStops.forEach((stop, stopIndex) => {
+              const inbound = googleLegs.find((leg: any) => leg.toNode?.kind === 'stop' && leg.toNode.stopIndex === stopIndex);
               if (inbound) {
-                return {
+                let slackMinutes: number | null = inbound.slackMinutes;
+
+                if (stopIndex > 0) {
+                  const previousStop = waypointStops[stopIndex - 1];
+                  const previousStopNodeIndex = routeNodes.findIndex(
+                    (node) => node.kind === 'stop' && node.stopIndex === stopIndex - 1,
+                  );
+                  const currentStopNodeIndex = routeNodes.findIndex(
+                    (node) => node.kind === 'stop' && node.stopIndex === stopIndex,
+                  );
+
+                  if (previousStop?.end && stop.start && previousStopNodeIndex >= 0 && currentStopNodeIndex > previousStopNodeIndex) {
+                    const travelBetweenStops = googleLegs
+                      .slice(previousStopNodeIndex, currentStopNodeIndex)
+                      .reduce((sum: number, segment: any) => sum + segment.durationMinutes, 0);
+                    const availableMinutes = (new Date(stop.start).getTime() - new Date(previousStop.end).getTime()) / 60000;
+                    if (Number.isFinite(availableMinutes)) slackMinutes = availableMinutes - travelBetweenStops;
+                  }
+                }
+
+                const status: LogisticsRouteLegAnalysis['status'] =
+                  slackMinutes === null ? 'travel'
+                    : slackMinutes < 0 ? 'conflict'
+                      : slackMinutes < 10 ? 'tight'
+                        : 'good';
+
+                legs.push({
                   index: stopIndex,
                   fromLabel: inbound.fromLabel,
                   toLabel: inbound.toLabel,
                   distanceKm: inbound.distanceKm,
                   durationMinutes: inbound.durationMinutes,
-                  slackMinutes: inbound.slackMinutes,
-                  status: inbound.status,
-                };
+                  slackMinutes,
+                  status,
+                });
+              } else {
+                legs.push({
+                  index: stopIndex,
+                  fromLabel: stopIndex === 0 ? 'Geen heenreis' : 'Vorige locatie',
+                  toLabel: `#${stop.projectNumber} · ${stop.city || stop.locationName}`,
+                  distanceKm: 0,
+                  durationMinutes: 0,
+                  slackMinutes: null,
+                  status: 'travel',
+                  skipped: true,
+                  note: 'Geen heenreis ingesteld in Rentman',
+                });
               }
-
-              return {
-                index: stopIndex,
-                fromLabel: stopIndex === 0 ? 'Geen heenreis' : 'Vorige locatie',
-                toLabel: `#${stop.projectNumber} · ${stop.city || stop.locationName}`,
-                distanceKm: 0,
-                durationMinutes: 0,
-                slackMinutes: null,
-                status: 'travel',
-                skipped: true,
-                note: 'Geen heenreis ingesteld in Rentman',
-              };
             });
 
-            const returnLeg = googleLegs.find((leg: {
-              fromNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
-              toNode?: { kind?: 'warehouse' | 'stop'; stopIndex?: number; stop?: LogisticsOwner['stops'][number] };
-              fromLabel: string;
-              toLabel: string;
-              distanceKm: number;
-              durationMinutes: number;
-              slackMinutes: number | null;
-              status: LogisticsRouteLegAnalysis['status'];
-            }) => leg.toNode?.kind === 'warehouse');
+            const returnLeg = googleLegs.find((leg: any) =>
+              leg.fromNode?.kind === 'stop'
+              && leg.fromNode.stopIndex === waypointStops.length - 1
+              && leg.toNode?.kind === 'warehouse'
+            );
+
             legs.push(returnLeg ? {
               index: waypointStops.length,
               fromLabel: returnLeg.fromLabel,
