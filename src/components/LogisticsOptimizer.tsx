@@ -156,14 +156,7 @@ export default function LogisticsOptimizer({
           <h1>Logistieke optimalisatie</h1>
           <p>Vergelijk routes per voertuig of persoon. De portal adviseert; wijzigingen voer je handmatig door in Rentman.</p>
         </div>
-        <form className="datePicker" method="get">
-          <input type="hidden" name="view" value={viewMode} />
-          <label>
-            <span>Dag</span>
-            <input type="date" name="date" defaultValue={selectedDate} />
-          </label>
-          <button className="button orange" type="submit">Laden</button>
-        </form>
+
       </header>
 
       <section className="weekBar" aria-label="Routekwaliteit komende zeven dagen">
@@ -414,11 +407,6 @@ export default function LogisticsOptimizer({
         .eyebrow,.panelHeader span,.actionHeader span{display:block;color:var(--orange-dark);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
         h1{margin:4px 0 7px;font-size:clamp(34px,3vw,46px);line-height:1;letter-spacing:-.045em}
         .logisticsHeader p,.actionHeader p{margin:0;color:var(--muted);max-width:860px;font-size:14px;line-height:1.45}
-        .datePicker{display:flex;align-items:flex-end;gap:9px;flex:0 0 auto}
-        .datePicker label{display:grid;gap:5px}
-        .datePicker label span{font-size:10px;font-weight:800;color:var(--muted)}
-        .datePicker input{height:44px;min-width:190px;border:1px solid var(--line);border-radius:12px;padding:0 13px;background:#fff;font:inherit}
-        .datePicker :global(.button){height:44px;padding-inline:18px;border-radius:12px}
 
         .weekBar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:14px}
         .dayCard{position:relative;min-width:0;min-height:94px;display:flex;flex-direction:column;justify-content:space-between;padding:14px 15px 13px;border:1px solid transparent;border-radius:16px;color:#24211e;overflow:hidden;transition:box-shadow .15s ease,transform .15s ease,filter .15s ease}
@@ -524,14 +512,14 @@ export default function LogisticsOptimizer({
         @media(max-width:900px){
           .logisticsPage{padding:22px 14px 44px}
           .logisticsHeader,.actionHeader,.toolbar{align-items:stretch;flex-direction:column}
-          .datePicker{align-items:stretch}.datePicker label{flex:1}.datePicker input{width:100%;min-width:0}
+          
           .metricGrid{grid-template-columns:1fr 1fr}.weekBar{grid-template-columns:repeat(2,minmax(0,1fr))}
           .workspace{grid-template-columns:1fr}.suggestionPanel{grid-column:auto}.suggestionList{grid-template-columns:1fr}
           .routeList{max-height:none}.mapPlaceholder{min-height:420px}.actionGrid{grid-template-columns:1fr}
         }
         @media(max-width:560px){
           h1{font-size:34px}.metricGrid{grid-template-columns:1fr}.weekBar{grid-template-columns:1fr 1fr}
-          .datePicker{display:grid;grid-template-columns:1fr auto}.ownerCard{grid-template-columns:6px minmax(0,1fr) auto}.ownerCard>svg{display:none}
+          .ownerCard{grid-template-columns:6px minmax(0,1fr) auto}.ownerCard>svg{display:none}
           .legend{display:none}
         }
       `}</style>
