@@ -118,36 +118,55 @@ type LogisticsTrip = {
   startStopIndex: number;
   endStopIndex: number;
   stops: LogisticsStop[];
+  startsWithOutbound: boolean;
+  endsWithReturn: boolean;
 };
 
 function buildTrips(owner: LogisticsOwner): LogisticsTrip[] {
   const trips: LogisticsTrip[] = [];
   let current: LogisticsStop[] = [];
   let startStopIndex = 0;
+  let startsWithOutbound = false;
+
+  const closeTrip = (endStopIndex: number, endsWithReturn: boolean) => {
+    if (!current.length) return;
+    trips.push({
+      index: trips.length,
+      startStopIndex,
+      endStopIndex,
+      stops: [...current],
+      startsWithOutbound,
+      endsWithReturn,
+    });
+    current = [];
+    startsWithOutbound = false;
+  };
 
   owner.stops.forEach((stop, stopIndex) => {
-    if (current.length === 0) startStopIndex = stopIndex;
+    const transport = transportDirections(stop.transport);
+
+    // Een expliciete nieuwe heenreis begint een nieuwe rit.
+    // Als de vorige reeks nog geen terugreis had, bewaren we die als onvolledige rit
+    // zodat er nooit Rentman-stops verdwijnen.
+    if (transport.outbound && current.length > 0) {
+      closeTrip(stopIndex - 1, false);
+    }
+
+    if (current.length === 0) {
+      startStopIndex = stopIndex;
+      startsWithOutbound = transport.outbound;
+    }
+
     current.push(stop);
 
-    const transport = transportDirections(stop.transport);
+    // De rit eindigt pas bij het project waarop Rentman een terugreis aangeeft.
     if (transport.returnTrip) {
-      trips.push({
-        index: trips.length,
-        startStopIndex,
-        endStopIndex: stopIndex,
-        stops: [...current],
-      });
-      current = [];
+      closeTrip(stopIndex, true);
     }
   });
 
   if (current.length > 0) {
-    trips.push({
-      index: trips.length,
-      startStopIndex,
-      endStopIndex: owner.stops.length - 1,
-      stops: [...current],
-    });
+    closeTrip(owner.stops.length - 1, false);
   }
 
   const stopCount = trips.reduce((sum, trip) => sum + trip.stops.length, 0);
@@ -157,6 +176,8 @@ function buildTrips(owner: LogisticsOwner): LogisticsTrip[] {
       startStopIndex: 0,
       endStopIndex: owner.stops.length - 1,
       stops: [...owner.stops],
+      startsWithOutbound: transportDirections(owner.stops[0]?.transport).outbound,
+      endsWithReturn: transportDirections(owner.stops[owner.stops.length - 1]?.transport).returnTrip,
     }];
   }
 
@@ -233,14 +254,14 @@ export default function LogisticsOptimizer({
   function tripStartTime(trip: LogisticsTrip, analysis?: LogisticsRouteAnalysis) {
     const firstStop = trip.stops[0];
     const leg = analysis?.legs[trip.startStopIndex];
-    if (!firstStop?.start || !leg || leg.skipped) return null;
+    if (!trip.startsWithOutbound || !firstStop?.start || !leg || leg.skipped) return null;
     const duration = leg.viaWarehouse?.outboundDurationMinutes ?? leg.durationMinutes;
     return addMinutesToTime(firstStop.start, -duration);
   }
 
   function tripEndTime(trip: LogisticsTrip, owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
     const lastStop = trip.stops[trip.stops.length - 1];
-    if (!lastStop?.end) return null;
+    if (!trip.endsWithReturn || !lastStop?.end) return null;
 
     let duration: number | null = null;
     if (trip.endStopIndex === owner.stops.length - 1) {
@@ -302,12 +323,10 @@ export default function LogisticsOptimizer({
     ).filter(Boolean);
     if (!locations.length) return '';
 
-    const firstTransport = transportDirections(trip.stops[0].transport);
-    const lastTransport = transportDirections(trip.stops[trip.stops.length - 1].transport);
-    const origin = firstTransport.outbound ? logisticsBaseAddress : locations[0];
-    const destination = lastTransport.returnTrip ? logisticsBaseAddress : locations[locations.length - 1];
-    const waypointStart = firstTransport.outbound ? 0 : 1;
-    const waypointEnd = lastTransport.returnTrip ? locations.length : Math.max(1, locations.length - 1);
+    const origin = trip.startsWithOutbound ? logisticsBaseAddress : locations[0];
+    const destination = trip.endsWithReturn ? logisticsBaseAddress : locations[locations.length - 1];
+    const waypointStart = trip.startsWithOutbound ? 0 : 1;
+    const waypointEnd = trip.endsWithReturn ? locations.length : Math.max(1, locations.length - 1);
     const waypoints = locations.slice(waypointStart, waypointEnd);
 
     const params = new URLSearchParams({
@@ -557,13 +576,17 @@ export default function LogisticsOptimizer({
                                 : analysis ? <b className="timelineBadge good">Haalbaar</b> : null}
                           </div>
 
-                          <div className="timelineStart">
-                            <span className="timelineDot warehouse" />
-                            <div>
-                              <strong>Magazijn</strong>
-                              <small>{tripStart ? `${formatTime(tripStart)} · Vertrek` : 'Start rit'}</small>
+                          {trip.startsWithOutbound ? (
+                            <div className="timelineStart">
+                              <span className="timelineDot warehouse" />
+                              <div>
+                                <strong>Magazijn</strong>
+                                <small>{tripStart ? `${formatTime(tripStart)} · Vertrek` : 'Start rit'}</small>
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="tripBoundaryNote">Geen expliciete heenreis in Rentman voor het begin van deze rit.</div>
+                          )}
 
                           {trip.stops.map((stop, localIndex) => {
                             const stopIndex = trip.startStopIndex + localIndex;
@@ -607,7 +630,7 @@ export default function LogisticsOptimizer({
                             );
                           })}
 
-                          {transportDirections(trip.stops[trip.stops.length - 1]?.transport).returnTrip ? (
+                          {trip.endsWithReturn ? (
                             <>
                               <div className="travelLeg return">
                                 <span className="travelLine" />
@@ -856,7 +879,7 @@ export default function LogisticsOptimizer({
         .ownerStats{text-align:right}.ownerStats b{font-size:8px;white-space:nowrap}
         .routeList{display:grid;overflow:visible}
         .routeGroup{border-bottom:1px solid var(--line);padding-bottom:10px}.routeGroup:last-child{border-bottom:0}
-        .tripList{display:grid;gap:10px;padding:10px}.tripCard{border:1px solid #e7e2dc;border-radius:12px;overflow:hidden;background:#fff}.tripHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;background:#fbfaf8;border-bottom:1px solid #eee9e3}.tripHeader>div{display:grid;gap:2px}.tripHeader strong{font-size:9px}.tripHeader small{font-size:8px;color:var(--muted)}.tripActions{display:grid;grid-template-columns:1fr;gap:6px;padding:8px 10px 10px}.mapsButton{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#514b45;font-size:8px;font-weight:900;text-decoration:none}.mapsButton:hover{background:#f8f6f2}
+        .tripList{display:grid;gap:10px;padding:10px}.tripCard{border:1px solid #e7e2dc;border-radius:12px;overflow:hidden;background:#fff}.tripHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;background:#fbfaf8;border-bottom:1px solid #eee9e3}.tripHeader>div{display:grid;gap:2px}.tripHeader strong{font-size:9px}.tripHeader small{font-size:8px;color:var(--muted)}.tripBoundaryNote{padding:8px 10px;background:#fff7e8;color:#80621e;font-size:8px;border-bottom:1px solid #f1e2ba}.tripActions{display:grid;grid-template-columns:1fr;gap:6px;padding:8px 10px 10px}.mapsButton{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#514b45;font-size:8px;font-weight:900;text-decoration:none}.mapsButton:hover{background:#f8f6f2}
 
         .routeTitle{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:7px;padding:10px 11px;background:#f8f7f4;font-size:9px;border-bottom:1px solid #eee9e3}
         .routeTitle span{margin-left:auto;color:var(--muted)}
