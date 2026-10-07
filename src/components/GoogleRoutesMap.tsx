@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -165,9 +166,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
               overlays.push(polyline);
             });
 
-            const markers = await route.createWaypointAdvancedMarkers({
-              content: undefined,
-            });
+            const markers = await route.createWaypointAdvancedMarkers();
             markers.forEach((marker: any) => {
               marker.map = map;
               overlays.push(marker);
