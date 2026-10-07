@@ -27,6 +27,7 @@ declare global {
   interface Window {
     google?: any;
     __snsGoogleMapsPromise?: Promise<void>;
+    __snsInitGoogleMaps?: () => void;
   }
 }
 
@@ -35,20 +36,54 @@ function loadGoogleMaps(apiKey: string) {
   if (window.__snsGoogleMapsPromise) return window.__snsGoogleMapsPromise;
 
   window.__snsGoogleMapsPromise = new Promise<void>((resolve, reject) => {
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      delete window.__snsInitGoogleMaps;
+
+      if (window.google?.maps?.importLibrary) {
+        resolve();
+      } else {
+        reject(new Error('Google Maps is geladen, maar de Maps-library is niet beschikbaar.'));
+      }
+    };
+
+    const fail = (message: string) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      delete window.__snsInitGoogleMaps;
+      window.__snsGoogleMapsPromise = undefined;
+      reject(new Error(message));
+    };
+
+    const timeoutId = window.setTimeout(
+      () => fail('Google Maps reageerde niet binnen 12 seconden. Controleer API-key, billing en domeinrestricties.'),
+      12000,
+    );
+
+    window.__snsInitGoogleMaps = finish;
+
     const existing = document.querySelector<HTMLScriptElement>('script[data-sns-google-maps]');
     if (existing) {
-      existing.addEventListener('load', () => resolve(), { once: true });
-      existing.addEventListener('error', () => reject(new Error('Google Maps kon niet worden geladen.')), { once: true });
+      if (window.google?.maps?.importLibrary) {
+        finish();
+        return;
+      }
+
+      existing.addEventListener('error', () => fail('Google Maps kon niet worden geladen.'), { once: true });
       return;
     }
 
     const script = document.createElement('script');
     script.dataset.snsGoogleMaps = 'true';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&loading=async&language=nl&region=NL`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&loading=async&callback=__snsInitGoogleMaps&language=nl&region=NL`;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Google Maps kon niet worden geladen.'));
+    script.onerror = () => fail('Google Maps kon niet worden geladen.');
     document.head.appendChild(script);
   });
 
@@ -85,7 +120,10 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
 
       try {
         await loadGoogleMaps(apiKey);
-        if (cancelled || !window.google?.maps?.importLibrary) return;
+        if (cancelled) return;
+        if (!window.google?.maps?.importLibrary) {
+          throw new Error('Google Maps is geladen, maar importLibrary ontbreekt.');
+        }
 
         const [{ Map }, { Route: GoogleRoute }, { LatLngBounds }] = await Promise.all([
           window.google.maps.importLibrary('maps'),
