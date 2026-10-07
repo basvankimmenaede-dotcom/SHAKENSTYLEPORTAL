@@ -9,10 +9,12 @@ import {
   getPlanningCrewAssignmentsForRange,
   getPlanningProjectVehicles,
   getPlanningProjects,
+  getPlanningSubprojects,
   getPlanningVehicles,
   type RentmanPlanningCrewAssignment,
   type RentmanPlanningProject,
   type RentmanPlanningProjectVehicle,
+  type RentmanPlanningSubproject,
 } from '@/lib/rentman';
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -48,8 +50,9 @@ function projectIdFromPath(value?: string | null) {
   return Number.isFinite(id) ? id : null;
 }
 
-function projectAddress(project?: RentmanPlanningProject) {
-  const location = project?.location;
+type PlanningLocation = NonNullable<RentmanPlanningProject['location']>;
+
+function locationAddress(location?: PlanningLocation | null) {
   if (!location) return '';
   return [
     [location.visit_street, location.visit_number].filter(Boolean).join(' '),
@@ -108,6 +111,9 @@ function stopFromProject({
   groupName,
   start,
   end,
+  location,
+  subprojectName,
+  transport,
 }: {
   id: number;
   project: RentmanPlanningProject;
@@ -119,6 +125,9 @@ function stopFromProject({
   groupName: string;
   start: string | null;
   end: string | null;
+  location?: PlanningLocation | null;
+  subprojectName?: string | null;
+  transport?: string | null;
 }): LogisticsStop {
   return {
     id,
@@ -132,16 +141,21 @@ function stopFromProject({
     groupName,
     start,
     end,
-    locationName: displayName(project.location) || 'Onbekende locatie',
-    address: projectAddress(project),
-    city: project.location?.visit_city ?? '',
-    warehouseDistanceKm: typeof project.location?.distance === 'number' ? project.location.distance : null,
+    subprojectName: subprojectName || null,
+    transport: transport || null,
+    locationName: displayName(location || project.location) || 'Onbekende locatie',
+    address: locationAddress(location || project.location),
+    city: (location || project.location)?.visit_city ?? '',
+    warehouseDistanceKm: typeof (location || project.location)?.distance === 'number'
+      ? (location || project.location)!.distance ?? null
+      : null,
   };
 }
 
 function buildVehicleStops(
   assignments: RentmanPlanningProjectVehicle[],
   projectMap: Map<number, RentmanPlanningProject>,
+  subprojectMap: Map<number, RentmanPlanningSubproject>,
   day: string,
 ): LogisticsStop[] {
   const stops: LogisticsStop[] = [];
@@ -157,8 +171,10 @@ function buildVehicleStops(
     if (!ownerId || !projectId) continue;
     const project = projectMap.get(projectId);
     if (!project) continue;
+    const subprojectId = projectIdFromPath(assignment.function?.subproject);
+    const subproject = subprojectId ? subprojectMap.get(subprojectId) : undefined;
 
-    const key = [ownerId, projectId, assignment.function?.id ?? assignment.id, start ?? ''].join(':');
+    const key = [ownerId, projectId, subprojectId ?? 0, assignment.function?.id ?? assignment.id, start ?? ''].join(':');
     if (seen.has(key)) continue;
     seen.add(key);
 
@@ -173,6 +189,9 @@ function buildVehicleStops(
       groupName: vehicleGroupName(assignment),
       start,
       end,
+      location: subproject?.location || project.location,
+      subprojectName: subproject?.name || null,
+      transport: assignment.transport || null,
     }));
   }
 
@@ -182,6 +201,7 @@ function buildVehicleStops(
 function buildCrewStops(
   assignments: RentmanPlanningCrewAssignment[],
   projectMap: Map<number, RentmanPlanningProject>,
+  subprojectMap: Map<number, RentmanPlanningSubproject>,
   day: string,
 ): LogisticsStop[] {
   const stops: LogisticsStop[] = [];
@@ -197,11 +217,13 @@ function buildCrewStops(
     if (!ownerId || !projectId) continue;
     const project = projectMap.get(projectId);
     if (!project) continue;
+    const subprojectId = projectIdFromPath(assignment.function?.subproject);
+    const subproject = subprojectId ? subprojectMap.get(subprojectId) : undefined;
 
     const crewName = assignment.crewmember?.displayname
       || [assignment.crewmember?.firstname, assignment.crewmember?.middle_name, assignment.crewmember?.lastname].filter(Boolean).join(' ')
       || `Persoon ${ownerId}`;
-    const key = [ownerId, projectId, assignment.function?.id ?? assignment.id, start ?? ''].join(':');
+    const key = [ownerId, projectId, subprojectId ?? 0, assignment.function?.id ?? assignment.id, start ?? ''].join(':');
     if (seen.has(key)) continue;
     seen.add(key);
 
@@ -216,6 +238,9 @@ function buildCrewStops(
       groupName: crewGroupName(assignment),
       start,
       end,
+      location: subproject?.location || project.location,
+      subprojectName: subproject?.name || null,
+      transport: assignment.transport || null,
     }));
   }
 
@@ -453,11 +478,12 @@ export default async function LogisticsPage({
   const viewMode: ViewMode = valueOf(params.view) === 'person' ? 'person' : 'vehicle';
   const tomorrow = addDays(selectedDate, 1);
 
-  const [planning, projectVehicles, vehiclesCatalog, crewAssignments, settingsResult] = await Promise.all([
+  const [planning, projectVehicles, vehiclesCatalog, crewAssignments, subprojects, settingsResult] = await Promise.all([
     getPlanningProjects(),
     getPlanningProjectVehicles(),
     getPlanningVehicles(),
     getPlanningCrewAssignmentsForRange(today, addDays(weekEnd, 1)),
+    getPlanningSubprojects(),
     supabase
       .from('planning_settings')
       .select('fuel_card_distance_km')
@@ -467,10 +493,11 @@ export default async function LogisticsPage({
 
   const fuelCardThresholdKm = Number(settingsResult.data?.fuel_card_distance_km ?? 150);
   const projectMap = new Map(planning.allProjects.map((project) => [project.id, project]));
+  const subprojectMap = new Map(subprojects.map((subproject) => [subproject.id, subproject]));
 
-  const vehicleStops = buildVehicleStops(projectVehicles, projectMap, selectedDate);
-  const crewStops = buildCrewStops(crewAssignments, projectMap, selectedDate);
-  const tomorrowVehicleStops = buildVehicleStops(projectVehicles, projectMap, tomorrow);
+  const vehicleStops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, selectedDate);
+  const crewStops = buildCrewStops(crewAssignments, projectMap, subprojectMap, selectedDate);
+  const tomorrowVehicleStops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, tomorrow);
 
   const vehicleCatalog = vehiclesCatalog.map((vehicle) => ({
     id: vehicle.id,
@@ -503,7 +530,7 @@ export default async function LogisticsPage({
 
   const days: LogisticsDayStatus[] = Array.from({ length: 7 }, (_, index) => {
     const day = addDays(today, index);
-    const stops = buildVehicleStops(projectVehicles, projectMap, day);
+    const stops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, day);
     const status = analyseDay(stops, fuelCardThresholdKm);
     const activeOwners = new Set(stops.map((stop) => stop.ownerId)).size;
     return {
