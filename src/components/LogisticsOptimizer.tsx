@@ -127,7 +127,7 @@ export default function LogisticsOptimizer({
     const order = optimizedOrders[owner.id];
     if (!order?.length) return owner.stops;
 
-    const rank = new Map(order.map((key, index) => [key, index]));
+    const rank = new globalThis.Map<string, number>(order.map((key, index) => [key, index] as [string, number]));
     return [...owner.stops].sort((a, b) => {
       const aRank = rank.get(stopKey(a));
       const bRank = rank.get(stopKey(b));
