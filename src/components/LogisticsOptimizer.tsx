@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Check, ChevronRight, Copy, Fuel, Map, Route, Truck, UserRound, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronRight, Copy, Fuel, Map, MessageCircle, Route, Truck, UserRound, X } from 'lucide-react';
 import GoogleRoutesMap, { type LogisticsRouteAnalysis } from './GoogleRoutesMap';
 
 export type LogisticsStop = {
@@ -169,6 +169,65 @@ export default function LogisticsOptimizer({
     if (Number.isNaN(end.getTime())) return null;
     end.setMinutes(end.getMinutes() + returnLeg.durationMinutes);
     return end.toISOString();
+  }
+
+  function googleMapsRouteUrl(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
+    if (!owner.stops.length) return '';
+
+    const firstLeg = analysis?.legs[0];
+    const returnLeg = analysis?.legs[owner.stops.length];
+    const startAtWarehouse = Boolean(firstLeg && !firstLeg.skipped);
+    const endAtWarehouse = Boolean(returnLeg && !returnLeg.skipped);
+    const stopLocations = owner.stops.map((stop) => stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '));
+
+    const origin = startAtWarehouse ? logisticsBaseAddress : stopLocations[0];
+    const destination = endAtWarehouse ? logisticsBaseAddress : stopLocations[stopLocations.length - 1];
+    const waypointStart = startAtWarehouse ? 0 : 1;
+    const waypointEnd = endAtWarehouse ? stopLocations.length : Math.max(1, stopLocations.length - 1);
+    const waypoints = stopLocations.slice(waypointStart, waypointEnd);
+
+    const params = new URLSearchParams({
+      api: '1',
+      origin,
+      destination,
+      travelmode: 'driving',
+    });
+    if (waypoints.length) params.set('waypoints', waypoints.join('|'));
+    return `https://www.google.com/maps/dir/?${params.toString()}`;
+  }
+
+  function whatsappRouteUrl(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
+    const mapsUrl = googleMapsRouteUrl(owner, analysis);
+    const routeStart = routeStartTime(owner, analysis);
+    const routeEnd = routeEndTime(owner, analysis);
+    const dayLabel = new Intl.DateTimeFormat('nl-NL', {
+      timeZone: 'Europe/Amsterdam',
+      weekday: 'long',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(new Date(`${selectedDate}T12:00:00+02:00`));
+
+    const lines = [
+      `*Route ${dayLabel} – ${owner.name}*`,
+      '',
+      routeStart ? `Vertrek SHAKENSTYLE: ${formatTime(routeStart)}` : null,
+      '',
+      ...owner.stops.flatMap((stop, index) => [
+        `*${index + 1}. #${stop.projectNumber} – ${stop.projectName}*`,
+        `${formatTime(stop.start)}–${formatTime(stop.end)}`,
+        stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '),
+        '',
+      ]),
+      routeEnd ? `Verwacht terug SHAKENSTYLE: ${formatTime(routeEnd)}` : null,
+      analysis ? `Totale route: ${Math.round(analysis.distanceKm)} km · ca. ${formatTravel(analysis.durationMinutes)} reistijd` : null,
+      owner.fuelCardRequired ? '⛽ Tankpas meenemen' : null,
+      '',
+      mapsUrl ? '*Google Maps route:*' : null,
+      mapsUrl || null,
+    ].filter((line): line is string => Boolean(line));
+
+    return `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`;
   }
 
   function approveSuggestion(id: string) {
@@ -403,6 +462,34 @@ export default function LogisticsOptimizer({
                       <small>{routeEndTime(owner, analysis) ? `${formatTime(routeEndTime(owner, analysis))} · Einde van de dagroute` : 'Einde van de dagroute'}</small>
                     </div>
                   </div>
+                  {(owner.fuelCardRequired || viewMode === 'person') ? (
+                    <div className="routeFooter">
+                      {owner.fuelCardRequired ? (
+                        <div className="routeImportantNote">
+                          <Fuel size={14} />
+                          <div>
+                            <strong>Belangrijke route-info</strong>
+                            <small>Tankpas meenemen voor deze route.</small>
+                          </div>
+                        </div>
+                      ) : null}
+                      {viewMode === 'person' ? (
+                        <a
+                          className={analysis ? 'whatsappButton' : 'whatsappButton disabled'}
+                          href={analysis ? whatsappRouteUrl(owner, analysis) : undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-disabled={!analysis}
+                          onClick={(event) => {
+                            if (!analysis) event.preventDefault();
+                          }}
+                        >
+                          <MessageCircle size={14} />
+                          Deel via WhatsApp
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
@@ -485,7 +572,7 @@ export default function LogisticsOptimizer({
                 </article>
               );
             })}
-            {!suggestions.length ? <div className="emptyState">Geen opvallende combinaties gevonden met de huidige regels.</div> : null}
+            {!suggestions.length ? <div className="emptyState">Geen concrete route-optimalisaties gevonden. Operationele aandachtspunten staan bij de betreffende route.</div> : null}
           </div>
         </aside>
       </div>
@@ -597,6 +684,11 @@ export default function LogisticsOptimizer({
         .travelLeg>div{display:grid;gap:2px;min-width:0}.travelLeg strong{font-size:8px;color:#5d5751}.travelLeg small{font-size:8px;color:var(--muted)}
         .travelLine{width:2px;height:34px;background:#d9d4cd;justify-self:center;border-radius:999px}.travelLeg.good .travelLine{background:#7fbe91}.travelLeg.tight .travelLine{background:#e4b13b}.travelLeg.conflict .travelLine{background:#cf5a4e}.travelLeg.return .travelLine{background:#aaa39b}
         .travelLeg.good small{color:#347043}.travelLeg.tight small{color:#8a6500;font-weight:800}.travelLeg.conflict small{color:#a33e34;font-weight:900}
+        .routeFooter{display:grid;gap:8px;padding:10px 12px 2px}
+        .routeImportantNote{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:center;padding:9px 10px;border:1px solid #eadca9;border-radius:10px;background:#fff9df;color:#6d5700}
+        .routeImportantNote>div{display:grid;gap:1px}.routeImportantNote strong{font-size:8px}.routeImportantNote small{font-size:8px;color:#7c6a27}
+        .whatsappButton{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border:1px solid #cfded2;border-radius:10px;background:#f5fbf6;color:#2f6f44;font-size:8px;font-weight:900;text-decoration:none}
+        .whatsappButton:hover{background:#edf7ef;border-color:#a9c9b0}.whatsappButton.disabled{opacity:.45;cursor:not-allowed}
 
         .mapPanel{background:#fff}
         .mapPlaceholder{position:relative;min-height:500px;display:grid;place-items:center;background:#eef0ed;overflow:hidden}
