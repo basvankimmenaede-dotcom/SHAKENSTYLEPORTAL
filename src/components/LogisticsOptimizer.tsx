@@ -407,7 +407,7 @@ export default function LogisticsOptimizer({
         )}
       </section>
 
-      <style jsx>{`
+      <style jsx global>{`
         .logisticsPage{width:100%;max-width:1720px;margin:0 auto;padding:26px 28px 56px;color:var(--ink)}
         .logisticsHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:32px;margin-bottom:20px}
         .logisticsHeader>div{min-width:0}
