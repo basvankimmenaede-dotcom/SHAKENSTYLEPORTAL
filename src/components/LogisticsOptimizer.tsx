@@ -191,10 +191,18 @@ export default function LogisticsOptimizer({
       <section className="toolbar">
         <div className="viewSwitch" aria-label="Filter routeweergave">
           <Link href={viewHref('vehicle')} className={viewMode === 'vehicle' ? 'active' : ''}>
-            <Truck size={15} /> Voertuig
+            <span className="viewIcon"><Truck size={18} /></span>
+            <span className="viewCopy">
+              <strong>Voertuigen</strong>
+              <small>Routes per bus</small>
+            </span>
           </Link>
           <Link href={viewHref('person')} className={viewMode === 'person' ? 'active' : ''}>
-            <UserRound size={15} /> Persoon
+            <span className="viewIcon"><UserRound size={18} /></span>
+            <span className="viewCopy">
+              <strong>Personen</strong>
+              <small>Routes per medewerker</small>
+            </span>
           </Link>
         </div>
         <div className="legend">
@@ -412,24 +420,37 @@ export default function LogisticsOptimizer({
         .datePicker input{height:44px;min-width:190px;border:1px solid var(--line);border-radius:12px;padding:0 13px;background:#fff;font:inherit}
         .datePicker :global(.button){height:44px;padding-inline:18px;border-radius:12px}
 
-        .weekBar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:12px}
-        .dayCard{position:relative;min-width:0;display:grid;gap:8px;padding:12px 13px 11px;border:1px solid var(--line);border-radius:14px;background:#fff;color:inherit;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
-        .dayCard:hover{border-color:#cfc8bf;box-shadow:0 5px 18px rgba(28,24,20,.06);transform:translateY(-1px)}
-        .dayCard.selected{border-color:#24211e;box-shadow:0 0 0 1px #24211e}
+        .weekBar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:14px}
+        .dayCard{position:relative;min-width:0;min-height:94px;display:flex;flex-direction:column;justify-content:space-between;padding:14px 15px 13px;border:1px solid transparent;border-radius:16px;color:#24211e;overflow:hidden;transition:box-shadow .15s ease,transform .15s ease,filter .15s ease}
+        .dayCard.empty{background:#efede9;border-color:#e2dfd9}
+        .dayCard.green{background:#dff2e5;border-color:#c7e6d1}
+        .dayCard.yellow{background:#fff0bd;border-color:#f0db8a}
+        .dayCard.red{background:#f9dfdb;border-color:#efc2bc}
+        .dayCard:hover{filter:saturate(1.04);box-shadow:0 7px 20px rgba(28,24,20,.08);transform:translateY(-1px)}
+        .dayCard.selected{box-shadow:0 0 0 2px #24211e inset,0 7px 20px rgba(28,24,20,.08)}
         .dayTop{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-        .dayDate{display:flex;align-items:baseline;gap:4px;min-width:0}
-        .dayDate strong{font-size:14px;line-height:1.1;text-transform:capitalize;white-space:nowrap}
-        .dayDate small{font-size:10px;color:var(--muted);white-space:nowrap}
-        .dayStatusDot{width:9px;height:9px;border-radius:50%;background:#cfcac2;flex:0 0 auto;margin-top:2px}
-        .dayCard.green .dayStatusDot{background:#4fa36d}.dayCard.yellow .dayStatusDot{background:#e4b13b}.dayCard.red .dayStatusDot{background:#cf5a4e}
-        .dayMeta{display:grid;gap:2px;min-width:0}
-        .dayMeta b{font-size:9px;line-height:1.15;white-space:nowrap}
-        .dayMeta small{font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .dayDate{display:flex;align-items:baseline;gap:5px;min-width:0}
+        .dayDate strong{font-size:15px;line-height:1.05;text-transform:capitalize;white-space:nowrap}
+        .dayDate small{font-size:10px;color:rgba(36,33,30,.58);white-space:nowrap}
+        .dayStatusDot{display:none}
+        .dayMeta{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;min-width:0}
+        .dayMeta b{font-size:10px;line-height:1.15;white-space:nowrap}
+        .dayMeta small{font-size:9px;color:rgba(36,33,30,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .dayCard.empty .dayMeta b{color:#6f6a64}
+        .dayCard.green .dayMeta b{color:#2f6f44}
+        .dayCard.yellow .dayMeta b{color:#8a6500}
+        .dayCard.red .dayMeta b{color:#9e4037}
 
         .toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px}
-        .viewSwitch{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:12px;background:#efede9}
-        .viewSwitch a{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:9px;color:var(--muted);font-size:11px;font-weight:900}
-        .viewSwitch a.active{background:#fff;color:var(--ink);box-shadow:0 1px 5px rgba(0,0,0,.09)}
+        .viewSwitch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:min(430px,100%)}
+        .viewSwitch a{min-width:0;display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
+        .viewSwitch a:hover{border-color:#d8c7ba;box-shadow:0 4px 14px rgba(28,24,20,.05)}
+        .viewSwitch a.active{border-color:#f37021;background:#fff6ef;box-shadow:0 0 0 1px rgba(243,112,33,.14)}
+        .viewIcon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#f2f0ec;color:#716b64}
+        .viewSwitch a.active .viewIcon{background:#fee7d7;color:#e76416}
+        .viewCopy{display:grid;gap:2px;min-width:0}
+        .viewCopy strong{font-size:11px;line-height:1.1}
+        .viewCopy small{font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .legend{display:flex;gap:14px;flex-wrap:wrap}
         .legend span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:9px;font-weight:800}
         .legend i{width:9px;height:9px;border-radius:50%}.legend .green{background:#4fa36d}.legend .yellow{background:#e4b13b}.legend .red{background:#cf5a4e}
