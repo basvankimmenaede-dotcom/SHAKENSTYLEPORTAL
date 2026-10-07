@@ -334,8 +334,8 @@ export default function LogisticsOptimizer({
                         <div className={`travelLeg ${leg?.status || 'travel'}`}>
                           <span className="travelLine" />
                           <div>
-                            <strong>{leg ? `${formatTravel(leg.durationMinutes)} · ${Math.round(leg.distanceKm)} km` : 'Route berekenen…'}</strong>
-                            {leg?.slackMinutes !== null && leg?.slackMinutes !== undefined ? (
+                            <strong>{leg?.skipped ? (leg.note || 'Geen transport in Rentman') : leg ? `${formatTravel(leg.durationMinutes)} · ${Math.round(leg.distanceKm)} km` : 'Route berekenen…'}</strong>
+                            {!leg?.skipped && leg?.slackMinutes !== null && leg?.slackMinutes !== undefined ? (
                               <small>
                                 {leg.slackMinutes < 0
                                   ? `${Math.abs(Math.round(leg.slackMinutes))} min te laat`
@@ -366,8 +366,10 @@ export default function LogisticsOptimizer({
                     <div className="travelLeg return">
                       <span className="travelLine" />
                       <div>
-                        <strong>{formatTravel(analysis.legs[owner.stops.length].durationMinutes)} · {Math.round(analysis.legs[owner.stops.length].distanceKm)} km</strong>
-                        <small>Terug naar magazijn</small>
+                        <strong>{analysis.legs[owner.stops.length].skipped
+                          ? (analysis.legs[owner.stops.length].note || 'Geen terugreis in Rentman')
+                          : `${formatTravel(analysis.legs[owner.stops.length].durationMinutes)} · ${Math.round(analysis.legs[owner.stops.length].distanceKm)} km`}</strong>
+                        <small>{analysis.legs[owner.stops.length].skipped ? 'Rentman transportinstelling' : 'Terug naar magazijn'}</small>
                       </div>
                     </div>
                   ) : null}
