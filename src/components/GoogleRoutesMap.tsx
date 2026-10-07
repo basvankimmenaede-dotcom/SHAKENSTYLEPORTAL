@@ -225,7 +225,7 @@ export default function GoogleRoutesMap({ apiKey, baseAddress, owners }: Props) 
               ? optimized
                   .map((value: number) => waypointStops[value])
                   .filter(Boolean)
-                  .map((stop) => `#${stop.projectNumber} · ${stop.city || stop.locationName}`)
+                  .map((stop: LogisticsOwner['stops'][number]) => `#${stop.projectNumber} · ${stop.city || stop.locationName}`)
               : undefined;
 
             routeSummaries.push({
