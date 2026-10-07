@@ -422,8 +422,19 @@ export default function CrewPlanningPopup(props: Props) {
                 className="planningNotesBadge"
                 title="Notitie aanwezig"
                 aria-label="Notitie aanwezig"
+                style={{
+                  width: 'auto',
+                  height: 'auto',
+                  display: 'inline-flex',
+                  marginLeft: 6,
+                  border: 0,
+                  borderRadius: 0,
+                  background: 'transparent',
+                  color: 'var(--orange-dark)',
+                  verticalAlign: 'middle',
+                }}
               >
-                <FileText size={13} strokeWidth={2} aria-hidden="true" />
+                <FileText size={14} strokeWidth={1.9} aria-hidden="true" />
               </span>
             ) : null}
           </strong>
