@@ -179,33 +179,17 @@ export default function LogisticsOptimizer({
     return end.toISOString();
   }
 
-  function googleMapsRouteUrl(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
-    if (!owner.stops.length) return '';
-
-    const firstLeg = analysis?.legs[0];
-    const returnLeg = analysis?.legs[owner.stops.length];
-    const startAtWarehouse = Boolean(firstLeg && !firstLeg.skipped);
-    const endAtWarehouse = Boolean(returnLeg && !returnLeg.skipped);
-    const stopLocations = owner.stops.map((stop) => stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '));
-
-    const origin = startAtWarehouse ? logisticsBaseAddress : stopLocations[0];
-    const destination = endAtWarehouse ? logisticsBaseAddress : stopLocations[stopLocations.length - 1];
-    const waypointStart = startAtWarehouse ? 0 : 1;
-    const waypointEnd = endAtWarehouse ? stopLocations.length : Math.max(1, stopLocations.length - 1);
-    const waypoints = stopLocations.slice(waypointStart, waypointEnd);
-
+  function googleMapsLegUrl(origin: string, destination: string) {
     const params = new URLSearchParams({
       api: '1',
       origin,
       destination,
       travelmode: 'driving',
     });
-    if (waypoints.length) params.set('waypoints', waypoints.join('|'));
     return `https://www.google.com/maps/dir/?${params.toString()}`;
   }
 
   function whatsappRouteUrl(owner: LogisticsOwner, analysis?: LogisticsRouteAnalysis) {
-    const mapsUrl = googleMapsRouteUrl(owner, analysis);
     const routeStart = routeStartTime(owner, analysis);
     const routeEnd = routeEndTime(owner, analysis);
     const dayLabel = new Intl.DateTimeFormat('nl-NL', {
@@ -216,26 +200,75 @@ export default function LogisticsOptimizer({
       year: 'numeric',
     }).format(new Date(`${selectedDate}T12:00:00+02:00`));
 
-    const lines = [
-      `*Route ${dayLabel} – ${owner.name}*`,
+    const lines: Array<string | null> = [
+      `*Routes ${dayLabel} – ${owner.name}*`,
       '',
-      routeStart ? `Vertrek SHAKENSTYLE: ${formatTime(routeStart)}` : null,
-      '',
-      ...owner.stops.flatMap((stop, index) => [
+    ];
+
+    owner.stops.forEach((stop, index) => {
+      const stopLocation = stop.address || [stop.locationName, stop.city].filter(Boolean).join(', ');
+      const transport = transportDirections(stop.transport);
+      const leg = analysis?.legs[index];
+      const previousStop = index > 0 ? owner.stops[index - 1] : null;
+
+      let origin = index === 0
+        ? (transport.outbound ? logisticsBaseAddress : stopLocation)
+        : (leg?.viaWarehouse ? logisticsBaseAddress : (
+          previousStop?.address || [previousStop?.locationName, previousStop?.city].filter(Boolean).join(', ')
+        ));
+      if (!origin) origin = logisticsBaseAddress;
+
+      let destination = stopLocation;
+      if (!destination) destination = logisticsBaseAddress;
+
+      const outboundUrl = transport.outbound
+        ? googleMapsLegUrl(origin, destination)
+        : '';
+
+      const returnUrl = transport.returnTrip
+        ? googleMapsLegUrl(destination, logisticsBaseAddress)
+        : '';
+
+      const outboundDeparture = index === 0
+        ? routeStart
+        : leg?.viaWarehouse
+          ? addMinutesToTime(stop.start, -leg.viaWarehouse.outboundDurationMinutes)
+          : null;
+
+      lines.push(
         `*${index + 1}. #${stop.projectNumber} – ${stop.projectName}*`,
         `${formatTime(stop.start)}–${formatTime(stop.end)}`,
-        stop.address || [stop.locationName, stop.city].filter(Boolean).join(', '),
-        '',
-      ]),
-      routeEnd ? `Verwacht terug SHAKENSTYLE: ${formatTime(routeEnd)}` : null,
-      analysis ? `Totale route: ${Math.round(analysis.distanceKm)} km · ca. ${formatTravel(analysis.durationMinutes)} reistijd` : null,
-      owner.fuelCardRequired ? '⛽ Tankpas meenemen' : null,
-      '',
-      mapsUrl ? '*Google Maps route:*' : null,
-      mapsUrl || null,
-    ].filter((line): line is string => Boolean(line));
+        stopLocation,
+      );
 
-    return `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`;
+      if (transport.outbound && outboundUrl) {
+        lines.push(
+          outboundDeparture ? `Heen · vertrek ${formatTime(outboundDeparture)}` : 'Heen',
+          outboundUrl,
+        );
+      }
+
+      if (transport.returnTrip && returnUrl) {
+        const returnDuration = index === owner.stops.length - 1
+          ? analysis?.legs[owner.stops.length]?.durationMinutes
+          : analysis?.legs[index + 1]?.viaWarehouse?.returnDurationMinutes;
+        const expectedArrival = returnDuration
+          ? addMinutesToTime(stop.end, returnDuration)
+          : null;
+        lines.push(
+          expectedArrival ? `Terug naar SHAKENSTYLE · verwacht ${formatTime(expectedArrival)}` : 'Terug naar SHAKENSTYLE',
+          returnUrl,
+        );
+      }
+
+      lines.push('');
+    });
+
+    if (routeEnd) lines.push(`Einde dagroute: ${formatTime(routeEnd)}`);
+    if (analysis) lines.push(`Totaal: ${Math.round(analysis.distanceKm)} km · ca. ${formatTravel(analysis.durationMinutes)} reistijd`);
+    if (owner.fuelCardRequired) lines.push('⛽ Tankpas meenemen');
+
+    return `https://wa.me/?text=${encodeURIComponent(lines.filter((line): line is string => Boolean(line)).join('\n'))}`;
   }
 
   function approveSuggestion(id: string) {
