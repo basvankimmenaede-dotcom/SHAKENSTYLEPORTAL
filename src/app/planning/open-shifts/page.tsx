@@ -152,9 +152,11 @@ export default async function OpenShiftsPage({
     .sort((a, b) => String(a.start).localeCompare(String(b.start)));
 
   const functionsList = [...new Set(rows.map((row) => row.name))].sort((a, b) => a.localeCompare(b, 'nl'));
-  const projectsList = [...new Map(rows.map((row) => [row.projectId, row.project])).entries()]
-    .filter((entry): entry is [number, RentmanPlanningProject] => Boolean(entry[0] && entry[1]))
-    .sort((a, b) => String(a[1].name).localeCompare(String(b[1].name), 'nl'));
+  const projectsList = [...new Map(
+    rows
+      .filter((row) => row.projectId !== null && row.project !== undefined)
+      .map((row) => [row.projectId as number, row.project!] as const),
+  ).entries()].sort((a, b) => String(a[1].name).localeCompare(String(b[1].name), 'nl'));
 
   const filteredRows = rows.filter((row) => {
     if (!selectedStatuses.has(row.status)) return false;
