@@ -410,28 +410,11 @@ function buildSuggestions(
     }
   }
 
-  for (const owner of activeOwners) {
-    if (!owner.fuelCardRequired) continue;
-    suggestions.push({
-      id: `fuel-${viewMode}-${owner.id}`,
-      type: 'fuel-card',
-      badge: 'Brandstofpas',
-      title: `Brandstofpas controleren voor ${owner.name}`,
-      description: `Minimaal één geplande stop komt op meer dan ${fuelCardThresholdKm} km retour vanaf het magazijn volgens de Rentman-afstand.`,
-      approvable: true,
-      checks: ['Na een route- of voertuigwijziging opnieuw controleren.'],
-      actionLines: [
-        `Controleer brandstofpas voor ${owner.name}`,
-        owner.subtitle ? `Referentie: ${owner.subtitle}` : 'Geen extra referentie beschikbaar',
-        `Drempel in portal: ${fuelCardThresholdKm} km retour`,
-      ],
-    });
-  }
 
   return suggestions.slice(0, 12);
 }
 
-function analyseDay(stops: LogisticsStop[], fuelCardThresholdKm: number): LogisticsDayStatus['status'] {
+function analyseDay(stops: LogisticsStop[]): LogisticsDayStatus['status'] {
   if (!stops.length) return 'empty';
 
   const byOwner = new Map<number, LogisticsStop[]>();
@@ -449,12 +432,7 @@ function analyseDay(stops: LogisticsStop[], fuelCardThresholdKm: number): Logist
   }
 
   const duplicatedCity = [...cityOwners.values()].some((ids) => ids.size > 1);
-  const activeOwners = [...byOwner.values()];
-  const obviousSingleStop = activeOwners.length > 1 && activeOwners.some((items) => items.length === 1);
-  const longRoute = stops.some((stop) => stop.warehouseDistanceKm !== null && stop.warehouseDistanceKm * 2 > fuelCardThresholdKm);
-
-  if (duplicatedCity && obviousSingleStop) return 'red';
-  if (duplicatedCity || obviousSingleStop || longRoute) return 'yellow';
+  if (duplicatedCity) return 'yellow';
   return 'green';
 }
 
@@ -531,7 +509,7 @@ export default async function LogisticsPage({
   const days: LogisticsDayStatus[] = Array.from({ length: 7 }, (_, index) => {
     const day = addDays(today, index);
     const stops = buildVehicleStops(projectVehicles, projectMap, subprojectMap, day);
-    const status = analyseDay(stops, fuelCardThresholdKm);
+    const status = analyseDay(stops);
     const activeOwners = new Set(stops.map((stop) => stop.ownerId)).size;
     return {
       date: day,
