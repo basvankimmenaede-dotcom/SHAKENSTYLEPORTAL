@@ -601,6 +601,10 @@ export type RentmanPlanningProjectVehicle = {
     planperiod_end?: string | null;
     usageperiod_start?: string | null;
     usageperiod_end?: string | null;
+    travel_time_before?: number | null;
+    travel_time_after?: number | null;
+    twoway?: boolean | null;
+    type?: string | null;
     group?: {
       id?: number;
       displayname?: string;
