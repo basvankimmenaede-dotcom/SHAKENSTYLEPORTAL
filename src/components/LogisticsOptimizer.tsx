@@ -105,6 +105,7 @@ export default function LogisticsOptimizer({
 }: Props) {
   const [approved, setApproved] = useState<string[]>([]);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | 'all'>('all');
+  const [optimizedOrders, setOptimizedOrders] = useState<Record<number, string[]>>({});
 
   const visibleOwners = useMemo(
     () => selectedOwnerId === 'all' ? owners : owners.filter((owner) => owner.id === selectedOwnerId),
@@ -115,6 +116,36 @@ export default function LogisticsOptimizer({
   const activeOwners = owners.filter((owner) => owner.stops.length > 0);
   const referenceDistance = activeOwners.reduce((sum, owner) => sum + owner.referenceDistanceKm, 0);
   const mapStops = visibleOwners.flatMap((owner) => owner.stops);
+  const optimizedOwnerIds = Object.keys(optimizedOrders).map(Number);
+  const approvedCount = approved.length + optimizedOwnerIds.length;
+
+  function stopKey(stop: LogisticsStop) {
+    return `${stop.id}:${stop.projectId}`;
+  }
+
+  function orderedStopsForOwner(owner: LogisticsOwner) {
+    const order = optimizedOrders[owner.id];
+    if (!order?.length) return owner.stops;
+
+    const rank = new Map(order.map((key, index) => [key, index]));
+    return [...owner.stops].sort((a, b) => {
+      const aRank = rank.get(stopKey(a));
+      const bRank = rank.get(stopKey(b));
+      if (aRank === undefined && bRank === undefined) return 0;
+      if (aRank === undefined) return 1;
+      if (bRank === undefined) return -1;
+      return aRank - bRank;
+    });
+  }
+
+  function updateOptimizedOrder(ownerId: number, order: string[] | null) {
+    setOptimizedOrders((current) => {
+      const next = { ...current };
+      if (order?.length) next[ownerId] = order;
+      else delete next[ownerId];
+      return next;
+    });
+  }
 
   function approveSuggestion(id: string) {
     setApproved((current) => current.includes(id) ? current : [...current, id]);
@@ -125,11 +156,23 @@ export default function LogisticsOptimizer({
   }
 
   async function copyActions() {
-    const lines = approvedSuggestions.flatMap((suggestion) => [
+    const suggestionLines = approvedSuggestions.flatMap((suggestion) => [
       suggestion.title,
       ...suggestion.actionLines.map((line) => `- ${line}`),
       '',
     ]);
+    const optimizationLines = optimizedOwnerIds.flatMap((ownerId) => {
+      const owner = owners.find((item) => item.id === ownerId);
+      if (!owner) return [];
+      const orderedStops = orderedStopsForOwner(owner);
+      return [
+        `Google route-optimalisatie · ${owner.name}`,
+        ...orderedStops.map((stop, index) => `- ${index + 1}. #${stop.projectNumber} · ${stop.city || stop.locationName}`),
+        '- Volgorde handmatig controleren/doorgeven in Rentman.',
+        '',
+      ];
+    });
+    const lines = [...suggestionLines, ...optimizationLines];
     if (!lines.length) return;
     const text = lines.join('\n').trim();
     try {
@@ -223,8 +266,8 @@ export default function LogisticsOptimizer({
         </article>
         <article>
           <span>Voorstellen</span>
-          <strong>{suggestions.length}</strong>
-          <p>{approved.length} goedgekeurd</p>
+          <strong>{suggestions.length + optimizedOwnerIds.length}</strong>
+          <p>{approvedCount} geselecteerd/goedgekeurd</p>
         </article>
       </section>
 
@@ -275,9 +318,10 @@ export default function LogisticsOptimizer({
                 <div className="routeTitle">
                   {viewMode === 'vehicle' ? <Truck size={16} /> : <UserRound size={16} />}
                   <strong>{owner.name}</strong>
+                  {optimizedOrders[owner.id]?.length ? <b className="optimizedBadge">Google volgorde actief</b> : null}
                   <span>{owner.stops.length} stops</span>
                 </div>
-                {owner.stops.map((stop, stopIndex) => (
+                {orderedStopsForOwner(owner).map((stop, stopIndex) => (
                   <div className="stopRow" key={`${owner.id}-${stop.id}-${stop.projectId}`}>
                     <span className="stopNumber">{stopIndex + 1}</span>
                     <div>
@@ -308,6 +352,7 @@ export default function LogisticsOptimizer({
               apiKey={googleMapsApiKey}
               baseAddress={logisticsBaseAddress}
               owners={visibleOwners}
+              onOptimizationChange={updateOptimizedOrder}
             />
           ) : (
             <div className="mapPlaceholder">
@@ -380,12 +425,12 @@ export default function LogisticsOptimizer({
             <h2>Rentman-actielijst</h2>
             <p>De portal wijzigt Rentman niet. Na goedkeuren staat hier exact wat je handmatig moet controleren of aanpassen.</p>
           </div>
-          <button type="button" className="button secondary" onClick={copyActions} disabled={!approvedSuggestions.length}>
+          <button type="button" className="button secondary" onClick={copyActions} disabled={!approvedSuggestions.length && !optimizedOwnerIds.length}>
             <Copy size={15} /> Kopieer actielijst
           </button>
         </div>
 
-        {approvedSuggestions.length ? (
+        {approvedSuggestions.length || optimizedOwnerIds.length ? (
           <div className="actionGrid">
             {approvedSuggestions.map((suggestion) => (
               <article key={suggestion.id}>
@@ -394,6 +439,21 @@ export default function LogisticsOptimizer({
                 {suggestion.actionLines.map((line) => <p key={line}><Check size={14} /> {line}</p>)}
               </article>
             ))}
+            {optimizedOwnerIds.map((ownerId) => {
+              const owner = owners.find((item) => item.id === ownerId);
+              if (!owner) return null;
+              const orderedStops = orderedStopsForOwner(owner);
+              return (
+                <article key={`route-${ownerId}`} className="routeActionCard">
+                  <span>GOOGLE ROUTE · GESELECTEERD</span>
+                  <strong>{owner.name} · nieuwe stopvolgorde</strong>
+                  {orderedStops.map((stop, index) => (
+                    <p key={stopKey(stop)}><Check size={14} /> {index + 1}. #{stop.projectNumber} · {stop.city || stop.locationName}</p>
+                  ))}
+                  <p><Check size={14} /> Controleer en verwerk deze volgorde handmatig in Rentman.</p>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className="emptyAction">Keur een voorstel goed om de concrete Rentman-acties hier te tonen.</div>
@@ -500,7 +560,7 @@ export default function LogisticsOptimizer({
         .actionHeader h2{margin:5px 0;font-size:21px}.actionHeader :global(.button){display:inline-flex;align-items:center;gap:7px}.actionHeader :global(.button:disabled){opacity:.45}
         .actionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
         .actionGrid article{padding:12px;border:1px solid #cfe0d2;border-radius:12px;background:#f8fcf9;display:grid;gap:6px}
-        .actionGrid article>span{font-size:8px;font-weight:900;color:#347043}.actionGrid article>strong{font-size:10px}.actionGrid p{display:flex;gap:6px;margin:0;font-size:8px;color:#4e5c51}
+        .actionGrid article>span{font-size:8px;font-weight:900;color:#347043}.actionGrid article>strong{font-size:10px}.actionGrid p{display:flex;gap:6px;margin:0;font-size:8px;color:#4e5c51}.actionGrid .routeActionCard{border-color:#f2d4bf;background:#fff8f3}.actionGrid .routeActionCard>span{color:#d85b10}
         .emptyState,.emptyAction{padding:20px;color:var(--muted);font-size:9px;text-align:center}.emptyAction{margin-top:14px;border:1px dashed var(--line);border-radius:12px}
 
         @media(max-width:1380px){
