@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronRight, Copy, Fuel, Map, Route, Truck, UserRound, X } from 'lucide-react';
+import GoogleRoutesMap from './GoogleRoutesMap';
 
 export type LogisticsStop = {
   id: number;
@@ -57,7 +58,8 @@ type Props = {
   suggestions: LogisticsSuggestion[];
   fuelCardThresholdKm: number;
   days: LogisticsDayStatus[];
-  googleMapsConfigured: boolean;
+  googleMapsApiKey: string;
+  logisticsBaseAddress: string;
 };
 
 const ROUTE_COLORS = ['#e86d24', '#2f6f8f', '#6d5c9a', '#3f7f66', '#9a613e', '#6c737d'];
@@ -98,7 +100,8 @@ export default function LogisticsOptimizer({
   suggestions,
   fuelCardThresholdKm,
   days,
-  googleMapsConfigured,
+  googleMapsApiKey,
+  logisticsBaseAddress,
 }: Props) {
   const [approved, setApproved] = useState<string[]>([]);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | 'all'>('all');
@@ -297,19 +300,19 @@ export default function LogisticsOptimizer({
             <Map size={18} />
           </div>
 
-          {googleMapsConfigured ? (
-            <div className="mapReady">
-              <Map size={34} />
-              <strong>Google Maps API-key is aanwezig</strong>
-              <p>De kaartcomponent kan nu aan de Google Routes Library worden gekoppeld.</p>
-            </div>
+          {googleMapsApiKey ? (
+            <GoogleRoutesMap
+              apiKey={googleMapsApiKey}
+              baseAddress={logisticsBaseAddress}
+              owners={visibleOwners}
+            />
           ) : (
             <div className="mapPlaceholder">
               <div className="mapPlaceholderGrid" />
               <div className="mapMessage">
                 <Map size={30} />
                 <strong>Google Maps nog niet gekoppeld</strong>
-                <p>De schematische kaart is verwijderd. Voeg een Google Maps Platform API-key toe om echte wegen, reistijden en routes te tonen.</p>
+                <p>Voeg de Google Maps API-key toe om echte wegen, reistijden en route-optimalisatie te tonen.</p>
               </div>
               <div className="mapStopList">
                 {mapStops.slice(0, 8).map((stop) => (
@@ -322,9 +325,9 @@ export default function LogisticsOptimizer({
           )}
           <p className="mapNote">
             <AlertTriangle size={14} />
-            Voor echte optimalisatie gebruiken we Google Routes + Route Matrix. Tot die koppeling actief is, zijn geel/rood gebaseerd op duidelijke Rentman-signalen zoals dubbele plaatsen, losse ritten en lange retourafstanden.
+            Google Routes optimaliseert de stopvolgorde binnen de geselecteerde bus of persoon. Wisselen tussen voertuigen blijft voorlopig een advies en wordt niet automatisch in Rentman aangepast.
           </p>
-          <p className="mapNote">Brandstofpasgrens: {fuelCardThresholdKm} km retour.</p>
+          <p className="mapNote">Start/eindpunt: {logisticsBaseAddress} · Brandstofpasgrens: {fuelCardThresholdKm} km retour.</p>
         </section>
 
         <aside className="suggestionPanel">
@@ -418,11 +421,11 @@ export default function LogisticsOptimizer({
         .ownerList{display:grid;border-bottom:1px solid var(--line)}.ownerCard{width:100%;display:grid;grid-template-columns:7px minmax(0,1fr) auto auto;gap:9px;align-items:center;padding:10px 12px;border:0;border-bottom:1px solid #efede8;background:#fff;text-align:left;cursor:pointer}.ownerCard:last-child{border-bottom:0}.ownerCard:hover,.ownerCard.selected{background:#fff8f3}.ownerColor{width:7px;height:30px;border-radius:999px}.ownerMain,.ownerStats{display:grid;gap:1px;min-width:0}.ownerMain strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ownerMain small,.ownerStats small{font-size:8px;color:var(--muted)}.ownerStats{text-align:right}.ownerStats b{font-size:8px}
         .routeList{display:grid}.routeGroup{border-bottom:1px solid var(--line)}.routeGroup:last-child{border-bottom:0}.routeTitle{display:flex;align-items:center;gap:7px;padding:9px 11px;background:#f8f7f4;font-size:9px}.routeTitle span{margin-left:auto;color:var(--muted)}
         .stopRow{display:grid;grid-template-columns:23px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 11px;border-top:1px solid #efede8}.stopNumber{width:21px;height:21px;display:grid;place-items:center;border-radius:50%;background:var(--orange-soft);color:var(--orange-dark);font-size:8px;font-weight:900}.stopRow>div{min-width:0;display:grid;gap:1px}.stopRow strong{font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stopRow span,.stopRow small{font-size:8px;color:var(--muted)}.stopRow>b{font-size:8px;color:var(--muted)}
-        .mapPlaceholder,.mapReady{position:relative;min-height:480px;display:grid;place-items:center;background:#eef0ed;overflow:hidden}.mapPlaceholderGrid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.8) 1px,transparent 1px);background-size:42px 42px;transform:rotate(-9deg) scale(1.2);opacity:.7}.mapMessage{position:relative;z-index:2;width:min(360px,calc(100% - 40px));padding:20px;border:1px solid #d8d9d5;border-radius:14px;background:rgba(255,255,255,.94);text-align:center;box-shadow:0 12px 35px rgba(0,0,0,.08)}.mapMessage strong,.mapReady strong{display:block;margin-top:8px;font-size:14px}.mapMessage p,.mapReady p{margin:7px 0 0;color:var(--muted);font-size:9px;line-height:1.5}.mapStopList{position:absolute;left:12px;right:12px;bottom:12px;z-index:2;display:flex;flex-wrap:wrap;gap:5px}.mapStopList span{padding:5px 7px;border:1px solid rgba(0,0,0,.1);border-radius:999px;background:rgba(255,255,255,.94);font-size:8px}.mapNote{display:flex;gap:7px;align-items:flex-start;margin:0;padding:9px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:8px;line-height:1.45}
+        .mapPlaceholder{position:relative;min-height:520px;display:grid;place-items:center;background:#eef0ed;overflow:hidden}.mapPlaceholderGrid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.8) 1px,transparent 1px);background-size:42px 42px;transform:rotate(-9deg) scale(1.2);opacity:.7}.mapMessage{position:relative;z-index:2;width:min(360px,calc(100% - 40px));padding:20px;border:1px solid #d8d9d5;border-radius:14px;background:rgba(255,255,255,.94);text-align:center;box-shadow:0 12px 35px rgba(0,0,0,.08)}.mapMessage strong{display:block;margin-top:8px;font-size:14px}.mapMessage p{margin:7px 0 0;color:var(--muted);font-size:9px;line-height:1.5}.mapStopList{position:absolute;left:12px;right:12px;bottom:12px;z-index:2;display:flex;flex-wrap:wrap;gap:5px}.mapStopList span{padding:5px 7px;border:1px solid rgba(0,0,0,.1);border-radius:999px;background:rgba(255,255,255,.94);font-size:8px}.mapNote{display:flex;gap:7px;align-items:flex-start;margin:0;padding:9px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:8px;line-height:1.45}
         .suggestionList{display:grid}.suggestion{padding:12px;border-bottom:1px solid var(--line);display:grid;gap:7px}.suggestion:last-child{border-bottom:0}.suggestion.approved{background:#f6fbf7}.suggestionTop{display:flex;justify-content:space-between;align-items:center;gap:8px}.suggestionBadge{width:fit-content;padding:4px 7px;border-radius:999px;background:#f1efeb;color:#625e58;font-size:7px;font-weight:900;text-transform:uppercase}.suggestionBadge.vehicle-transfer{background:#fff0e6;color:#8b3b12}.suggestionBadge.tomorrow-nearby{background:#eef5fb;color:#2c607d}.suggestionBadge.fuel-card{background:#fff5cc;color:#715800}.approvedLabel{display:flex;align-items:center;gap:4px;color:#347043;font-size:8px;font-weight:900}.suggestion>strong{font-size:10px;line-height:1.35}.suggestion p{margin:0;color:var(--muted);font-size:8px;line-height:1.45}.checks{display:grid;gap:3px}.checks span{display:flex;gap:3px;color:#6a655f;font-size:8px}.approveButton{width:100%;border:1px solid var(--orange);border-radius:9px;background:var(--orange);color:#fff;padding:8px 10px;font-size:8px;font-weight:900;cursor:pointer}.textAction{width:fit-content;display:flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--muted);font-size:8px;font-weight:800;cursor:pointer;padding:2px 0}
         .actionPanel{margin-top:12px;padding:17px}.actionHeader{display:flex;justify-content:space-between;align-items:flex-end;gap:18px}.actionHeader h2{margin:5px 0;font-size:21px}.actionHeader :global(.button){display:inline-flex;align-items:center;gap:7px}.actionHeader :global(.button:disabled){opacity:.45}.actionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.actionGrid article{padding:12px;border:1px solid #cfe0d2;border-radius:12px;background:#f8fcf9;display:grid;gap:6px}.actionGrid article>span{font-size:8px;font-weight:900;color:#347043}.actionGrid article>strong{font-size:10px}.actionGrid p{display:flex;gap:6px;margin:0;font-size:8px;color:#4e5c51}.emptyState,.emptyAction{padding:20px;color:var(--muted);font-size:9px;text-align:center}.emptyAction{margin-top:14px;border:1px dashed var(--line);border-radius:12px}
         @media(max-width:1250px){.weekBar{grid-template-columns:repeat(4,minmax(0,1fr))}.workspace{grid-template-columns:1fr 1.25fr}.suggestionPanel{grid-column:1/-1}.suggestionList{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        @media(max-width:820px){.logisticsPage{padding:22px 14px 44px}.logisticsHeader,.actionHeader,.toolbar{align-items:stretch;flex-direction:column}.datePicker{align-items:stretch}.metricGrid{grid-template-columns:1fr 1fr}.weekBar{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace{grid-template-columns:1fr}.suggestionPanel{grid-column:auto}.suggestionList{grid-template-columns:1fr}.actionGrid{grid-template-columns:1fr}.mapPlaceholder,.mapReady{min-height:380px}}
+        @media(max-width:820px){.logisticsPage{padding:22px 14px 44px}.logisticsHeader,.actionHeader,.toolbar{align-items:stretch;flex-direction:column}.datePicker{align-items:stretch}.metricGrid{grid-template-columns:1fr 1fr}.weekBar{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace{grid-template-columns:1fr}.suggestionPanel{grid-column:auto}.suggestionList{grid-template-columns:1fr}.actionGrid{grid-template-columns:1fr}.mapPlaceholder{min-height:420px}}
         @media(max-width:540px){.metricGrid{grid-template-columns:1fr}.weekBar{grid-template-columns:1fr 1fr}.dayCard{grid-template-columns:7px minmax(0,1fr)}.dayMeta{grid-column:2;text-align:left}.datePicker{display:grid;grid-template-columns:1fr auto}.ownerCard{grid-template-columns:7px minmax(0,1fr) auto}.ownerCard>svg{display:none}}
       `}</style>
     </main>
