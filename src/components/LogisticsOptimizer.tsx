@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Check, ChevronRight, Copy, Fuel, MapPin, Route, Truck, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronRight, Copy, Fuel, Route, Truck, X } from 'lucide-react';
 
 export type LogisticsStop = {
   id: number;
@@ -289,7 +289,7 @@ export default function LogisticsOptimizer({
               <text className="countryLabel" x="270" y="185">NEDERLAND</text>
               <text className="countryLabel" x="229" y="435">BELGIË</text>
 
-              {visibleVehicles.map((vehicle, index) => {
+              {visibleVehicles.map((vehicle) => {
                 const points = vehicle.stops
                   .map((stop) => cityPosition(stop.city))
                   .filter((point): point is [number, number] => Boolean(point));
@@ -333,7 +333,7 @@ export default function LogisticsOptimizer({
           {unmappedStops > 0 ? (
             <p className="mapNote"><AlertTriangle size={14} /> {unmappedStops} stop(s) konden nog niet op de schematische kaart worden geplaatst.</p>
           ) : null}
-          <p className="mapNote">De kaart toont de volgorde en spreiding. Voor echte rijtijd, routekilometers, tol en parkeren koppelen we later een routeprovider.</p>
+          <p className="mapNote">De kaart toont de volgorde en spreiding. Brandstofpas wordt gesignaleerd vanaf {fuelCardThresholdKm} km retour. Voor echte rijtijd, routekilometers, tol en parkeren koppelen we later een routeprovider.</p>
         </section>
 
         <aside className="suggestionPanel">
