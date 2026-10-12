@@ -11,7 +11,7 @@ export async function POST(request:NextRequest){
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return NextResponse.json({error:'Vul een geldig e-mailadres in.'},{status:400});
 
  const admin=createAdminClient();
- const {data:member,error:memberError}=await admin.from('crew_portal_members').select('id,full_name').or(`email.eq.${email},login_email_override.eq.${email}`).eq('active',true).maybeSingle();
+ const {data:member,error:memberError}=await admin.from('crew_portal_members').select('id,full_name').or(`and(email.eq.${email},login_email_override.is.null),login_email_override.eq.${email}`).eq('active',true).maybeSingle();
  if(memberError)return NextResponse.json({error:'Inloggen is tijdelijk niet beschikbaar.'},{status:503});
  if(!member)return NextResponse.json(generic);
  const now=new Date();
