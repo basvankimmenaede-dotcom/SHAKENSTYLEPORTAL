@@ -68,9 +68,9 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
         </div>
       </div>)}
     {editable && <button type="button" className="button secondary" onClick={() => { setProducts(current => [...current, { id: 'manual:' + Date.now(), section: section.key, category, name: 'Nieuw product', quantity: 1, unit: 'stuks', unitPrice: null, source: 'manual' }]); setDirty(true); setMessage('Niet-opgeslagen wijzigingen'); }}>+ Product toevoegen aan {category}</button>}
-    {section.key === "consumption" && <div style={{ background: 'var(--surface-secondary, #f5f5f5)', padding: 14, borderRadius: 10, marginTop: 16 }}>
-      {categories.map(cat => <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}><span>{cat}</span><strong>{money(products.filter(p => p.category === cat).reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0))}</strong></div>)}
-      <hr /><div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>Totaal excl. btw</strong><strong>{money(total)}</strong></div>
+    {section.key === 'consumption' && <div style={{ background: 'var(--surface-secondary, #f5f5f5)', padding: 14, borderRadius: 10, marginTop: 16 }}>
+      {categories.map(cat => <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}><span>{cat}</span><strong>{money(products.filter(p => p.section === section.key && p.category === cat).reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0))}</strong></div>)}
+      <hr /><div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>Totaal excl. btw</strong><strong>{money(products.filter(p => p.section === section.key).reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0))}</strong></div>
       {missing > 0 && <p style={{ marginBottom: 0 }}>{missing} prijs{missing === 1 ? '' : 'en'} nog te controleren. Totaal is voorlopig.</p>}
     </div>}
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 16 }}>
