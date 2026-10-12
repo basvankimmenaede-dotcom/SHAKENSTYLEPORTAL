@@ -8,7 +8,7 @@ export default async function CrewPage() {
  const supabase = await createClient();
  const { data: { user } } = await supabase.auth.getUser();
  if (!user?.email) return <CrewLogin />;
- const { data: member } = await supabase.from('crew_portal_members').select('id,full_name,email').eq('email', user.email).eq('active', true).maybeSingle();
+ const { data: member } = await supabase.from('crew_portal_members').select('id,full_name,email').or(`email.eq.${user.email},login_email_override.eq.${user.email}`).eq('active', true).maybeSingle();
  if (!member) return <CrewLogin signedInButNotLinked />;
  const from = new Date(Date.now()-7*86400000).toISOString();
  const to = new Date(Date.now()+7*86400000).toISOString();
