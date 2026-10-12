@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import BrandLogo from '@/components/BrandLogo';
 
 type Assignment={id:string;project_name:string;project_location:string|null;starts_at:string;ends_at:string;crew_shift_reports:{id:string;status:string}[]|null};
-export default function CrewDashboard({memberName,assignments}:{memberName:string;assignments:Assignment[]}) {
+export default function CrewDashboard({memberName,assignments,adminPreview=false}:{memberName:string;assignments:Assignment[];adminPreview?:boolean}) {
  const [selected,setSelected]=useState<Assignment|null>(null);
  const [saving,setSaving]=useState(false); const [message,setMessage]=useState('');
  const router=useRouter();
@@ -43,15 +43,16 @@ export default function CrewDashboard({memberName,assignments}:{memberName:strin
  const fmt=(d:string)=>new Date(d).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
  return <main style={{minHeight:'100vh',background:'var(--bg)',padding:'30px 16px',color:'#202020'}}>
  <div style={{maxWidth:650,margin:'auto'}}>
- <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}><div><div style={{width:205,maxWidth:"55vw"}}><BrandLogo dark /></div><p style={{color:'var(--muted)'}}>Mijn diensten · {memberName}</p></div><button onClick={async()=>{await createClient().auth.signOut();router.refresh()}} style={{border:0,background:'transparent',textDecoration:'underline'}}>Uitloggen</button></header>
+ <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}><div><div style={{width:205,maxWidth:"55vw"}}><BrandLogo dark /></div><p style={{color:'var(--muted)'}}>Mijn diensten · {memberName}</p></div>{!adminPreview&&<button onClick={async()=>{await createClient().auth.signOut();router.refresh()}} style={{border:0,background:'transparent',textDecoration:'underline'}}>Uitloggen</button>}</header>
+ {adminPreview&&<div role="status" style={{marginTop:20,padding:14,borderRadius:10,background:'#fff0dc',color:'#713e0b'}}><strong>Adminvoorbeeld — alleen lezen</strong><p style={{margin:'6px 0 0'}}>Je bekijkt de diensten van {memberName}. Je bent niet als deze medewerker ingelogd en kunt geen rapporten indienen.</p></div>}
  <section style={{background:'var(--panel)',borderRadius:18,padding:24,marginTop:20}}>
  <h1 style={{fontSize:23}}>Mijn diensten</h1><p style={{color:'var(--muted)'}}>Van 7 dagen geleden tot 7 dagen vooruit. Je kunt een rapport indienen zodra je dienst is afgelopen.</p>
  {assignments.length===0&&<p>Er zijn geen diensten gevonden in deze periode.</p>}
  {assignments.map(a=>{const report=a.crew_shift_reports?.[0];const ended=new Date(a.ends_at).getTime()<=Date.now();return <div key={a.id} style={{padding:'18px 0',borderTop:'1px solid #eee'}}>
  <strong>{a.project_name}</strong><p style={{color:'var(--muted)',margin:'5px 0'}}>{fmt(a.starts_at)} – {fmt(a.ends_at)} · {a.project_location||'Locatie volgt'}</p>
- {report?<span style={{color:'#29764d'}}>Rapport {report.status==='approved'?'goedgekeurd':'ingediend'}</span>:<button disabled={!ended} onClick={()=>{setSelected(a);setMessage('')}} style={{padding:'9px 14px',background:ended?'var(--orange)':'#ddd',color:ended?'white':'#555',border:0,borderRadius:8}}>{ended?'Shiftrapport invullen':'Nog gepland'}</button>}
+ {report?<span style={{color:'#29764d'}}>Rapport {report.status==='approved'?'goedgekeurd':'ingediend'}</span>:adminPreview?<span style={{color:'#777'}}>{ended?'Rapport nog niet ingediend':'Nog gepland'}</span>:<button disabled={!ended} onClick={()=>{setSelected(a);setMessage('')}} style={{padding:'9px 14px',background:ended?'var(--orange)':'#ddd',color:ended?'white':'#555',border:0,borderRadius:8}}>{ended?'Shiftrapport invullen':'Nog gepland'}</button>}
  </div>})}</section>
- {selected&&<section style={{background:'var(--panel)',borderRadius:18,padding:24,marginTop:16}}>
+ {!adminPreview&&selected&&<section style={{background:'var(--panel)',borderRadius:18,padding:24,marginTop:16}}>
  <h2 style={{fontSize:21}}>Shiftrapport · {selected.project_name}</h2>
  <form action={submit} style={{display:'grid',gap:14}}>
  <label>Werkelijke begintijd <input name="start" type="time" required defaultValue={new Date(selected.starts_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} style={{display:'block',padding:10,width:'100%'}}/></label>
