@@ -70,8 +70,8 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       </section>
       <BillingHours id={id} />
       <BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} />
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <h2>Overige factuurregels</h2>
+      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
+        <details><summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14, padding: "4px 0" }}>Overige factuurregels ({draft.lines.filter(l => l.description.trim()).length})</summary>
         {draft.lines.map((line, i) => <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 3fr) 85px 110px 95px auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
           <div className="field"><label>Omschrijving</label><input className="input" aria-label={'Omschrijving regel ' + (i + 1)} value={line.description} disabled={!canManage || item.status === 'invoiced'} onChange={e => changeLine(i, 'description', e.target.value)} /></div>
           <div className="field"><label>Aantal</label><input className="input" type="number" min="0" step="0.01" value={line.quantity} disabled={!canManage || item.status === 'invoiced'} onChange={e => changeLine(i, 'quantity', e.target.value)} /></div>
@@ -82,10 +82,11 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         <button type="button" className="button secondary" disabled={!canManage || item.status === 'invoiced'} onClick={() => { setDraft(d => ({ ...d, lines: [...d.lines, blank()] })); setState('Niet-opgeslagen wijzigingen'); }}>+ Factuurregel</button>
         <p style={{ textAlign: 'right' }}>Excl. btw: <strong>{money(totals.net)}</strong></p>
         <p style={{ textAlign: 'right' }}>Btw: <strong>{money(totals.vat)}</strong></p>
-        <p style={{ textAlign: 'right', fontSize: 20 }}>Totaal incl. btw: <strong>{money(totals.net + totals.vat)}</strong></p>
+        <p style={{ textAlign: 'right', fontSize: 14 }}>Totaal incl. btw: <strong>{money(totals.net + totals.vat)}</strong></p>
+        </details>
       </section>
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <div className="field"><label htmlFor="notes">Interne notities</label><textarea id="notes" className="input" value={draft.notes} disabled={!canManage || item.status === 'invoiced'} onChange={e => change('notes', e.target.value)} /></div>
+      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
+        <details><summary style={{ cursor: "pointer", fontSize: 14 }}>Interne notities</summary><div className="field"><label htmlFor="notes">Interne notities</label><textarea id="notes" className="input" value={draft.notes} disabled={!canManage || item.status === 'invoiced'} onChange={e => change('notes', e.target.value)} /></div></details>
       </section>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         {canManage && item.status !== 'invoiced' && <button type="button" className="button orange" disabled={saving} onClick={save}>{saving ? 'Opslaan…' : 'Concept opslaan'}</button>}
