@@ -11,6 +11,15 @@ export default function CrewMemberManager({members}:{members:Member[]}){
    setNotice(`${result.synced} medewerkers gesynchroniseerd, ${result.missingEmail} zonder e-mailadres, ${result.skipped} overgeslagen. Vernieuw de pagina om de lijst te zien.`);
   }catch(e){setNotice(e instanceof Error?e.message:'Synchronisatie mislukt')}finally{setBusy(false)}
  }
+ async function syncAssignments(){
+  setBusy(true);setNotice('');
+  try{
+   const res=await fetch('/api/crew/admin/sync-assignments',{method:'POST'});
+   const result=await res.json();
+   if(!res.ok)throw Error(result.error||'Diensten synchroniseren mislukt');
+   setNotice(`${result.synced} diensten gesynchroniseerd, ${result.skipped} overgeslagen van ${result.total} Rentman-planningsregels.`);
+  }catch(e){setNotice(e instanceof Error?e.message:'Diensten synchroniseren mislukt')}finally{setBusy(false)}
+ }
  async function save(m:Member){
   setBusy(true);setNotice('');
   try{const res=await fetch('/api/crew/admin/members',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:m.id,email:m.login_email_override,active:m.active})});
@@ -18,7 +27,7 @@ export default function CrewMemberManager({members}:{members:Member[]}){
   }catch(e){setNotice(e instanceof Error?e.message:'Opslaan mislukt')}finally{setBusy(false)}
  }
  return <div className="stack" style={{padding:"24px 36px 36px",minWidth:0}}>
- <div className="split" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}><strong>{rows.length} medewerkers</strong><button className="button orange" onClick={sync} disabled={busy}>{busy?'Even wachten…':'Synchroniseer met Rentman'}</button></div>
+ <div className="split" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}><strong>{rows.length} medewerkers</strong><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><button className="button secondary" onClick={syncAssignments} disabled={busy}>Synchroniseer diensten</button><button className="button orange" onClick={sync} disabled={busy}>{busy?'Even wachten…':'Synchroniseer met Rentman'}</button></div></div>
  <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}><input className="input" type="search" aria-label="Zoek medewerkers" placeholder="Zoek op naam, e-mail of Rentman-nummer..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",maxWidth:420}}/>{search&&<span className="muted">{visibleRows.length} van {rows.length} medewerkers</span>}</div>
  {notice&&<div className="notice" role="status">{notice}</div>}
  <div className="tableWrap" style={{width:"100%",maxWidth:"100%",overflowX:"auto"}}><table style={{width:"100%",minWidth:800}}><thead><tr><th>Medewerker</th><th>Rentman e-mail</th><th>Inlog e-mail (afwijkend)</th><th>Actief</th><th></th></tr></thead>
