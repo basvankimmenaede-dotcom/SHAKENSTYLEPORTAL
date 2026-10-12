@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import BillingProductUsage from './BillingProductUsage';
 import BillingChecks from './BillingChecks';
+import BillingHours from './BillingHours';
 import { useEffect, useMemo, useState } from 'react';
 
 type Line = { description: string; quantity: number; unitPrice: number; vatRate: number };
@@ -59,12 +60,15 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
     {!item ? <p role="status">{state}</p> : <>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(240px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <h2>Klant en referentie</h2>
+      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
+        <strong>Klant: {draft.customer_name || item.customer_name || "Onbekend"}</strong>
+        <details style={{ marginTop: 8 }}><summary style={{ cursor: "pointer" }}>Factuurgegevens bewerken</summary>
         {([['customer_name', 'Klant'], ['customer_email', 'E-mailadres'], ['customer_address', 'Factuuradres'], ['reference', 'Referentie / PO-nummer'], ['description', 'Factuuromschrijving']] as const).map(([key, label]) =>
           <div className="field" key={key}><label htmlFor={key}>{label}</label>
             <input className="input" id={key} value={draft[key]} disabled={!canManage || item.status === 'invoiced'} onChange={e => change(key, e.target.value)} /></div>)}
+        </details>
       </section>
+      <BillingHours id={id} />
       <BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} />
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2>Overige factuurregels</h2>
