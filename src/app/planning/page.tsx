@@ -665,10 +665,10 @@ export default async function PlanningPage() {
           <div><small>Niet retour</small><strong>{overdueReturnProjects.length}</strong><em>{overdueReturnProjects.length ? 'openstaand' : 'alles retour'}</em></div>
         </div>
         {canSeeBilling ? (
-          <a className="planningMetricCard" href="/planning/billing">
+          <Link className="planningMetricCard" href="/planning/billing">
             <span className="planningMetricIcon billing">€</span>
             <div><small>Facturatie</small><strong>{openBillingItems.length}</strong><em>{openBillingItems.length ? 'openstaand' : 'bijgewerkt'}</em></div>
-          </a>
+          </Link>
         ) : null}
         {closingRequired ? (
           <a className="planningMetricCard" href="/planning/afsluitlijst">
