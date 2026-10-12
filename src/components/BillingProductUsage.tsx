@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type Category = 'IJs' | 'Fruit' | 'Spirits' | "Soda's" | 'Overig';
 type Section = 'consumption' | 'rental' | 'external_rental' | 'external_sale' | 'review';
@@ -25,7 +25,7 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
       .catch(e => { if (active) { setMessage('Fout: ' + e.message); setLoading(false); } });
     return () => { active = false; };
   }, [id]);
-  const total = useMemo(() => products.reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0), [products]);
+
   const missing = products.filter(p => p.unitPrice === null).length;
   const editable = canManage && !locked;
   function change(id: string, key: keyof Product, value: string) {
@@ -47,16 +47,16 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     <button type="button" onClick={() => setExpanded(v => v === section.key ? null : section.key)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', border: 0, background: 'transparent', cursor: 'pointer', padding: 4, textAlign: 'left' }}><strong>{section.label} <small>({products.filter(p => p.section === section.key).length})</small></strong><span>{money(products.filter(p => p.section === section.key).reduce((s,p) => s + p.quantity * (p.unitPrice ?? 0), 0))} &nbsp; {expanded === section.key ? '▴' : '▾'}</span></button>
     {expanded === section.key && <>
     {warning && <p style={{ color: 'var(--color-warning, #b66b00)' }}>{warning}</p>}
-    {section.key === "consumption" && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-      {categories.map(cat => <button type="button" key={cat} className={'button ' + (category === cat ? 'orange' : 'secondary')} onClick={() => setCategory(cat)}>{cat} ({products.filter(p => p.section === section.key && p.category === cat).length})</button>)}
+    {section.key === "consumption" && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+      {categories.map(cat => <button type="button" key={cat} className={'button ' + (category === cat ? 'orange' : 'secondary')} style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setCategory(cat)}>{cat} ({products.filter(p => p.section === section.key && p.category === cat).length})</button>)}
     </div>}
     {loading ? <p>Laden…</p> : products.filter(p => p.section === section.key && (section.key !== 'consumption' || p.category === category)).length === 0 ? <p>Geen producten in deze categorie.</p> : products.filter(p => p.section === section.key && (section.key !== 'consumption' || p.category === category)).map(p =>
-      <div key={p.id} style={{ border: '1px solid var(--border, #ddd)', borderRadius: 10, padding: 12, marginBottom: 10 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 2fr) minmax(100px, 1fr)', gap: 8 }}>
-          <div className="field"><label>Product</label><input className="input" aria-label="Productnaam" disabled={!editable} value={p.name} onChange={e => change(p.id, 'name', e.target.value)} /></div>
+      <div key={p.id} style={{ borderBottom: '1px solid var(--border, #ddd)', padding: '8px 0', marginBottom: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 2fr) minmax(100px, 1fr)', gap: 8, alignItems: 'end' }}>
+          <div className="field"><label>Product</label><input className="input" style={{ minHeight: 34, height: 34, padding: "5px 9px", fontSize: 13 }} aria-label="Productnaam" disabled={!editable} value={p.name} onChange={e => change(p.id, 'name', e.target.value)} /></div>
           <div className="field"><label>Indeling</label><select className="input" disabled={!editable} value={p.section} onChange={e => change(p.id, 'section', e.target.value)}>{sections.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select>{section.key === "consumption" && <><label>Categorie</label><select className="input" disabled={!editable} value={p.category} onChange={e => change(p.id, 'category', e.target.value)}>{categories.map(cat => <option key={cat}>{cat}</option>)}</select></>}</div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, alignItems: 'end' }}>
           <div className="field"><label>Aantal</label><input className="input" type="number" min="0" step="0.01" disabled={!editable} value={p.quantity} onChange={e => change(p.id, 'quantity', e.target.value)} /></div>
           <div className="field"><label>Eenheid</label><input className="input" disabled={!editable} value={p.unit} onChange={e => change(p.id, 'unit', e.target.value)} /></div>
           <div className="field"><label>Verkoopprijs / eenheid</label><input className="input" type="number" min="0" step="0.01" placeholder="Controleren" disabled={!editable} value={p.unitPrice ?? ''} onChange={e => change(p.id, 'unitPrice', e.target.value)} /></div>
@@ -64,10 +64,10 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 8 }}>
           <small>{p.source === 'rentman' ? 'Rentman · bewerkbare kopie' : 'Handmatig toegevoegd'}</small>
           <strong>{p.unitPrice === null ? 'Prijs controleren' : money(p.quantity * p.unitPrice)}</strong>
-          {editable && <button type="button" className="button secondary" onClick={() => { setProducts(current => current.filter(x => x.id !== p.id)); setDirty(true); setMessage('Niet-opgeslagen wijzigingen'); }}>Verwijderen</button>}
+          {editable && <button type="button" className="button secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => { setProducts(current => current.filter(x => x.id !== p.id)); setDirty(true); setMessage('Niet-opgeslagen wijzigingen'); }}>Verwijderen</button>}
         </div>
       </div>)}
-    {editable && <button type="button" className="button secondary" onClick={() => { setProducts(current => [...current, { id: 'manual:' + Date.now(), section: section.key, category, name: 'Nieuw product', quantity: 1, unit: 'stuks', unitPrice: null, source: 'manual' }]); setDirty(true); setMessage('Niet-opgeslagen wijzigingen'); }}>+ {section.key === "consumption" ? "Product toevoegen aan " + category : section.key === "external_sale" ? "Extern verkoopartikel toevoegen" : "Materiaal toevoegen"}</button>}
+    {editable && <button type="button" className="button secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => { setProducts(current => [...current, { id: 'manual:' + Date.now(), section: section.key, category, name: 'Nieuw product', quantity: 1, unit: 'stuks', unitPrice: null, source: 'manual' }]); setDirty(true); setMessage('Niet-opgeslagen wijzigingen'); }}>+ {section.key === "consumption" ? "Product toevoegen aan " + category : section.key === "external_sale" ? "Extern verkoopartikel toevoegen" : "Materiaal toevoegen"}</button>}
     {section.key === 'consumption' && <div style={{ background: 'var(--surface-secondary, #f5f5f5)', padding: 14, borderRadius: 10, marginTop: 16 }}>
       {categories.map(cat => <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}><span>{cat}</span><strong>{money(products.filter(p => p.section === section.key && p.category === cat).reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0))}</strong></div>)}
       <hr /><div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>Totaal excl. btw</strong><strong>{money(products.filter(p => p.section === section.key).reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0))}</strong></div>
