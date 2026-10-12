@@ -23,7 +23,9 @@ export async function POST(request:NextRequest){
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
  const anon=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
  if(!url||!anon)return NextResponse.json({error:'Supabase Auth is niet geconfigureerd.'},{status:503});
- const origin=process.env.CREW_PUBLIC_ORIGIN || request.nextUrl.origin;
+ // Always return to the host where the bartender requested the link.
+ // A production override would otherwise send preview users to Storage Portal.
+ const origin=request.nextUrl.origin;
  const redirect=new URL('/auth/callback',origin);
  redirect.searchParams.set('next','/crew');
  const auth=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false}});
