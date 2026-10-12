@@ -11,9 +11,19 @@ export default function CrewDashboard({memberName,assignments}:{memberName:strin
  const router=useRouter();
  async function submit(formData:FormData){if(!selected)return;setSaving(true);setMessage('');
  const start=String(formData.get('start'));const end=String(formData.get('end'));
- const base=selected.starts_at.slice(0,10);
- const startsAt=new Date(base+'T'+start+':00');let endsAt=new Date(base+'T'+end+':00');
- if(endsAt<=startsAt)endsAt=new Date(endsAt.getTime()+86400000);
+ const localDate=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(selected.starts_at));
+ const parseAmsterdam=(date:string,time:string)=>{
+  const utc=new Date(date+'T'+time+':00Z');
+  if(Number.isNaN(utc.getTime()))return new Date(NaN);
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Amsterdam',timeZoneName:'shortOffset'}).formatToParts(utc);
+  const offset=parts.find(p=>p.type==='timeZoneName')?.value.match(/GMT([+-])(\\d{1,2})(?::(\\d{2}))?/);
+  const minutes=offset?(offset[1]==='+'?1:-1)*(Number(offset[2])*60+Number(offset[3]||0)):60;
+  return new Date(utc.getTime()-minutes*60000);
+ };
+ const startsAt=parseAmsterdam(localDate,start);
+ let endsAt=parseAmsterdam(localDate,end);
+ if(endsAt<=startsAt){const next=new Date(localDate+'T12:00:00Z');next.setUTCDate(next.getUTCDate()+1);endsAt=parseAmsterdam(next.toISOString().slice(0,10),end);}
+ if(!Number.isFinite(startsAt.getTime())||!Number.isFinite(endsAt.getTime())||endsAt<=startsAt||endsAt.getTime()-startsAt.getTime()>86400000){setMessage('Controleer de begin- en eindtijd. Een dienst mag maximaal 24 uur duren.');setSaving(false);return;}
  const expenses=Number(formData.get('expenses')||0);
  const missing=formData.get('missing')==='yes';
  const data={assignment_id:selected.id,work_started_at:startsAt.toISOString(),work_ended_at:endsAt.toISOString(),
@@ -24,7 +34,7 @@ export default function CrewDashboard({memberName,assignments}:{memberName:strin
  if(missing&&!data.missing_materials_description.trim()){setMessage('Vermeld welke materialen ontbreken.');setSaving(false);return}
  if(expenses>0&&!data.expenses_description.trim()){setMessage('Omschrijf de gemaakte kosten.');setSaving(false);return}
  const supabase=createClient();
- const {data:member}=await supabase.from('crew_portal_members').select('id').maybeSingle();
+ const {data:member}=await supabase.from('crew_portal_members').select('id').eq('active',true).maybeSingle();
  if(!member){setMessage('Je toegang is niet gekoppeld.');setSaving(false);return}
  const {error}=await supabase.from('crew_shift_reports').insert({...data,crew_member_id:member.id});
  setSaving(false);
@@ -44,8 +54,8 @@ export default function CrewDashboard({memberName,assignments}:{memberName:strin
  {selected&&<section style={{background:'var(--panel)',borderRadius:18,padding:24,marginTop:16}}>
  <h2 style={{fontSize:21}}>Shiftrapport · {selected.project_name}</h2>
  <form action={submit} style={{display:'grid',gap:14}}>
- <label>Werkelijke begintijd <input name="start" type="time" required defaultValue={selected.starts_at.slice(11,16)} style={{display:'block',padding:10,width:'100%'}}/></label>
- <label>Werkelijke eindtijd <input name="end" type="time" required defaultValue={selected.ends_at.slice(11,16)} style={{display:'block',padding:10,width:'100%'}}/></label>
+ <label>Werkelijke begintijd <input name="start" type="time" required defaultValue={new Date(selected.starts_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} style={{display:'block',padding:10,width:'100%'}}/></label>
+ <label>Werkelijke eindtijd <input name="end" type="time" required defaultValue={new Date(selected.ends_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} style={{display:'block',padding:10,width:'100%'}}/></label>
  <label>Pauze (minuten) <input name="break" type="number" min="0" max="1440" defaultValue="0" required style={{display:'block',padding:10,width:'100%'}}/></label>
  <label>Totale reistijd, heen en terug (minuten) <input name="travel" type="number" min="0" max="1440" defaultValue="0" required style={{display:'block',padding:10,width:'100%'}}/></label>
  <small>Amsterdam: geen reistijdvergoeding. Buiten Amsterdam: eerste 30 minuten eigen tijd, daarna 75% van je afgesproken uurtarief. De definitieve berekening volgt na controle.</small>
