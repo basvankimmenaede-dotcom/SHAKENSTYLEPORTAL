@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import CrewLogin from './ui/CrewLogin';
 import CrewDashboard from './ui/CrewDashboard';
+import {synchronizeCrewAssignments} from '@/app/api/crew/admin/sync-assignments/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,10 @@ export default async function CrewPage() {
  if (!user?.email) return <CrewLogin />;
  const { data: member } = await supabase.from('crew_portal_members').select('id,full_name,email').or(`and(email.eq.${user.email},login_email_override.is.null),login_email_override.eq.${user.email}`).eq('active', true).maybeSingle();
  if (!member) return <CrewLogin signedInButNotLinked />;
+ // Refresh Rentman assignments on every authenticated Crew page opening.
+ // A failed refresh must not hide previously synchronized assignments.
+ const syncResult=await synchronizeCrewAssignments();
+ if(!syncResult.ok)console.error('Crew planning refresh failed on page open');
  const from = new Date(Date.now()-7*86400000).toISOString();
  const to = new Date(Date.now()+7*86400000).toISOString();
  const { data: assignments } = await supabase.from('crew_portal_assignments')
