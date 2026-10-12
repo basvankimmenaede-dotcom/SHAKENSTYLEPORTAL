@@ -805,3 +805,19 @@ export async function getPlanningEquipmentCatalog() {
     '/equipment?fields=id,name,code,current_quantity&sort=+name&limit=1500',
   );
 }
+
+/** Crew identities, read-only, using the portal's existing Rentman token. */
+export type RentmanCrewIdentity = {
+  id: number;
+  firstname?: string | null;
+  middle_name?: string | null;
+  lastname?: string | null;
+  displayname?: string | null;
+  email?: string | null;
+  active?: boolean | null;
+};
+export async function getRentmanCrewIdentities(): Promise<RentmanCrewIdentity[]> {
+  return rentmanFetchAll<RentmanCrewIdentity>(
+    '/crew?fields=id,firstname,middle_name,lastname,email,active,displayname&limit=1500',
+  );
+}
