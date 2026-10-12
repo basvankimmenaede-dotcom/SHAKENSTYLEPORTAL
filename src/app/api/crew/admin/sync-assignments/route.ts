@@ -18,6 +18,10 @@ function referenceId(ref:unknown):number|null{
 }
 export async function POST(){
  await requireModulePermission('user_admin','manage');
+ return synchronizeCrewAssignments();
+}
+
+export async function synchronizeCrewAssignments(){
  try{
   const admin=createAdminClient();
   const [rentmanAssignments,planning,membersResult]=await Promise.all([
