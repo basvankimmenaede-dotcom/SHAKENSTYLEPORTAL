@@ -11,6 +11,13 @@ export async function POST(){
  try {
   const crew=await getRentmanCrewIdentities();
   let synced=0,missingEmail=0,skipped=0;
+  const existingAuthEmails=new Set<string>();
+  for(let page=1;page<=20;page++){
+   const {data,error}=await admin.auth.admin.listUsers({page,perPage:1000});
+   if(error)throw error;
+   for(const u of data.users)if(u.email)existingAuthEmails.add(u.email.toLowerCase());
+   if(data.users.length<1000)break;
+  }
   for(const person of crew){
    const email=String(person.email||'').trim().toLowerCase();
    if(!valid(email)){missingEmail++;continue}
@@ -24,6 +31,12 @@ export async function POST(){
     ?await admin.from('crew_portal_members').update(values).eq('id',existing.id)
     :await admin.from('crew_portal_members').insert(values);
    if(writeError){skipped++;continue}
+   const loginEmail=String(existing?.login_email_override||email).toLowerCase();
+   if(!existingAuthEmails.has(loginEmail)){
+    const {error:authError}=await admin.auth.admin.createUser({email:loginEmail,email_confirm:true});
+    if(authError){skipped++;continue}
+    existingAuthEmails.add(loginEmail);
+   }
    synced++;
   }
   return NextResponse.json({synced,missingEmail,skipped,total:crew.length});
