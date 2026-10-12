@@ -9,6 +9,7 @@ const money = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency',
 export default function BillingProductUsage({ id, canManage, locked }: { id: string; canManage: boolean; locked: boolean }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<Category>('IJs');
+  const [expanded, setExpanded] = useState(false);
   const [message, setMessage] = useState('Producten laden uit Rentman…');
   const [warning, setWarning] = useState('');
   const [dirty, setDirty] = useState(false);
@@ -39,9 +40,9 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     } catch (e) { setMessage('Opslaan mislukt: ' + (e instanceof Error ? e.message : 'Onbekende fout')); }
     finally { setSaving(false); }
   }
-  return <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-    <h2>Product &amp; verbruik</h2>
-    <p>Automatisch uit Rentman. Bewerkingen worden uitsluitend in de portal opgeslagen en veranderen Rentman niet.</p>
+  return <section className="card" style={{ padding: 12, marginBottom: 12 }}>
+    <button type="button" onClick={() => setExpanded(v => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", border: 0, background: "transparent", cursor: "pointer", padding: 4, textAlign: "left" }}><strong>Product &amp; verbruik <small>({products.length} artikelen)</small></strong><span>{money(total)} &nbsp; {expanded ? "▴" : "▾"}</span></button>
+    {expanded && <>
     {warning && <p style={{ color: 'var(--color-warning, #b66b00)' }}>{warning}</p>}
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
       {categories.map(cat => <button type="button" key={cat} className={'button ' + (category === cat ? 'orange' : 'secondary')} onClick={() => setCategory(cat)}>{cat} ({products.filter(p => p.category === cat).length})</button>)}
@@ -73,5 +74,6 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
       {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Producten opslaan'}</button>}
       <span role="status" aria-live="polite">{message}</span>
     </div>
+    </>}
   </section>;
 }
