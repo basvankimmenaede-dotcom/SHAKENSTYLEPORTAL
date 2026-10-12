@@ -1,5 +1,6 @@
 'use client';
 import {useState} from 'react';
+import Link from 'next/link';
 type Member={id:string;rentman_crew_id:number;full_name:string;email:string;rentman_email:string|null;login_email_override:string|null;active:boolean;last_synced_at:string|null};
 export default function CrewMemberManager({members}:{members:Member[]}){
  const [rows,setRows]=useState(members);const [savedActive,setSavedActive]=useState<Record<string,boolean>>(()=>Object.fromEntries(members.map(m=>[m.id,m.active])));const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');const [search,setSearch]=useState('');
@@ -25,6 +26,6 @@ export default function CrewMemberManager({members}:{members:Member[]}){
  <tbody>{visibleRows.map(m=><tr key={m.id}><td><strong>{m.full_name}</strong><div className="muted">Rentman #{m.rentman_crew_id}</div></td><td>{m.rentman_email||m.email}</td>
  <td><input className="input" type="email" aria-label={'Inlogadres '+m.full_name} placeholder="Zelfde als Rentman" value={m.login_email_override||''} onChange={e=>setRows(prev=>prev.map(x=>x.id===m.id?{...x,login_email_override:e.target.value}:x))}/></td>
  <td><input type="checkbox" aria-label={'Actief '+m.full_name} checked={m.active} onChange={e=>setRows(prev=>prev.map(x=>x.id===m.id?{...x,active:e.target.checked}:x))}/></td>
- <td><button className="button secondary" disabled={busy} onClick={()=>save(m)}>Opslaan</button></td></tr>)}{visibleRows.length===0&&<tr><td colSpan={5} className="muted" style={{padding:24,textAlign:"center"}}>Geen medewerkers gevonden.</td></tr>}</tbody></table></div>
+ <td><div style={{display:"flex",gap:8,alignItems:"center"}}><Link className="button secondary" href={`/planning/instellingen/crew/${m.id}`} title={`Bekijk Crew-portaal van ${m.full_name}`}>Bekijk als medewerker</Link><button className="button secondary" disabled={busy} onClick={()=>save(m)}>Opslaan</button></div></td></tr>)}{visibleRows.length===0&&<tr><td colSpan={5} className="muted" style={{padding:24,textAlign:"center"}}>Geen medewerkers gevonden.</td></tr>}</tbody></table></div>
  </div>;
 }
