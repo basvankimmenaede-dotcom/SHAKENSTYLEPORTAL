@@ -9,8 +9,8 @@ export async function POST(request:NextRequest){
  try{body=await request.json()}catch{return NextResponse.json({error:'Ongeldig verzoek.'},{status:400})}
  const id=String(body.id||'');
  const password=String(body.password||'');
- if(!/^[0-9a-f-]{36}$/i.test(id)||password.length<12||password.length>128)
-  return NextResponse.json({error:'Gebruik een wachtwoord van minimaal 12 tekens.'},{status:400});
+ if(!/^[0-9a-f-]{36}$/i.test(id)||password.length<8||password.length>128)
+  return NextResponse.json({error:'Gebruik een wachtwoord van minimaal 8 tekens.'},{status:400});
  const admin=createAdminClient();
  const {data:member,error:memberError}=await admin.from('crew_portal_members').select('email,login_email_override,active').eq('id',id).maybeSingle();
  if(memberError||!member)return NextResponse.json({error:'Medewerker niet gevonden.'},{status:404});
