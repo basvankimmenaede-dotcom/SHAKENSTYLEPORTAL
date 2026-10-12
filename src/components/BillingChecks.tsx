@@ -8,6 +8,15 @@ export default function BillingChecks({ id, canManage, locked }: { id: string; c
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   useEffect(() => {
+    fetch('/api/planning/billing/hours/' + encodeURIComponent(id))
+      .then(async r => { const x = await r.json(); if (!r.ok) throw new Error(x.error || 'Sheets ophalen mislukt');
+        const list: Check[] = [];
+        for (const report of x.recorded || []) {
+          if (report.breakageOverTen) list.push({ key: 'breakage:' + report.id, title: 'Meer dan 10 glazen kapot of vermist', detail: 'Gemeld in een ingediend shiftrapport' });
+          if (report.missingMaterials) list.push({ key: 'missing:' + report.id, title: 'Ontbrekend materiaal', detail: report.missingMaterialsDescription || 'Geen toelichting opgegeven' });
+        }
+        setChecks(list);
+      }).catch(e => setError(e.message));
     fetch('/api/planning/billing/checks/' + encodeURIComponent(id))
       .then(async r => { const x = await r.json(); if (!r.ok) throw new Error(x.error); setResolved(x.resolved || []); })
       .catch(e => setError(e.message));
@@ -33,7 +42,7 @@ export default function BillingChecks({ id, canManage, locked }: { id: string; c
     </label>)}
     {done.length > 0 && <><button type="button" className="button secondary" onClick={() => setShowResolved(v => !v)}>Afgehandeld ({done.length})</button>
       {showResolved && done.map(c => <label key={c.key} style={{ display: 'flex', gap: 8, marginTop: 8 }}><input type="checkbox" checked disabled={!canManage || locked || busy === c.key} onChange={() => toggle(c.key, false)} />{c.title}</label>)}</>}
-    <p style={{ fontSize: 12, color: '#777' }}>Meldingen uit bartender-sheets, urenregistraties en retouren worden hier getoond zodra de bronkoppeling beschikbaar is.</p>
+
     {error && <p role="alert">{error}</p>}
   </aside>;
 }
