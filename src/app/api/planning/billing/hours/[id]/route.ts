@@ -36,7 +36,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       const hours = Number.isFinite(start) && Number.isFinite(end) && end >= start
         ? Math.round(Math.max(0, (end - start) / 60000 - Number(report.break_minutes || 0)) / 60 * 100) / 100 : null;
       return { id: report.id, assignmentId: report.assignment_id, crewMemberId: assignment?.crew_member_id, hours,
-        travelMinutes: report.travel_minutes, breakageOverTen: report.breakage_over_ten,
+        plannedStartsAt: assignment?.starts_at ?? null, plannedEndsAt: assignment?.ends_at ?? null, workStartedAt: report.work_started_at, workEndedAt: report.work_ended_at, travelMinutes: report.travel_minutes, breakageOverTen: report.breakage_over_ten,
         missingMaterials: report.missing_materials, missingMaterialsDescription: report.missing_materials_description, status: report.status };
     });
     return NextResponse.json({ rows, recorded, assignedCount: ids.length, source: 'rentman+crew_shift_reports', recordedConnected: true });
