@@ -706,18 +706,25 @@ export async function getPlanningProjectFunctionsForRange(startDate: string, end
 }
 
 export async function getPlanningCrewAssignmentsForRange(startDate: string, endDate: string) {
+  // Projectcrew has no planperiod fields: these belong to its expanded function.
+  // Filtering projectcrew by planperiod_start/end causes invalid API requests.
   const params = new URLSearchParams({
     fields: 'id,function,crewmember,transport',
     expand: 'function,crewmember',
-    sort: '+id',
+    sort: '-id',
     limit: '1500',
   });
-  params.set('planperiod_start[lte]', planningDateTime(endDate, true));
-  params.set('planperiod_end[gte]', planningDateTime(startDate));
-
-  return rentmanPlanningFetchAll<RentmanPlanningCrewAssignment>(
+  const assignments = await rentmanPlanningFetchAll<RentmanPlanningCrewAssignment>(
     `/projectcrew?${params.toString()}`,
   );
+  const start = Date.parse(planningDateTime(startDate));
+  const end = Date.parse(planningDateTime(endDate, true));
+  return assignments.filter((a) => {
+    const f = a.function;
+    const begins = Date.parse(f?.planperiod_start ?? f?.usageperiod_start ?? '');
+    const ends = Date.parse(f?.planperiod_end ?? f?.usageperiod_end ?? '');
+    return Number.isFinite(begins) && Number.isFinite(ends) && begins <= end && ends >= start;
+  });
 }
 
 
