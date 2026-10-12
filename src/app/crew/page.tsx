@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import CrewLogin from './ui/CrewLogin';
 import CrewDashboard from './ui/CrewDashboard';
-import {synchronizeCrewAssignments} from '@/app/api/crew/admin/sync-assignments/route';
+import {synchronizeCrewAssignments} from '@/lib/crew/synchronize-assignments';
 
 export const dynamic = 'force-dynamic';
 
