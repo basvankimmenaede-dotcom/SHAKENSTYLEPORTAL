@@ -28,7 +28,7 @@ export async function synchronizeCrewAssignments(){
    const crewId=referenceId(assignment.crewmember);
    const memberId=crewId===null?null:memberIds.get(crewId);
    const fn=assignment.function;
-   const projectId=referenceId(fn?.project)||referenceId(fn?.group?.project);
+   const projectId=referenceId(fn?.project);
    const start=fn?.planperiod_start||fn?.usageperiod_start;
    const end=fn?.planperiod_end||fn?.usageperiod_end;
    if(!memberId||!projectId||!start||!end||!Number.isFinite(Date.parse(start))||!Number.isFinite(Date.parse(end))||Date.parse(end)<=Date.parse(start)){skipped++;continue;}
