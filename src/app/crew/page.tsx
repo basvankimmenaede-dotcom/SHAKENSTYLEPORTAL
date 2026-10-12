@@ -18,7 +18,7 @@ export default async function CrewPage() {
  const from = new Date(Date.now()-7*86400000).toISOString();
  const to = new Date(Date.now()+7*86400000).toISOString();
  const { data: assignments } = await supabase.from('crew_portal_assignments')
- .select('id,project_name,project_location,starts_at,ends_at,crew_shift_reports(id,status)')
+ .select('id,project_name,project_location,starts_at,ends_at,crew_shift_reports(id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes)')
  .eq('crew_member_id', member.id).gte('starts_at',from).lte('starts_at',to).order('starts_at');
  return <CrewDashboard memberName={member.full_name} assignments={assignments || []} />;
 }
