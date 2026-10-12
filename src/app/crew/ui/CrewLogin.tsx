@@ -1,18 +1,16 @@
 'use client';
 import { FormEvent, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import BrandLogo from '@/components/BrandLogo';
 
 export default function CrewLogin({ signedInButNotLinked = false }: {signedInButNotLinked?: boolean}) {
  const [email,setEmail]=useState(''); const [status,setStatus]=useState(''); const [busy,setBusy]=useState(false);
  async function submit(e:FormEvent){
  e.preventDefault();setBusy(true);setStatus('');
- const supabase=createClient();
- const {error}=await supabase.auth.signInWithOtp({
- email:email.trim(),
- options:{emailRedirectTo:window.location.origin+'/auth/callback?next=/crew',shouldCreateUser:false}
- });
- setStatus(error?'De inloglink kon niet worden verstuurd. Controleer je e-mailadres of neem contact op met kantoor.':'Als dit adres bij ons bekend is, ontvang je een persoonlijke inloglink.');
+ try {
+ const response=await fetch('/api/crew/login-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim()})});
+ const result=await response.json();
+ setStatus(response.ok?result.message:(result.error||'De e-mail kon niet worden verstuurd.'));
+ }catch{setStatus('De e-mail kon niet worden verstuurd. Probeer later opnieuw.')}
  setBusy(false);
  }
  return <main className="loginPage">
