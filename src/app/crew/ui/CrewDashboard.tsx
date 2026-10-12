@@ -16,7 +16,7 @@ export default function CrewDashboard({memberName,assignments}:{memberName:strin
   const utc=new Date(date+'T'+time+':00Z');
   if(Number.isNaN(utc.getTime()))return new Date(NaN);
   const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Amsterdam',timeZoneName:'shortOffset'}).formatToParts(utc);
-  const offset=parts.find(p=>p.type==='timeZoneName')?.value.match(/GMT([+-])(\\d{1,2})(?::(\\d{2}))?/);
+  const offset=parts.find(p=>p.type==='timeZoneName')?.value.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
   const minutes=offset?(offset[1]==='+'?1:-1)*(Number(offset[2])*60+Number(offset[3]||0)):60;
   return new Date(utc.getTime()-minutes*60000);
  };
