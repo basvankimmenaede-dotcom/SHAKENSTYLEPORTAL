@@ -13,7 +13,7 @@ export default function CrewMemberManager({members}:{members:Member[]}){
   }catch(e){setNotice(e instanceof Error?e.message:'Synchronisatie mislukt')}finally{setBusy(false)}
  }
  async function setPassword(m:Member){
-  if(newPassword.length<8){setNotice('Gebruik minimaal 8 tekens voor het wachtwoord.');return;}
+  if(newPassword.length<8){setRowFeedback(prev=>({...prev,[m.id]:{ok:false,message:'Gebruik minimaal 8 tekens voor het wachtwoord.'}}));return;}
   setBusy(true);setNotice('');setRowFeedback(prev=>({...prev,[m.id]:{ok:true,message:'Wachtwoord wordt opgeslagen…'}}));
   try{
    const res=await fetch('/api/crew/admin/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:m.id,password:newPassword})});
@@ -27,7 +27,7 @@ export default function CrewMemberManager({members}:{members:Member[]}){
  async function save(m:Member){
   setBusy(true);setNotice('');
   try{const res=await fetch('/api/crew/admin/members',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:m.id,email:m.login_email_override,active:m.active})});
-  const data=await res.json();if(!res.ok)throw Error(data.error||'Opslaan mislukt');setSavedActive(prev=>({...prev,[m.id]:m.active}));setNotice('Wijziging opgeslagen. Een gewijzigd adres moet eerst een Supabase Auth-account hebben voordat de inlogmail werkt.');
+  const data=await res.json();if(!res.ok)throw Error(data.error||'Opslaan mislukt');setSavedActive(prev=>({...prev,[m.id]:m.active}));setRowFeedback(prev=>({...prev,[m.id]:{ok:true,message:'Medewerkergegevens succesvol opgeslagen.'}}));
   }catch(e){setRowFeedback(prev=>({...prev,[m.id]:{ok:false,message:e instanceof Error?e.message:'Opslaan mislukt'}}))}finally{setBusy(false)}
  }
  return <div className="stack" style={{padding:"24px 36px 36px",minWidth:0}}>
