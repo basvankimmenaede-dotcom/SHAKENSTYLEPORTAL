@@ -40,8 +40,8 @@ export default function CrewDashboard({memberName,assignments,adminPreview=false
  const {error}=await supabase.from('crew_shift_reports').insert({...data,crew_member_id:member.id,status:'submitted'});
  setSaving(false);
  if(error){setMessage(error.code==='23505'?'Voor deze dienst is al een shiftrapport ingediend. Open het bestaande rapport.':'Opslaan mislukt: '+error.message);router.refresh();return}
- setSelected(null);router.refresh();setMessage('Shiftrapport ingediend. Bevestigingsmail wordt verwerkt…');
- try { const response = await fetch('/api/crew/report-confirmation', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({assignmentId:selected.id})}); const result=await response.json(); setMessage(response.ok && result.sent ? 'Shiftrapport ingediend. Bevestigingsmail verstuurd; je kunt het rapport inzien.' : 'Shiftrapport ingediend. Bevestigingsmail nog niet verzonden: '+(result.error||'onbekende fout')); } catch { setMessage('Shiftrapport ingediend. Bevestigingsmail kon niet worden verstuurd.'); }}
+ setSelected(null);router.refresh();setMessage('Shiftrapport ingediend. Je kunt het rapport voortaan inzien.');}
+
  const fmt=(d:string)=>new Date(d).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
  return <main style={{minHeight:'100vh',background:'var(--bg)',padding:'30px 16px',color:'#202020'}}>
  <div style={{maxWidth:650,margin:'auto'}}>
