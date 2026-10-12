@@ -141,7 +141,7 @@ export default function BillingQueue({
                 {item.status === 'skip' ? <span className="billingSkipped">Niet factureren</span> : null}
                 {canManage ? (
                   <div className="billingActions">
-                    <Link className="button secondary" href={\`/planning/billing/\${item.id}\`}>Factuur voorbereiden</Link>
+                    <Link className="button secondary" href={`/planning/billing/${item.id}`}>Factuur voorbereiden</Link>
                     {item.status !== 'invoiced' ? (
                       <button className="button orange" type="button" disabled={isPending} onClick={() => updateStatus(item, 'invoiced')}>
                         {isPending ? 'Opslaan…' : '✓ Gefactureerd'}
