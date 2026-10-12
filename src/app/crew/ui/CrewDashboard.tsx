@@ -7,7 +7,7 @@ import BrandLogo from '@/components/BrandLogo';
 type Assignment={id:string;project_name:string;project_location:string|null;starts_at:string;ends_at:string;crew_shift_reports:{id:string;status:string}[]|null};
 export default function CrewDashboard({memberName,assignments,adminPreview=false}:{memberName:string;assignments:Assignment[];adminPreview?:boolean}) {
  const [selected,setSelected]=useState<Assignment|null>(null);
- const [saving,setSaving]=useState(false); const [message,setMessage]=useState('');
+ const [saving,setSaving]=useState(false); const [missingYes,setMissingYes]=useState(false); const [expensesYes,setExpensesYes]=useState(false); const [message,setMessage]=useState('');
  const router=useRouter();
  async function submit(formData:FormData){if(!selected)return;setSaving(true);setMessage('');
  const start=String(formData.get('start'));const end=String(formData.get('end'));
@@ -36,9 +36,9 @@ export default function CrewDashboard({memberName,assignments,adminPreview=false
  const supabase=createClient();
  const {data:member}=await supabase.from('crew_portal_members').select('id').eq('active',true).maybeSingle();
  if(!member){setMessage('Je toegang is niet gekoppeld.');setSaving(false);return}
- const {error}=await supabase.from('crew_shift_reports').insert({...data,crew_member_id:member.id});
+ const {error}=await supabase.from('crew_shift_reports').upsert({...data,crew_member_id:member.id,status:'submitted'},{onConflict:'assignment_id'});
  setSaving(false);
- if(error){setMessage('Opslaan mislukt. Controleer de gegevens of neem contact op met kantoor.');return}
+ if(error){setMessage('Opslaan mislukt: '+error.message);return}
  setSelected(null);router.refresh();setMessage('Shiftrapport ontvangen.');}
  const fmt=(d:string)=>new Date(d).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
  return <main style={{minHeight:'100vh',background:'var(--bg)',padding:'30px 16px',color:'#202020'}}>
@@ -52,15 +52,15 @@ export default function CrewDashboard({memberName,assignments,adminPreview=false
  <strong>{a.project_name}</strong><p style={{color:'var(--muted)',margin:'5px 0'}}>{fmt(a.starts_at)} – {fmt(a.ends_at)} · {a.project_location||'Locatie volgt'}</p>
  {report?<span style={{color:'#29764d'}}>Rapport {report.status==='approved'?'goedgekeurd':'ingediend'}</span>:adminPreview?<span style={{color:'#777'}}>{ended?'Rapport nog niet ingediend':'Nog gepland'}</span>:<button disabled={!ended} onClick={()=>{setSelected(a);setMessage('')}} style={{padding:'9px 14px',background:ended?'var(--orange)':'#ddd',color:ended?'white':'#555',border:0,borderRadius:8}}>{ended?'Shiftrapport invullen':'Nog gepland'}</button>}
  </div>})}</section>
- {!adminPreview&&selected&&<section style={{background:'var(--panel)',borderRadius:18,padding:24,marginTop:16}}>
- <h2 style={{fontSize:21}}>Shiftrapport · {selected.project_name}</h2>
- <form action={submit} style={{display:'grid',gap:14}}>
- <label>Werkelijke begintijd <input name="start" type="time" required defaultValue={new Date(selected.starts_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} style={{display:'block',padding:10,width:'100%'}}/></label>
- <label>Werkelijke eindtijd <input name="end" type="time" required defaultValue={new Date(selected.ends_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} style={{display:'block',padding:10,width:'100%'}}/></label>
- <label>Pauze (minuten) <input name="break" type="number" min="0" max="1440" defaultValue="0" required style={{display:'block',padding:10,width:'100%'}}/></label>
- <label>Totale reistijd, heen en terug (minuten) <input name="travel" type="number" min="0" max="1440" defaultValue="0" required style={{display:'block',padding:10,width:'100%'}}/></label>
- <small>Amsterdam: geen reistijdvergoeding. Buiten Amsterdam: eerste 30 minuten eigen tijd, daarna 75% van je afgesproken uurtarief. De definitieve berekening volgt na controle.</small>
- <label>Gemaakte kosten (€) <input name="expenses" type="number" min="0" step="0.01" defaultValue="0" required style={{display:'block',padding:10,width:'100%'}}/></label>
+ {!adminPreview&&selected&&<section style={{background:'var(--panel)',borderRadius:16,padding:20,marginTop:16,border:'1px solid var(--border,#eee)'}}>
+ <div style={{fontSize:11,fontWeight:750,letterSpacing:1.2,textTransform:'uppercase',color:'var(--orange)',marginBottom:6}}>Dienst afronden</div><h2 style={{fontSize:19,letterSpacing:'-.02em',margin:'0 0 16px'}}>Shiftrapport · {selected.project_name}</h2>
+ <form action={submit} style={{display:'grid',gap:12}}><style>{`.crew-field{display:block;box-sizing:border-box;width:100%;min-height:42px;padding:9px 12px;margin-top:5px;border:1px solid var(--border,#dedbd7);border-radius:9px;background:var(--bg,#fff);color:var(--text,#202020);font:inherit;font-size:14px;outline:none}.crew-field:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(245,105,25,.12)}.crew-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.crew-label{font-size:12px;font-weight:650;color:var(--text,#333)}.crew-field::placeholder{color:#a7a7a7}@media(max-width:480px){.crew-grid{grid-template-columns:1fr}}`}</style><div style={{fontSize:12,fontWeight:700,color:'var(--muted)'}}>WERKTIJD</div><div className="crew-grid">
+ <label>Werkelijke begintijd <input name="start" type="time" required defaultValue={new Date(selected.starts_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} className="crew-field"/></label>
+ <label>Werkelijke eindtijd <input name="end" type="time" required defaultValue={new Date(selected.ends_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} style={{display:'block',padding:10,width:'100%'}}/></label></div><div className="crew-grid">
+ <label>Pauze (minuten) <input name="break" type="number" min="0" max="1440" placeholder="0" required style={{display:'block',padding:10,width:'100%'}}/></label>
+ <label>Totale reistijd, heen en terug (minuten) <input name="travel" type="number" min="0" max="1440" placeholder="0" required style={{display:'block',padding:10,width:'100%'}}/></label></div>
+ <small style={{fontSize:11,color:'var(--muted)',lineHeight:1.5}}>Amsterdam: geen reistijdvergoeding. Buiten Amsterdam: eerste 30 minuten eigen tijd, daarna 75% van je afgesproken uurtarief. De definitieve berekening volgt na controle.</small><div style={{fontSize:12,fontWeight:700,color:'var(--muted)',marginTop:8}}>KOSTEN & BIJZONDERHEDEN</div>
+ <label>Gemaakte kosten (€) <input name="expenses" type="number" min="0" step="0.01" placeholder="0" required style={{display:'block',padding:10,width:'100%'}}/></label>
  <label>Omschrijving onkosten <textarea name="expense_note" rows={2} style={{display:'block',padding:10,width:'100%'}}/></label>
  <label>Meer dan 10 glazen gebroken? <select name="breakage" style={{display:'block',padding:10,width:'100%'}}><option value="no">Nee</option><option value="yes">Ja</option></select></label>
  <label>Misten er materialen of producten? <select name="missing" style={{display:'block',padding:10,width:'100%'}}><option value="no">Nee</option><option value="yes">Ja</option></select></label>
