@@ -56,12 +56,8 @@ async function sourceProducts(projectId: number): Promise<Product[]> {
     rentmanRows('/projects/' + projectId + '/costs?fields=id,name,quantity,sale_price&limit=300'),
   ]);
   const products: Product[] = [];
-  const ids = [...new Set(equipment.map(r => Number(typeof r.equipment === 'object' && r.equipment !== null ? (r.equipment as Record<string, unknown>).id : String(r.equipment ?? '').split('/').pop())).filter(Number.isFinite))];
-  const catalog = new Map<number, Record<string, unknown>>();
-  await Promise.all(ids.map(async id => {
-    const rows = await rentmanRows('/equipment?fields=id,name,rental_sales,temporary,unit,price&limit=1&id=' + id);
-    if (rows[0] && Number(rows[0].id) === id) catalog.set(id, rows[0]);
-  }));
+  const catalogRows = await rentmanRows('/equipment?fields=id,name,rental_sales,temporary,unit,price&limit=1500');
+  const catalog = new Map(catalogRows.map(item => [Number(item.id), item]));
   for (const r of equipment) {
     const equipmentInfo = r.equipment && typeof r.equipment === 'object' ? r.equipment as Record<string, unknown> : {};
     const name = label(r.equipment) || label(r.displayname) || 'Rentman-artikel ' + r.id;
