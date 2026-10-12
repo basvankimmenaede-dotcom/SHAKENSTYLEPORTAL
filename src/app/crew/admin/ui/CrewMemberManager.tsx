@@ -2,8 +2,8 @@
 import {useState} from 'react';
 type Member={id:string;rentman_crew_id:number;full_name:string;email:string;rentman_email:string|null;login_email_override:string|null;active:boolean;last_synced_at:string|null};
 export default function CrewMemberManager({members}:{members:Member[]}){
- const [rows,setRows]=useState(members);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');const [search,setSearch]=useState('');
- const visibleRows=rows.filter(m=>[m.full_name,m.rentman_email,m.email,m.login_email_override,String(m.rentman_crew_id)].some(v=>(v||'').toLowerCase().includes(search.trim().toLowerCase()))).sort((a,b)=>Number(b.active)-Number(a.active)||a.full_name.localeCompare(b.full_name,'nl'));
+ const [rows,setRows]=useState(members);const [savedActive,setSavedActive]=useState<Record<string,boolean>>(()=>Object.fromEntries(members.map(m=>[m.id,m.active])));const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');const [search,setSearch]=useState('');
+ const visibleRows=rows.filter(m=>[m.full_name,m.rentman_email,m.email,m.login_email_override,String(m.rentman_crew_id)].some(v=>(v||'').toLowerCase().includes(search.trim().toLowerCase()))).sort((a,b)=>Number(savedActive[b.id]??b.active)-Number(savedActive[a.id]??a.active)||a.full_name.localeCompare(b.full_name,'nl'));
  async function sync(){
   setBusy(true);setNotice('');
   try{const res=await fetch('/api/crew/admin/sync',{method:'POST'});const result=await res.json();
@@ -14,7 +14,7 @@ export default function CrewMemberManager({members}:{members:Member[]}){
  async function save(m:Member){
   setBusy(true);setNotice('');
   try{const res=await fetch('/api/crew/admin/members',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:m.id,email:m.login_email_override,active:m.active})});
-  const data=await res.json();if(!res.ok)throw Error(data.error||'Opslaan mislukt');setNotice('Wijziging opgeslagen. Een gewijzigd adres moet eerst een Supabase Auth-account hebben voordat de inlogmail werkt.');
+  const data=await res.json();if(!res.ok)throw Error(data.error||'Opslaan mislukt');setSavedActive(prev=>({...prev,[m.id]:m.active}));setNotice('Wijziging opgeslagen. Een gewijzigd adres moet eerst een Supabase Auth-account hebben voordat de inlogmail werkt.');
   }catch(e){setNotice(e instanceof Error?e.message:'Opslaan mislukt')}finally{setBusy(false)}
  }
  return <div className="stack" style={{padding:"24px 36px 36px",minWidth:0}}>
