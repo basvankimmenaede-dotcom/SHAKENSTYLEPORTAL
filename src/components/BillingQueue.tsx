@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 type BillingStatus = 'open' | 'invoiced' | 'skip';
@@ -43,6 +44,7 @@ export default function BillingQueue({
   const [filter, setFilter] = useState<Filter>('open');
   const [pending, setPending] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState('');
+  const [feedback, setFeedback] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setItems(initialItems);
@@ -62,6 +64,7 @@ export default function BillingQueue({
     const previous = item;
 
     setError('');
+    setFeedback(current => ({ ...current, [item.id]: 'Wijziging wordt opgeslagen…' }));
     setPending((current) => new Set(current).add(item.id));
     setItems((current) => current.map((row) => row.id === item.id
       ? {
@@ -81,7 +84,9 @@ export default function BillingQueue({
       const result = await response.json().catch(() => ({}));
       setItems((current) => current.map((row) => row.id === item.id ? previous : row));
       setError(result.error || 'Facturatiestatus kon niet worden opgeslagen.');
+      setFeedback(current => ({ ...current, [item.id]: 'Opslaan mislukt: ' + (result.error || 'Probeer opnieuw.') }));
     } else {
+      setFeedback(current => ({ ...current, [item.id]: '✓ Wijziging opgeslagen' }));
       const result = await response.json().catch(() => ({}));
       if (result.completedAt) {
         setItems((current) => current.map((row) => row.id === item.id
@@ -136,6 +141,7 @@ export default function BillingQueue({
                 {item.status === 'skip' ? <span className="billingSkipped">Niet factureren</span> : null}
                 {canManage ? (
                   <div className="billingActions">
+                    <Link className="button secondary" href={\`/planning/billing/\${item.id}\`}>Factuur voorbereiden</Link>
                     {item.status !== 'invoiced' ? (
                       <button className="button orange" type="button" disabled={isPending} onClick={() => updateStatus(item, 'invoiced')}>
                         {isPending ? 'Opslaan…' : '✓ Gefactureerd'}
@@ -152,6 +158,7 @@ export default function BillingQueue({
                     ) : null}
                   </div>
                 ) : null}
+                {feedback[item.id] ? <small role="status" aria-live="polite">{feedback[item.id]}</small> : null}
               </div>
             </article>
           );
