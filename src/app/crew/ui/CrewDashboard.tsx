@@ -4,9 +4,10 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import BrandLogo from '@/components/BrandLogo';
 
-type Assignment={id:string;project_name:string;project_location:string|null;starts_at:string;ends_at:string;crew_shift_reports:{id:string;status:string}[]|null};
+type ShiftReport={id:string;status:string;submitted_at:string|null;work_started_at:string;work_ended_at:string;break_minutes:number;travel_minutes:number;expenses_amount:number;expenses_description:string|null;breakage_over_ten:boolean;missing_materials:boolean;missing_materials_description:string|null;notes:string|null};
+type Assignment={id:string;project_name:string;project_location:string|null;starts_at:string;ends_at:string;crew_shift_reports:ShiftReport[]|null};
 export default function CrewDashboard({memberName,assignments,adminPreview=false}:{memberName:string;assignments:Assignment[];adminPreview?:boolean}) {
- const [selected,setSelected]=useState<Assignment|null>(null);
+ const [selected,setSelected]=useState<Assignment|null>(null); const [viewing,setViewing]=useState<Assignment|null>(null);
  const [saving,setSaving]=useState(false); const [missingYes,setMissingYes]=useState(false); const [message,setMessage]=useState('');
  const router=useRouter();
  async function submit(formData:FormData){if(!selected)return;setSaving(true);setMessage('');
@@ -36,10 +37,10 @@ export default function CrewDashboard({memberName,assignments,adminPreview=false
  const supabase=createClient();
  const {data:member}=await supabase.from('crew_portal_members').select('id').eq('active',true).maybeSingle();
  if(!member){setMessage('Je toegang is niet gekoppeld.');setSaving(false);return}
- const {error}=await supabase.from('crew_shift_reports').upsert({...data,crew_member_id:member.id,status:'submitted'},{onConflict:'assignment_id'});
+ const {error}=await supabase.from('crew_shift_reports').insert({...data,crew_member_id:member.id,status:'submitted'});
  setSaving(false);
- if(error){setMessage('Opslaan mislukt: '+error.message);return}
- setSelected(null);router.refresh();setMessage('Shiftrapport ontvangen.');}
+ if(error){setMessage(error.code==='23505'?'Voor deze dienst is al een shiftrapport ingediend. Open het bestaande rapport.':'Opslaan mislukt: '+error.message);router.refresh();return}
+ setSelected(null);router.refresh();setMessage('Shiftrapport ingediend. Je kunt het rapport voortaan inzien.');}
  const fmt=(d:string)=>new Date(d).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
  return <main style={{minHeight:'100vh',background:'var(--bg)',padding:'30px 16px',color:'#202020'}}>
  <div style={{maxWidth:650,margin:'auto'}}>
@@ -50,8 +51,13 @@ export default function CrewDashboard({memberName,assignments,adminPreview=false
  {assignments.length===0&&<p>Er zijn geen diensten gevonden in deze periode.</p>}
  {assignments.map(a=>{const report=a.crew_shift_reports?.[0];const ended=new Date(a.ends_at).getTime()<=Date.now();return <div key={a.id} style={{padding:'18px 0',borderTop:'1px solid #eee'}}>
  <strong>{a.project_name}</strong><p style={{color:'var(--muted)',margin:'5px 0'}}>{fmt(a.starts_at)} – {fmt(a.ends_at)} · {a.project_location||'Locatie volgt'}</p>
- {report?<span style={{color:'#29764d'}}>Rapport {report.status==='approved'?'goedgekeurd':'ingediend'}</span>:adminPreview?<span style={{color:'#777'}}>{ended?'Rapport nog niet ingediend':'Nog gepland'}</span>:<button disabled={!ended} onClick={()=>{setSelected(a);setMessage('')}} style={{padding:'9px 14px',background:ended?'var(--orange)':'#ddd',color:ended?'white':'#555',border:0,borderRadius:8}}>{ended?'Shiftrapport invullen':'Nog gepland'}</button>}
+ {report?<button type="button" onClick={()=>{setViewing(a);setSelected(null)}} style={{background:'transparent',border:'1px solid var(--border,#ddd)',borderRadius:8,padding:'8px 12px',fontWeight:600,cursor:'pointer'}}>✓ Rapport bekijken</button>:adminPreview?<span style={{color:'#777'}}>{ended?'Rapport nog niet ingediend':'Nog gepland'}</span>:<button disabled={!ended} onClick={()=>{setSelected(a);setMessage('')}} style={{padding:'9px 14px',background:ended?'var(--orange)':'#ddd',color:ended?'white':'#555',border:0,borderRadius:8}}>{ended?'Shiftrapport invullen':'Nog gepland'}</button>}
  </div>})}</section>
+ {viewing?.crew_shift_reports?.[0] && <section style={{background:'var(--panel)',border:'1px solid var(--border,#ddd)',borderRadius:14,padding:18,marginTop:16}}>
+ <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}><div><div style={{fontSize:12,color:'var(--muted)'}}>INGEDIEND · ALLEEN LEZEN</div><h2 style={{fontSize:18,margin:'5px 0'}}>{viewing.project_name}</h2></div><button type="button" onClick={()=>setViewing(null)} style={{background:'transparent',border:'1px solid var(--border,#ddd)',borderRadius:8,padding:8,cursor:'pointer'}}>Sluiten</button></div>
+ {(() => { const report=viewing.crew_shift_reports![0];const show=(value:string)=>new Date(value).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const fields:[string,string][]=[['Begin',show(report.work_started_at)],['Eind',show(report.work_ended_at)],['Pauze',report.break_minutes+' min'],['Reistijd',report.travel_minutes+' min'],['Onkosten','€ '+Number(report.expenses_amount||0).toLocaleString('nl-NL',{minimumFractionDigits:2})],['Omschrijving onkosten',report.expenses_description||'—'],['Meer dan 10 glazen gebroken',report.breakage_over_ten?'Ja':'Nee'],['Ontbrekend materiaal',report.missing_materials?'Ja':'Nee'],['Omschrijving ontbrekend materiaal',report.missing_materials_description||'—'],['Opmerkingen',report.notes||'—']];return <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)',gap:10,marginTop:16}}>{fields.map(([label,value])=><div key={label} style={{padding:'9px 11px',borderRadius:8,background:'var(--bg,#f8f8f8)'}}><div style={{fontSize:11,color:'var(--muted)'}}>{label}</div><div style={{fontSize:13,fontWeight:600,whiteSpace:'pre-wrap'}}>{value}</div></div>)}</div>})()}
+ <p style={{fontSize:12,color:'var(--muted)',marginBottom:0}}>Dit rapport is definitief ingediend en kan niet opnieuw worden ingestuurd.</p>
+ </section>}
  {!adminPreview&&selected&&<section style={{background:'var(--panel)',borderRadius:16,padding:20,marginTop:16,border:'1px solid var(--border,#eee)'}}>
  <div style={{fontSize:11,fontWeight:750,letterSpacing:1.2,textTransform:'uppercase',color:'var(--orange)',marginBottom:6}}>Dienst afronden</div><h2 style={{fontSize:19,letterSpacing:'-.02em',margin:'0 0 16px'}}>Shiftrapport · {selected.project_name}</h2>
  <form action={submit} style={{display:'grid',gap:12}}><style>{`.crew-field{display:block;box-sizing:border-box;width:100%;min-height:42px;padding:9px 12px;margin-top:5px;border:1px solid var(--border,#dedbd7);border-radius:9px;background:var(--bg,#fff);color:var(--text,#202020);font:inherit;font-size:14px;outline:none}.crew-field:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(245,105,25,.12)}.crew-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.crew-label{font-size:12px;font-weight:650;color:var(--text,#333)}.crew-field::placeholder{color:#a7a7a7}@media(max-width:480px){.crew-grid{grid-template-columns:1fr}}`}</style><div style={{fontSize:12,fontWeight:700,color:'var(--muted)'}}>WERKTIJD</div><div className="crew-grid">
