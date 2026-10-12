@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import BillingProductUsage from './BillingProductUsage';
+import BillingChecks from './BillingChecks';
 import { useEffect, useMemo, useState } from 'react';
 
 type Line = { description: string; quantity: number; unitPrice: number; vatRate: number };
@@ -54,10 +55,10 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
   }
   return <main className="container" style={{ maxWidth: 1050, paddingBottom: 60 }}>
     <Link href="/planning/billing">← Terug naar facturatie</Link>
-    <h1>Factuur voorbereiden</h1>
+    <h1>Projectafrekening</h1>
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
     {!item ? <p role="status">{state}</p> : <>
-      <p>Dit is een intern concept. Er wordt niets naar Rentman of Exact Online verzonden.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(240px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2>Klant en referentie</h2>
         {([['customer_name', 'Klant'], ['customer_email', 'E-mailadres'], ['customer_address', 'Factuuradres'], ['reference', 'Referentie / PO-nummer'], ['description', 'Factuuromschrijving']] as const).map(([key, label]) =>
@@ -86,6 +87,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         {canManage && item.status !== 'invoiced' && <button type="button" className="button orange" disabled={saving} onClick={save}>{saving ? 'Opslaan…' : 'Concept opslaan'}</button>}
         <span role="status" aria-live="polite">{state}</span>
       </div>
+      </div><BillingChecks id={id} canManage={canManage} locked={item.status === 'invoiced'} /></div>
     </>}
   </main>;
 }
