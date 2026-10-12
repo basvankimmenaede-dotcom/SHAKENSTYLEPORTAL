@@ -32,9 +32,14 @@ export default function BillingHours({ id }: { id: string }) {
       <p style={{ fontSize: 13 }}>{status}</p>
       {loaded && <p><strong>{recorded.length} van {assignedCount} gekoppelde diensten met een ingediende sheet.</strong> {recorded.length === 0 ? 'Er zijn nog geen geregistreerde uren om te vergelijken.' : 'Totaal geregistreerd: ' + recordedTotal.toLocaleString('nl-NL') + ' uur.' + (recorded.length === assignedCount ? ' Verschil: ' + (diff >= 0 ? '+' : '') + diff.toLocaleString('nl-NL') + ' uur.' : ' Niet alle sheets zijn ingediend; verschil nog niet definitief.')}</p>}
       {recorded.filter(r => r.breakageOverTen || r.missingMaterials).map(r => <p key={r.id} style={{ color: '#a94c00' }}>{r.breakageOverTen ? 'Let op: meer dan 10 glazen kapot of vermist. ' : ''}{r.missingMaterials ? 'Ontbrekend materiaal: ' + (r.missingMaterialsDescription || 'geen toelichting') : ''}</p>)}
-      {rows.map(row => <div key={row.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: '1px solid #ddd', padding: '10px 0' }}>
-        <span>{row.name} · {row.amount}× {row.hoursPerPerson === null ? 'tijd onbekend' : row.hoursPerPerson.toLocaleString('nl-NL') + ' uur'}</span>
-        <strong>{row.plannedHours === null ? '—' : row.plannedHours.toLocaleString('nl-NL') + ' uur'}</strong>
+      {grouped.map(([group, items]) => <div key={group} style={{ marginTop: 10 }}>
+        <strong style={{ fontSize: 13 }}>{group}</strong>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(100px,2fr) 50px 120px 65px', gap: 8, fontSize: 12, padding: '6px 0', opacity: 0.7 }}>
+          <span>Functie</span><span>Aantal</span><span>Begin – eind</span><span>Uren</span>
+        </div>
+        {items.map(row => <div key={row.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(100px,2fr) 50px 120px 65px', gap: 8, borderTop: '1px solid var(--border, #ddd)', padding: '7px 0', fontSize: 13 }}>
+          <span>{row.name}</span><span>{row.amount}×</span><span>{time(row.startsAt)} – {time(row.endsAt)}</span><strong>{row.plannedHours === null ? '—' : row.plannedHours.toLocaleString('nl-NL') + ' u'}</strong>
+        </div>)}
       </div>)}
     </div>}
   </section>;
