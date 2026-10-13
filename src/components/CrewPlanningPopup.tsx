@@ -444,6 +444,7 @@ export default function CrewPlanningPopup(props: Props) {
               ? `#${props.projectNumber ?? props.projectId ?? ''} · ${props.projectName}`
               : 'Rentman activiteit'}
           </span>
+          {props.travelLabel ? <span style={{fontSize:11,color:'#9a5a32'}}>{props.travelLabel}</span> : null}
         </span>
       </button>
 
