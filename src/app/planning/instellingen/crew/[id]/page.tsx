@@ -16,7 +16,7 @@ export default async function CrewAdminPreview({params}:{params:Promise<{id:stri
  if(error||!member)notFound();
  const syncResponse=await synchronizeCrewAssignments();
  const from=new Date(Date.now()-7*86400000).toISOString();
- const to=new Date(Date.now()+7*86400000).toISOString();
+ const to=new Date(Date.now()+120*86400000).toISOString();
  const {data:assignments,error:assignmentsError}=await admin.from('crew_portal_assignments')
  .select('id,project_name,project_location,starts_at,ends_at,crew_shift_reports(id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes)')
  .eq('crew_member_id',id).gte('starts_at',from).lte('starts_at',to).order('starts_at');
