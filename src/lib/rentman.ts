@@ -730,6 +730,27 @@ export async function getPlanningCrewAssignmentsForRange(startDate: string, endD
 }
 
 
+export async function getPlanningCrewAssignmentsForProject(projectId: number) {
+  const params = new URLSearchParams({
+    fields: 'id,function,crewmember,transport',
+    expand: 'function,crewmember',
+    limit: '1500',
+  });
+  const assignments = await rentmanPlanningFetchAll<RentmanPlanningCrewAssignment>(
+    `/projectcrew?${params.toString()}`,
+  );
+  const refId = (ref: unknown): number | null => {
+    if (typeof ref === 'number') return ref;
+    if (typeof ref === 'string') {
+      const match = ref.match(/(\\d+)$/);
+      return match ? Number(match[1]) : null;
+    }
+    if (ref && typeof ref === 'object' && 'id' in ref) return Number((ref as { id: unknown }).id);
+    return null;
+  };
+  return assignments.filter(a => refId(a.function?.project) === projectId);
+}
+
 export type RentmanPlanningSubproject = {
   id: number;
   name?: string;
