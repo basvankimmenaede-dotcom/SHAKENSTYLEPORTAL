@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-type HourRow = { id: number; name: string; group: string; startsAt: string | null; endsAt: string | null; amount: number; hoursPerPerson: number | null; plannedHours: number | null };
+type HourRow = { id: number; type: string | null; name: string; group: string; startsAt: string | null; endsAt: string | null; amount: number; hoursPerPerson: number | null; plannedHours: number | null };
 type Recorded = { id: string; functionId: number | null; plannedStartsAt: string | null; plannedEndsAt: string | null; workStartedAt: string; workEndedAt: string; hours: number | null; travelMinutes: number; breakageOverTen: boolean; missingMaterials: boolean; missingMaterialsDescription: string | null; status: string };
 export default function BillingHours({ id }: { id: string }) {
   const [rows, setRows] = useState<HourRow[]>([]);
@@ -16,19 +16,20 @@ export default function BillingHours({ id }: { id: string }) {
       .catch(e => { if (active) setStatus('Fout bij uren ophalen: ' + e.message); });
     return () => { active = false; };
   }, [id]);
-  const total = rows.reduce((sum, row) => sum + (row.plannedHours || 0), 0);
+  const personnelRows = rows.filter(row => row.type !== 'vehicle_function' && !/^(bakwagen|bestelbus|bestelauto|transport bestelbus|transport bakwagen|vrachtwagen|auto\\b)/i.test(row.name));
+  const total = personnelRows.reduce((sum, row) => sum + (row.plannedHours || 0), 0);
   const recordedTotal = recorded.reduce((sum, row) => sum + (row.hours ?? 0), 0);
   const diff = Math.round((recordedTotal - total) * 100) / 100;
-  const mapped = recorded.filter(r => r.functionId !== null && rows.some(row => row.id === r.functionId));
+  const mapped = recorded.filter(r => r.functionId !== null && personnelRows.some(row => row.id === r.functionId));
   const unlinked = recorded.filter(r => r.functionId === null || !rows.some(row => row.id === r.functionId));
-  const grouped = Object.entries(rows.reduce<Record<string, HourRow[]>>((acc, row) => {
+  const grouped = Object.entries(personnelRows.reduce<Record<string, HourRow[]>>((acc, row) => {
     (acc[row.group || 'Overig'] ??= []).push(row);
     return acc;
   }, {}));
   const time = (value: string | null) => value ? new Intl.DateTimeFormat('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' }).format(new Date(value)) : '—';
   return <section className="card" style={{ padding: 12, marginBottom: 10 }}>
     <button type="button" onClick={() => setExpanded(v => !v)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', background: 'transparent', border: 0, padding: 4, cursor: 'pointer', textAlign: 'left' }}>
-      <strong>Personeel & uren ({rows.length} functies)</strong><span>{total.toLocaleString('nl-NL')} gepland · {recorded.length ? recordedTotal.toLocaleString('nl-NL') + ' geregistreerd' + (recorded.length === assignedCount ? ' (' + (diff >= 0 ? '+' : '') + diff.toLocaleString('nl-NL') + ')' : ' (onvolledig)') : 'nog geen sheets'} {expanded ? '▴' : '▾'}</span>
+      <strong>Personeel & uren ({personnelRows.length} functies)</strong><span>{total.toLocaleString('nl-NL')} gepland · {recorded.length ? recordedTotal.toLocaleString('nl-NL') + ' geregistreerd' + (recorded.length === assignedCount ? ' (' + (diff >= 0 ? '+' : '') + diff.toLocaleString('nl-NL') + ')' : ' (onvolledig)') : 'nog geen sheets'} {expanded ? '▴' : '▾'}</span>
     </button>
     {expanded && <div style={{ marginTop: 12 }}>
       <p style={{ fontSize: 13 }}>{status}</p>
