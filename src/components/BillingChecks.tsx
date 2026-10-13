@@ -12,10 +12,11 @@ export default function BillingChecks({ id, canManage, locked }: { id: string; c
       .then(async r => { const x = await r.json(); if (!r.ok) throw new Error(x.error || 'Sheets ophalen mislukt');
         const list: Check[] = [];
         for (const report of x.recorded || []) {
-          if (report.breakageOverTen) list.push({ key: 'breakage:' + report.id, title: 'Meer dan 10 glazen kapot of vermist', detail: 'Gemeld in een ingediend shiftrapport' });
-          if (report.missingMaterials) list.push({ key: 'missing:' + report.id, title: 'Ontbrekend materiaal', detail: report.missingMaterialsDescription || 'Geen toelichting opgegeven' });
-          if (Number(report.expensesAmount || 0) > 0 || String(report.expensesDescription || '').trim()) list.push({ key: 'expenses:' + report.id, title: 'Extra kosten' + (Number(report.expensesAmount || 0) > 0 ? ': ' + Number(report.expensesAmount).toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' }) : ''), detail: String(report.expensesDescription || '').trim() || 'Geen omschrijving opgegeven' });
-          if (String(report.notes || '').trim()) list.push({ key: 'notes:' + report.id, title: 'Opmerking shiftrapport', detail: String(report.notes).trim() });
+          const reporter = String(report.crewMemberName || 'Onbekende medewerker');
+          if (report.breakageOverTen) list.push({ key: 'breakage:' + report.id, title: 'Meer dan 10 glazen kapot of vermist · ' + reporter, detail: 'Gemeld in een ingediend shiftrapport' });
+          if (report.missingMaterials) list.push({ key: 'missing:' + report.id, title: 'Ontbrekend materiaal · ' + reporter, detail: report.missingMaterialsDescription || 'Geen toelichting opgegeven' });
+          if (Number(report.expensesAmount || 0) > 0 || String(report.expensesDescription || '').trim()) list.push({ key: 'expenses:' + report.id, title: 'Extra kosten · ' + reporter + (Number(report.expensesAmount || 0) > 0 ? ': ' + Number(report.expensesAmount).toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' }) : ''), detail: String(report.expensesDescription || '').trim() || 'Geen omschrijving opgegeven' });
+          if (String(report.notes || '').trim()) list.push({ key: 'notes:' + report.id, title: 'Opmerking shiftrapport · ' + reporter, detail: String(report.notes).trim() });
         }
         setChecks(list);
       }).catch(e => setError(e.message));
