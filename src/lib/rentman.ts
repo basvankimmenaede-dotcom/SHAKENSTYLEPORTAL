@@ -523,6 +523,8 @@ export type RentmanPlanningCrewAssignment = {
       displayname?: string;
       name?: string;
     } | null;
+    travel_time_before?: number | null;
+    travel_time_after?: number | null;
     planperiod_start?: string | null;
     planperiod_end?: string | null;
     usageperiod_start?: string | null;
