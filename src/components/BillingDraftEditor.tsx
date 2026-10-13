@@ -3,6 +3,7 @@ import Link from 'next/link';
 import BillingProductUsage from './BillingProductUsage';
 import BillingChecks from './BillingChecks';
 import BillingHours from './BillingHours';
+import BillingTransport from './BillingTransport';
 import { useEffect, useMemo, useState } from 'react';
 
 type Line = { description: string; quantity: number; unitPrice: number; vatRate: number };
@@ -30,7 +31,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       }).catch(e => { if (active) setState(e.message); });
     return () => { active = false; };
   }, [id]);
-  const totals = useMemo(() => draft.lines.reduce((a, l) => {
+  const totals = useMemo(() => draft.lines.filter(l => !l.description.startsWith('[Transport] ')).reduce((a, l) => {
     const net = Math.round((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0) * 100) / 100;
     const vat = Math.round(net * (Number(l.vatRate) || 0)) / 100;
     return { net: a.net + net, vat: a.vat + vat };
@@ -69,10 +70,11 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         </details>
       </section>
       <BillingHours id={id} />
+      <BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} />
       <BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} />
       <section className="card" style={{ padding: 12, marginBottom: 10 }}>
-        <details><summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14, padding: "4px 0" }}>Overige factuurregels ({draft.lines.filter(l => l.description.trim()).length})</summary>
-        {draft.lines.map((line, i) => <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 3fr) 85px 110px 95px auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
+        <details><summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14, padding: "4px 0" }}>Overige factuurregels ({draft.lines.filter(l => l.description.trim() && !l.description.startsWith('[Transport] ')).length})</summary>
+        {draft.lines.map((line, i) => line.description.startsWith('[Transport] ') ? null : <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 3fr) 85px 110px 95px auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
           <div className="field"><label>Omschrijving</label><input className="input" aria-label={'Omschrijving regel ' + (i + 1)} value={line.description} disabled={!canManage || item.status === 'invoiced'} onChange={e => changeLine(i, 'description', e.target.value)} /></div>
           <div className="field"><label>Aantal</label><input className="input" type="number" min="0" step="0.01" value={line.quantity} disabled={!canManage || item.status === 'invoiced'} onChange={e => changeLine(i, 'quantity', e.target.value)} /></div>
           <div className="field"><label>Prijs excl.</label><input className="input" type="number" min="0" step="0.01" value={line.unitPrice} disabled={!canManage || item.status === 'invoiced'} onChange={e => changeLine(i, 'unitPrice', e.target.value)} /></div>
