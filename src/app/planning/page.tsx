@@ -972,6 +972,23 @@ export default async function PlanningPage() {
                           ? formatTime(new Date(new Date(end).getTime() + travelAfter * 1000).toISOString())
                           : null;
                         const travelLabel = [departure ? `Vertrek ${departure}` : null, returnTime ? `Retour ${returnTime}` : null].filter(Boolean).join(' · ') || null;
+                        const travelTimes = assignmentGroup.map(groupAssignment => {
+                          const functionData = groupAssignment.function;
+                          const groupStart = functionData?.planperiod_start ?? functionData?.usageperiod_start ?? null;
+                          const groupEnd = functionData?.planperiod_end ?? functionData?.usageperiod_end ?? null;
+                          const direction = groupAssignment.transport ?? 'no_transport';
+                          const before = Number(functionData?.travel_time_before ?? 0);
+                          const after = Number(functionData?.travel_time_after ?? 0);
+                          const member = groupAssignment.crewmember;
+                          const personName = member?.displayname || [member?.firstname,member?.middle_name,member?.lastname].filter(Boolean).join(' ') || 'Medewerker';
+                          return {
+                            name: personName,
+                            departure: (direction === 'round_trip' || direction === 'only_way_there') && groupStart && before > 0
+                              ? formatTime(new Date(new Date(groupStart).getTime() - before * 1000).toISOString()) : null,
+                            returnTime: (direction === 'round_trip' || direction === 'only_way_back') && groupEnd && after > 0
+                              ? formatTime(new Date(new Date(groupEnd).getTime() + after * 1000).toISOString()) : null,
+                          };
+                        });
                         const projectId = Number(fn?.project?.split('/').pop());
                         const project = Number.isFinite(projectId) ? projectById.get(projectId) : undefined;
                         const name = crew?.displayname
@@ -1029,6 +1046,7 @@ export default async function PlanningPage() {
                             start={start}
                             end={end}
                             travelLabel={travelLabel}
+                            travelTimes={travelTimes}
                             projectNumber={project?.number ?? null}
                             projectName={project?.name ?? null}
                             locationName={project?.location?.displayname || project?.location?.name || null}
