@@ -103,6 +103,7 @@ type Props = {
   groupName?: string | null;
   start?: string | null;
   end?: string | null;
+  travelLabel?: string | null;
   projectNumber?: string | number | null;
   projectName?: string | null;
   projectUsageStart?: string | null;
