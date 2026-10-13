@@ -104,6 +104,7 @@ type Props = {
   start?: string | null;
   end?: string | null;
   travelLabel?: string | null;
+  travelTimes?: Array<{name:string;departure:string|null;returnTime:string|null}>;
   projectNumber?: string | number | null;
   projectName?: string | null;
   projectUsageStart?: string | null;
@@ -444,7 +445,16 @@ export default function CrewPlanningPopup(props: Props) {
               ? `#${props.projectNumber ?? props.projectId ?? ''} · ${props.projectName}`
               : 'Rentman activiteit'}
           </span>
-          {props.travelLabel ? <span style={{fontSize:11,color:'#9a5a32'}}>{props.travelLabel}</span> : null}
+          {props.travelTimes?.some(t => t.departure || t.returnTime) ? (
+            <span style={{display:'flex',flexDirection:'column',gap:3,marginTop:4,fontSize:12,lineHeight:1.4,color:'#9a5a32',whiteSpace:'normal',overflowWrap:'anywhere'}}>
+              {props.travelTimes.map((t,i) => (t.departure || t.returnTime) ? <span key={i}>
+                {props.travelTimes!.length > 1 ? t.name + ': ' : ''}
+                {t.departure ? 'Vertrek ' + t.departure : ''}
+                {t.departure && t.returnTime ? ' · ' : ''}
+                {t.returnTime ? 'Retour ' + t.returnTime : ''}
+              </span> : null)}
+            </span>
+          ) : null}
         </span>
       </button>
 
@@ -485,6 +495,18 @@ export default function CrewPlanningPopup(props: Props) {
               </div>
             </div>
 
+            <div style={{padding:'14px 16px',margin:'12px 0',border:'1px solid var(--border,#ddd)',borderRadius:12}}>
+              <strong style={{display:'block',marginBottom:10}}>Tijden van deze dienst</strong>
+              <div style={{display:'flex',flexWrap:'wrap',gap:16}}>
+                <div><small style={{display:'block'}}>Geplande werktijd</small><strong>{formatTime(props.start)} – {formatTime(props.end)}</strong></div>
+                {(props.travelTimes || []).filter(t=>t.departure || t.returnTime).map((t,i)=><div key={i} style={{minWidth:150}}>
+                  {people.length > 1 && <small style={{display:'block',fontWeight:600}}>{t.name}</small>}
+                  {t.departure && <div><small>Vertrek </small><strong>{t.departure}</strong></div>}
+                  {t.returnTime && <div><small>Verwachte retour </small><strong>{t.returnTime}</strong></div>}
+                </div>)}
+              </div>
+              <small style={{display:'block',marginTop:8,opacity:.75}}>Vertrek en retour zijn berekend uit de Rentman-reistijden; dit zijn geen achteraf geregistreerde uren.</small>
+            </div>
             <div className="crewPlanningProjectCard">
               <span>Project</span>
               <strong>
