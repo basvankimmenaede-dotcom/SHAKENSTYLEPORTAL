@@ -46,14 +46,15 @@ export default function BillingHours({ id }: { id: string }) {
               const sheets = mapped.filter(report => report.functionId === row.id);
               const hours = sheets.reduce((sum, report) => sum + (report.hours ?? 0), 0);
               const complete = sheets.length >= row.amount && sheets.every(report => report.hours !== null);
-              const difference = row.plannedHours === null || !complete ? null : Math.round((hours - row.plannedHours) * 100) / 100;
+              const difference = row.plannedHours === null || sheets.length === 0 || sheets.some(report => report.hours === null) ? null : Math.round((hours - row.plannedHours) * 100) / 100;
               return <div key={row.id} style={{ borderTop: '1px solid var(--border,#ddd)', padding: '8px 0' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(130px,2fr) 48px 115px 75px 100px 80px', gap: 8, fontSize: 13, alignItems: 'center' }}>
                   <span>{row.name}</span><span>{row.amount}×</span><span>{time(row.startsAt)} – {time(row.endsAt)}</span>
                   <strong>{row.plannedHours === null ? '—' : row.plannedHours.toLocaleString('nl-NL') + ' u'}</strong>
                   <strong>{sheets.length ? hours.toLocaleString('nl-NL') + ' u' : 'Nog geen sheet'}</strong>
-                  <strong>{difference === null ? '—' : (difference > 0 ? '+' : '') + difference.toLocaleString('nl-NL') + ' u'}</strong>
+                  <strong>{difference === null ? '—' : (difference > 0 ? '+' : '') + difference.toLocaleString('nl-NL') + ' u' + (!complete ? ' *' : '')}</strong>
                 </div>
+                {difference !== null && !complete && <small style={{display:'block',color:'var(--muted)'}}> * Voorlopig verschil; nog niet alle sheets zijn ingediend.</small>}
                 {sheets.length > 0 && <details style={{ marginTop: 6, fontSize: 12 }}>
                   <summary style={{ cursor: 'pointer', color: 'var(--muted)' }}>Bekijk {sheets.length} {sheets.length === 1 ? 'sheet' : 'sheets'}{!complete ? ' · nog niet compleet' : ''}</summary>
                   {sheets.map(sheet => <div key={sheet.id} style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: '1px solid var(--border,#ddd)' }}>
