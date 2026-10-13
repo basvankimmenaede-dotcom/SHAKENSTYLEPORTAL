@@ -617,7 +617,7 @@ export default async function PlanningPage() {
     : { configured: false, projects: [] as RentmanPlanningProject[] };
   const overdueReturnProjects = rentmanReturnResult.projects;
 
-  const crewPreviewDays = weekDays.slice(0, 3);
+  const crewPreviewDays = weekDays.slice(0, 7);
   const previewCrewCount = crewPreviewDays.reduce(
     (sum, dateKey) => sum + (crewByDay.get(dateKey)?.length ?? 0),
     0,
@@ -936,10 +936,10 @@ export default async function PlanningPage() {
           <section className="planningOpsCard planningCrewCard" id="planning-crew">
             <div className="planningOpsHeader">
               <span>Personeel (Rentman)</span>
-              <strong>{previewCrewCount} komende 3 dagen</strong>
+              <strong>{previewCrewCount} komende 7 dagen</strong>
             </div>
 
-            <div className="planningCrewDays">
+            <div className="planningCrewDays" style={{maxHeight:540,overflowY:"auto",overscrollBehavior:"contain"}}>
               {crewPreviewDays.map((dateKey) => {
                 const assignmentGroups = crewGroupsByDay.get(dateKey) ?? [];
                 if (!assignmentGroups.length) return null;
@@ -958,6 +958,9 @@ export default async function PlanningPage() {
                         const crew = assignment.crewmember;
                         const start = fn?.planperiod_start ?? fn?.usageperiod_start ?? null;
                         const end = fn?.planperiod_end ?? fn?.usageperiod_end ?? null;
+                        const travelBefore = Number(fn?.travel_time_before ?? 0);
+                        const travelAfter = Number(fn?.travel_time_after ?? 0);
+                        const travelLabel = (travelBefore>0||travelAfter>0) ? `Reis: ${travelBefore} + ${travelAfter} min` : null;
                         const projectId = Number(fn?.project?.split('/').pop());
                         const project = Number.isFinite(projectId) ? projectById.get(projectId) : undefined;
                         const name = crew?.displayname
@@ -1014,6 +1017,7 @@ export default async function PlanningPage() {
                             groupName={fn?.group?.displayname || fn?.group?.name || null}
                             start={start}
                             end={end}
+                            travelLabel={travelLabel}
                             projectNumber={project?.number ?? null}
                             projectName={project?.name ?? null}
                             locationName={project?.location?.displayname || project?.location?.name || null}
