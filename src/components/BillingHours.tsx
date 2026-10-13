@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 type HourRow = { id: number; name: string; group: string; startsAt: string | null; endsAt: string | null; amount: number; hoursPerPerson: number | null; plannedHours: number | null };
-type Recorded = { id: string; plannedStartsAt: string | null; plannedEndsAt: string | null; workStartedAt: string; workEndedAt: string; hours: number | null; travelMinutes: number; breakageOverTen: boolean; missingMaterials: boolean; missingMaterialsDescription: string | null; status: string };
+type Recorded = { id: string; functionId: number | null; plannedStartsAt: string | null; plannedEndsAt: string | null; workStartedAt: string; workEndedAt: string; hours: number | null; travelMinutes: number; breakageOverTen: boolean; missingMaterials: boolean; missingMaterialsDescription: string | null; status: string };
 export default function BillingHours({ id }: { id: string }) {
   const [rows, setRows] = useState<HourRow[]>([]);
   const [recorded, setRecorded] = useState<Recorded[]>([]);
@@ -19,6 +19,8 @@ export default function BillingHours({ id }: { id: string }) {
   const total = rows.reduce((sum, row) => sum + (row.plannedHours || 0), 0);
   const recordedTotal = recorded.reduce((sum, row) => sum + (row.hours ?? 0), 0);
   const diff = Math.round((recordedTotal - total) * 100) / 100;
+  const mapped = recorded.filter(r => r.functionId !== null && rows.some(row => row.id === r.functionId));
+  const unlinked = recorded.filter(r => r.functionId === null || !rows.some(row => row.id === r.functionId));
   const grouped = Object.entries(rows.reduce<Record<string, HourRow[]>>((acc, row) => {
     (acc[row.group || 'Overig'] ??= []).push(row);
     return acc;
@@ -32,16 +34,46 @@ export default function BillingHours({ id }: { id: string }) {
       <p style={{ fontSize: 13 }}>{status}</p>
       {loaded && <p><strong>{recorded.length} van {assignedCount} gekoppelde diensten met een ingediende sheet.</strong> {recorded.length === 0 ? 'Er zijn nog geen geregistreerde uren om te vergelijken.' : 'Totaal geregistreerd: ' + recordedTotal.toLocaleString('nl-NL') + ' uur.' + (recorded.length === assignedCount ? ' Verschil: ' + (diff >= 0 ? '+' : '') + diff.toLocaleString('nl-NL') + ' uur.' : ' Niet alle sheets zijn ingediend; verschil nog niet definitief.')}</p>}
 
-      {grouped.map(([group, items]) => <div key={group} style={{ marginTop: 10 }}>
+      {grouped.map(([group, items]) => <div key={group} style={{ marginTop: 16 }}>
         <strong style={{ fontSize: 13 }}>{group}</strong>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(100px,2fr) 45px 110px 65px 95px', gap: 8, fontSize: 12, padding: '6px 0', opacity: 0.7 }}>
-          <span>Functie</span><span>Aantal</span><span>Begin – eind</span><span>Gepland</span><span>Geregistreerd</span>
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: 590 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(130px,2fr) 48px 115px 75px 100px 80px', gap: 8, fontSize: 12, padding: '7px 0', opacity: 0.7 }}>
+              <span>Functie</span><span>Aantal</span><span>Begin – eind</span><span>Gepland</span><span>Geregistreerd</span><span>Verschil</span>
+            </div>
+            {items.map(row => {
+              const sheets = mapped.filter(report => report.functionId === row.id);
+              const hours = sheets.reduce((sum, report) => sum + (report.hours ?? 0), 0);
+              const complete = sheets.length >= row.amount && sheets.every(report => report.hours !== null);
+              const difference = row.plannedHours === null || !complete ? null : Math.round((hours - row.plannedHours) * 100) / 100;
+              return <div key={row.id} style={{ borderTop: '1px solid var(--border,#ddd)', padding: '8px 0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(130px,2fr) 48px 115px 75px 100px 80px', gap: 8, fontSize: 13, alignItems: 'center' }}>
+                  <span>{row.name}</span><span>{row.amount}×</span><span>{time(row.startsAt)} – {time(row.endsAt)}</span>
+                  <strong>{row.plannedHours === null ? '—' : row.plannedHours.toLocaleString('nl-NL') + ' u'}</strong>
+                  <strong>{sheets.length ? hours.toLocaleString('nl-NL') + ' u' : 'Nog geen sheet'}</strong>
+                  <strong>{difference === null ? '—' : (difference > 0 ? '+' : '') + difference.toLocaleString('nl-NL') + ' u'}</strong>
+                </div>
+                {sheets.length > 0 && <details style={{ marginTop: 6, fontSize: 12 }}>
+                  <summary style={{ cursor: 'pointer', color: 'var(--muted)' }}>Bekijk {sheets.length} {sheets.length === 1 ? 'sheet' : 'sheets'}{!complete ? ' · nog niet compleet' : ''}</summary>
+                  {sheets.map(sheet => <div key={sheet.id} style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: '1px solid var(--border,#ddd)' }}>
+                    <span>{time(sheet.workStartedAt)} – {time(sheet.workEndedAt)}</span>
+                    <strong>{sheet.hours === null ? '—' : sheet.hours.toLocaleString('nl-NL') + ' u'}</strong>
+                  </div>)}
+                </details>}
+                {sheets.length < row.amount && <small style={{ color: 'var(--muted)' }}>{row.amount - sheets.length} {row.amount - sheets.length === 1 ? 'sheet' : 'sheets'} nog niet ingediend of gekoppeld</small>}
+              </div>;
+            })}
+          </div>
         </div>
-        {items.map(row => <div key={row.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(100px,2fr) 50px 120px 65px', gap: 8, borderTop: '1px solid var(--border, #ddd)', padding: '7px 0', fontSize: 13 }}>
-          <span>{row.name}</span><span>{row.amount}×</span><span>{time(row.startsAt)} – {time(row.endsAt)}</span><strong>{row.plannedHours === null ? '—' : row.plannedHours.toLocaleString('nl-NL') + ' u'}</strong><span style={{color:'var(--muted)'}}>Zie sheets ↓</span>
-        </div>)}
       </div>)}
-      {recorded.length > 0 && <div style={{ marginTop: 16, paddingTop: 10, borderTop: '1px solid var(--border,#ddd)' }}><strong style={{ fontSize: 13 }}>Geregistreerde diensten ({recorded.length})</strong><p style={{ fontSize: 12, color: 'var(--muted)', margin: '5px 0' }}>Per ingediende sheet. De koppeling aan de exacte Rentman-functieregel ontbreekt nog; daarom tonen we geen onbetrouwbare verschillen per functie.</p>{recorded.map((report, index) => <div key={report.id} style={{ display:'grid',gridTemplateColumns:'minmax(90px,1fr) 125px 90px',gap:8,padding:'7px 0',borderTop:'1px solid var(--border,#ddd)',fontSize:13 }}><span>Sheet {index+1}</span><span>{time(report.workStartedAt)} – {time(report.workEndedAt)}</span><strong>{report.hours === null ? '—' : report.hours.toLocaleString('nl-NL')+' u'}</strong></div>)}</div>}
+      {unlinked.length > 0 && <div style={{ marginTop: 16, paddingTop: 10, borderTop: '1px solid var(--border,#ddd)' }}>
+        <strong style={{ fontSize: 13 }}>Niet aan Rentman-functie gekoppelde sheets ({unlinked.length})</strong>
+        <p style={{ fontSize: 12, color: 'var(--muted)' }}>Deze uren tellen wel mee in het totaal, maar niet in een functieverschil.</p>
+        {unlinked.map(sheet => <div key={sheet.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '7px 0', fontSize: 13 }}>
+          <span>{time(sheet.workStartedAt)} – {time(sheet.workEndedAt)}</span>
+          <strong>{sheet.hours === null ? '—' : sheet.hours.toLocaleString('nl-NL') + ' u'}</strong>
+        </div>)}
+      </div>}
     </div>}
   </section>;
 }
