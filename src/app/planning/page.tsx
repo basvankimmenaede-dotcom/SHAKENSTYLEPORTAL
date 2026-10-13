@@ -958,9 +958,20 @@ export default async function PlanningPage() {
                         const crew = assignment.crewmember;
                         const start = fn?.planperiod_start ?? fn?.usageperiod_start ?? null;
                         const end = fn?.planperiod_end ?? fn?.usageperiod_end ?? null;
+                        // Rentman travel_time_before/after are seconds, not minutes.
+                        // Respect each crew member's transport direction.
+                        const transport = assignment.transport ?? 'no_transport';
                         const travelBefore = Number(fn?.travel_time_before ?? 0);
                         const travelAfter = Number(fn?.travel_time_after ?? 0);
-                        const travelLabel = (travelBefore>0||travelAfter>0) ? `Reis: ${travelBefore} + ${travelAfter} min` : null;
+                        const hasOutbound = transport === 'round_trip' || transport === 'only_way_there';
+                        const hasReturn = transport === 'round_trip' || transport === 'only_way_back';
+                        const departure = hasOutbound && start && travelBefore > 0
+                          ? formatTime(new Date(new Date(start).getTime() - travelBefore * 1000).toISOString())
+                          : null;
+                        const returnTime = hasReturn && end && travelAfter > 0
+                          ? formatTime(new Date(new Date(end).getTime() + travelAfter * 1000).toISOString())
+                          : null;
+                        const travelLabel = [departure ? `Vertrek ${departure}` : null, returnTime ? `Retour ${returnTime}` : null].filter(Boolean).join(' · ') || null;
                         const projectId = Number(fn?.project?.split('/').pop());
                         const project = Number.isFinite(projectId) ? projectById.get(projectId) : undefined;
                         const name = crew?.displayname
