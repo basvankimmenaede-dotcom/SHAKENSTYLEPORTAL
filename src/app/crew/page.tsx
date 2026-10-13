@@ -17,8 +17,20 @@ export default async function CrewPage() {
  if(!syncResult.ok)console.error('Crew planning refresh failed on page open');
  const from = new Date(Date.now()-7*86400000).toISOString();
  const to = new Date(Date.now()+120*86400000).toISOString();
- const { data: assignments } = await supabase.from('crew_portal_assignments')
- .select('id,project_name,project_location,starts_at,ends_at,crew_shift_reports(id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes)')
+ const { data: assignments, error: assignmentsError } = await supabase.from('crew_portal_assignments')
+ .select('id,project_name,project_location,starts_at,ends_at')
  .eq('crew_member_id', member.id).gte('starts_at',from).lte('starts_at',to).order('starts_at');
- return <CrewDashboard memberName={member.full_name} assignments={assignments || []} />;
+ const { data: reports, error: reportsError } = await supabase.from('crew_shift_reports')
+ .select('id,assignment_id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes')
+ .eq('crew_member_id',member.id);
+ if(assignmentsError)console.error('Crew assignments load failed',assignmentsError);
+ if(reportsError)console.error('Crew reports load failed',reportsError);
+ const byAssignment = new Map<string, NonNullable<typeof reports>>();
+ for(const report of reports || []){
+  const list=byAssignment.get(report.assignment_id)||[];
+  list.push(report);
+  byAssignment.set(report.assignment_id,list);
+ }
+ const linkedAssignments=(assignments||[]).map(a=>({...a,crew_shift_reports:byAssignment.get(a.id)||[]}));
+ return <CrewDashboard memberName={member.full_name} assignments={linkedAssignments} reportsLoadError={Boolean(reportsError||assignmentsError)} />;
 }
