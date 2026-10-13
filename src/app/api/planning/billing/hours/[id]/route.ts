@@ -24,6 +24,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       .select('id,crew_member_id,starts_at,ends_at,rentman_projectcrew_id')
       .eq('rentman_project_id', Number(item.rentman_project_id));
     if (assignmentError) throw new Error('Diensten ophalen mislukt: ' + assignmentError.message);
+    const memberIds = [...new Set((assignments ?? []).map(a => a.crew_member_id).filter((value): value is string => typeof value === 'string'))];
+    const { data: members, error: memberError } = memberIds.length
+      ? await admin.from('crew_portal_members').select('id,full_name').in('id', memberIds)
+      : { data: [], error: null };
+    if (memberError) throw new Error('Medewerkers ophalen mislukt: ' + memberError.message);
+    const memberNames = new Map((members ?? []).map(member => [member.id, member.full_name]));
     const ids = (assignments ?? []).map(a => a.id);
     const { data: reports, error: reportError } = ids.length
       ? await admin.from('crew_shift_reports').select('id,assignment_id,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,notes,breakage_over_ten,missing_materials,missing_materials_description,status').in('assignment_id', ids)
@@ -55,7 +61,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       const end = Date.parse(report.work_ended_at);
       const hours = Number.isFinite(start) && Number.isFinite(end) && end >= start
         ? Math.round(Math.max(0, (end - start) / 60000 - Number(report.break_minutes || 0)) / 60 * 100) / 100 : null;
-      return { id: report.id, assignmentId: report.assignment_id, crewMemberId: assignment?.crew_member_id, functionId: assignment ? functionByCrewId.get(Number(assignment.rentman_projectcrew_id)) ?? null : null, hours,
+      return { id: report.id, assignmentId: report.assignment_id, crewMemberId: assignment?.crew_member_id, crewMemberName: assignment?.crew_member_id ? memberNames.get(assignment.crew_member_id) ?? 'Onbekende medewerker' : 'Onbekende medewerker', functionId: assignment ? functionByCrewId.get(Number(assignment.rentman_projectcrew_id)) ?? null : null, hours,
         plannedStartsAt: assignment?.starts_at ?? null, plannedEndsAt: assignment?.ends_at ?? null, workStartedAt: report.work_started_at, workEndedAt: report.work_ended_at, travelMinutes: report.travel_minutes, expensesAmount: report.expenses_amount, expensesDescription: report.expenses_description, notes: report.notes, breakageOverTen: report.breakage_over_ten,
         missingMaterials: report.missing_materials, missingMaterialsDescription: report.missing_materials_description, status: report.status };
     });
