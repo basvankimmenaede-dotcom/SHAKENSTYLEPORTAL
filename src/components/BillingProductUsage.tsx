@@ -6,6 +6,7 @@ const sections: {key:Section;label:string}[] = [{key:'consumption',label:'Ingred
 const money=(n:number)=>new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'}).format(n);
 export default function BillingProductUsage({id,canManage,locked}:{id:string;canManage:boolean;locked:boolean}) {
  const [products,setProducts]=useState<Product[]>([]);
+ const [mode,setMode]=useState<'sets'|'loose'>('sets');
  const [expanded,setExpanded]=useState<Section|null>(null);
  const [openFolders,setOpenFolders]=useState<string[]>([]);
  const [message,setMessage]=useState('Producten laden…');
@@ -14,16 +15,25 @@ export default function BillingProductUsage({id,canManage,locked}:{id:string;can
  const [dirty,setDirty]=useState(false);
  const [saving,setSaving]=useState(false);
  const editable=canManage&&!locked;
- useEffect(()=>{let active=true;fetch('/api/planning/billing/products/'+encodeURIComponent(id)).then(async r=>{const data=await r.json();if(!r.ok)throw new Error(data.error||'Ophalen mislukt');return data;}).then(data=>{if(!active)return;setProducts(data.products||[]);setWarning(data.warning||'');setLoading(false);setMessage('');}).catch(e=>{if(active){setMessage('Fout: '+e.message);setLoading(false);}});return()=>{active=false;};},[id]);
+ useEffect(()=>{let active=true;fetch('/api/planning/billing/products/'+encodeURIComponent(id)).then(async r=>{const data=await r.json();if(!r.ok)throw new Error(data.error||'Ophalen mislukt');return data;}).then(data=>{if(!active)return;setProducts(data.products||[]);setMode(data.mode==='loose'?'loose':'sets');setWarning(data.warning||'');setLoading(false);setMessage('');}).catch(e=>{if(active){setMessage('Fout: '+e.message);setLoading(false);}});return()=>{active=false;};},[id]);
  const grouped=useMemo(()=>sections.map(section=>{const items=products.filter(p=>p.section===section.key);const groups=new Map<string,Product[]>();for(const p of items){const folder=p.category||'Overig';groups.set(folder,[...(groups.get(folder)||[]),p]);}return {...section,items,groups:[...groups.entries()],total:items.reduce((sum,p)=>sum+p.quantity*(p.unitPrice||0),0)};}),[products]);
+ async function changeMode(next:'sets'|'loose') {
+  if(next===mode)return;
+  if(dirty && !window.confirm('Niet-opgeslagen prijswijzigingen gaan verloren. Doorgaan?'))return;
+  setLoading(true);setMessage('Ingrediënten laden…');
+  try {const response=await fetch('/api/planning/billing/products/'+encodeURIComponent(id)+'?mode='+next);const data=await response.json();if(!response.ok)throw new Error(data.error||'Ophalen mislukt');setProducts(data.products||[]);setMode(next);setDirty(true);setOpenFolders([]);setWarning(data.warning||'');setMessage('Berekeningswijze gewijzigd. Sla op om te bewaren.');}
+  catch(e){setMessage('Ophalen mislukt: '+(e instanceof Error?e.message:'Onbekende fout'));}
+  finally{setLoading(false);}
+ }
  function updatePrice(productId:string,value:string){setProducts(current=>current.map(p=>p.id===productId?{...p,unitPrice:value===''?null:Math.max(0,Number(value)||0)}:p));setDirty(true);setMessage('Niet-opgeslagen wijzigingen');}
  function remove(productId:string){setProducts(current=>current.filter(p=>p.id!==productId));setDirty(true);setMessage('Niet-opgeslagen wijzigingen');}
- async function save(){setSaving(true);setMessage('Producten opslaan…');try{const response=await fetch('/api/planning/billing/products/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({products})});const result=await response.json();if(!response.ok)throw new Error(result.error||'Opslaan mislukt');setDirty(false);setMessage('Producten opgeslagen (Rentman ongewijzigd)');}catch(e){setMessage('Opslaan mislukt: '+(e instanceof Error?e.message:'Onbekende fout'));}finally{setSaving(false);}}
+ async function save(){setSaving(true);setMessage('Producten opslaan…');try{const response=await fetch('/api/planning/billing/products/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({products,mode})});const result=await response.json();if(!response.ok)throw new Error(result.error||'Opslaan mislukt');setDirty(false);setMessage('Producten opgeslagen (Rentman ongewijzigd)');}catch(e){setMessage('Opslaan mislukt: '+(e instanceof Error?e.message:'Onbekende fout'));}finally{setSaving(false);}}
  const toggleFolder=(key:string)=>setOpenFolders(old=>old.includes(key)?old.filter(x=>x!==key):[...old,key]);
  return <div>{grouped.map(section=><section key={section.key} className="card" style={{padding:14,marginBottom:10,minWidth:0}}>
  <button type="button" onClick={()=>setExpanded(old=>old===section.key?null:section.key)} style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',width:'100%',border:0,background:'transparent',padding:4,cursor:'pointer',textAlign:'left'}}>
  <strong>{section.label} ({section.items.length})</strong><span>{money(section.total)} {expanded===section.key?'▴':'▾'}</span></button>
  {expanded===section.key&&<div style={{marginTop:12}}>
+ {section.key==='consumption'&&<div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:12}}><span style={{fontSize:12,color:'var(--muted)'}}>Berekening:</span><button type="button" disabled={!editable||loading} onClick={()=>changeMode('sets')} aria-pressed={mode==='sets'} style={{padding:'6px 10px',borderRadius:7,border:'1px solid var(--border,#ddd)',background:mode==='sets'?'var(--surface-secondary,#eee)':'transparent',fontWeight:mode==='sets'?700:400,cursor:'pointer'}}>Cocktails / sets</button><button type="button" disabled={!editable||loading} onClick={()=>changeMode('loose')} aria-pressed={mode==='loose'} style={{padding:'6px 10px',borderRadius:7,border:'1px solid var(--border,#ddd)',background:mode==='loose'?'var(--surface-secondary,#eee)':'transparent',fontWeight:mode==='loose'?700:400,cursor:'pointer'}}>Losse ingrediënten</button></div>}
  {warning&&<p style={{fontSize:12,color:'var(--muted)'}}>{warning}</p>}
  {loading?<p>Laden…</p>:section.items.length===0?<p style={{fontSize:13,color:'var(--muted)'}}>Geen artikelen.</p>:section.groups.map(([folder,items])=>{
  const folderKey=section.key+':'+folder;
