@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 
 export type TransportLine = { description: string; quantity: number; unitPrice: number; vatRate: number };
+type VehicleTrip = {id:number; name:string; direction:string|null; legs:number|null; kilometers:number|null};
 type Vehicle = { id: number; name: string; amount: number };
 const money = (value: number) => value.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
 const rentalRate = (name: string) => /bakwagen|vrachtwagen/i.test(name) ? 100 : /bestelbus/i.test(name) ? 80 : /bestelauto|auto\b/i.test(name) ? 40 : null;
@@ -11,13 +12,13 @@ export default function BillingTransport({ id }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [oneWayKm, setOneWayKm] = useState<number | null>(null);
+  const [vehicleTrips, setVehicleTrips] = useState<VehicleTrip[]>([]);
   useEffect(() => {
     let active = true;
     fetch('/api/planning/billing/hours/' + encodeURIComponent(id))
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Rentman niet beschikbaar')))
       .then(data => {
-        if (active) setOneWayKm(typeof data.rentmanOneWayKm === 'number' && Number.isFinite(data.rentmanOneWayKm) ? data.rentmanOneWayKm : null);
+        if (active) setVehicleTrips(Array.isArray(data.vehicleTrips) ? data.vehicleTrips : []);
         if (active) setVehicles((data.rows || [])
           .filter((row: {type?: string; name: string}) => row.type === 'vehicle_function' || /bakwagen|bestelbus|bestelauto|vrachtwagen|transport/i.test(row.name))
           .map((row: Vehicle) => ({id: row.id, name: row.name, amount: row.amount})));
@@ -29,6 +30,8 @@ export default function BillingTransport({ id }: {
     ...vehicle,
     rate: rentalRate(vehicle.name),
   }));
+  const totalKm = vehicleTrips.reduce((sum, trip) => sum + (trip.kilometers ?? 0), 0);
+  const unknownTrips = vehicleTrips.filter(trip => trip.kilometers === null).length;
   const total = planned.reduce((sum, vehicle) => sum + (vehicle.rate ?? 0) * vehicle.amount, 0);
   return <section className="card" style={{padding:12,marginBottom:10}}>
     <button type="button" onClick={() => setExpanded(value => !value)} style={{display:'flex',justifyContent:'space-between',width:'100%',background:'transparent',border:0,padding:4,cursor:'pointer',textAlign:'left'}}>
@@ -46,7 +49,13 @@ export default function BillingTransport({ id }: {
           {!planned.length && <p style={{fontSize:13,color:'var(--muted)'}}>Geen transport gepland in Rentman.</p>}
         </div>
       </div>
-      {oneWayKm !== null && <div style={{display:'flex',justifyContent:'space-between',gap:12,padding:'8px 0',borderTop:'1px solid var(--border,#ddd)'}}><span>Afstand volgens Rentman (retour)</span><strong>{(oneWayKm * 2).toLocaleString('nl-NL')} km</strong></div>}
+      {vehicleTrips.length > 0 && <div style={{borderTop:'1px solid var(--border,#ddd)',paddingTop:8}}>
+        {vehicleTrips.map(trip => <div key={trip.id} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'4px 0'}}>
+          <span>{trip.name} · {trip.direction === 'round_trip' ? 'heen en terug' : trip.direction === 'only_way_there' ? 'heen' : trip.direction === 'only_way_back' ? 'terug' : 'rit onbekend'}</span>
+          <strong>{trip.kilometers === null ? '—' : trip.kilometers.toLocaleString('nl-NL') + ' km'}</strong>
+        </div>)}
+        <div style={{display:'flex',justifyContent:'space-between',gap:12,padding:'6px 0'}}><strong>{unknownTrips ? 'Bekende geplande kilometers' : 'Totaal geplande kilometers'}</strong><strong>{totalKm.toLocaleString('nl-NL')} km</strong></div>
+      </div>}
       <div style={{textAlign:'right',marginTop:10}}><strong>Totaal: {money(total)}</strong></div>
     </div>}
   </section>;
