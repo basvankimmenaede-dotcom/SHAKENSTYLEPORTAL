@@ -36,7 +36,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         kilometers:(hours.vehicleTrips||[]).reduce((s:number,r:{kilometers?:number})=>s+(r.kilometers||0),0),
         vehicles:rows.filter(isVehicle).length,
         products:products.filter((p:{excluded?:boolean})=>!p.excluded).length,
-        productTotal:products.reduce((s:number,p:{quantity:number;unitPrice:number|null;factor?:number;discount?:number;excluded?:boolean})=>s+(p.excluded?0:Math.round(p.quantity*(p.unitPrice||0)*((p.section==='rental'||p.section==='external_rental')?(p.factor??1):1)*(1-(p.discount??0)/100)*100)/100),0)
+        productTotal:products.reduce((s:number,p:{section:string;quantity:number;unitPrice:number|null;factor?:number;discount?:number;excluded?:boolean})=>s+(p.excluded?0:Math.round(p.quantity*(p.unitPrice||0)*((p.section==='rental'||p.section==='external_rental')?(p.factor??1):1)*(1-(p.discount??0)/100)*100)/100),0)
       });
     });
     return ()=>{active=false};
