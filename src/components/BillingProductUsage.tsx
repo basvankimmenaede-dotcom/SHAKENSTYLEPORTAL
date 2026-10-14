@@ -111,8 +111,8 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
    <summary style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left',listStyle:'none'}}>
     <span style={{display:'grid',gap:3}}><strong style={{fontSize:15}}>{section.label} <span style={{fontSize:12,color:'var(--muted)',fontWeight:400}}>({section.items.length})</span></strong><span style={{fontSize:12,color:'var(--muted)'}}>{section.detail}</span></span>
     <span style={{display:'flex',alignItems:'center',gap:14,whiteSpace:'nowrap'}}><strong style={{fontSize:15}}>{money(section.total)}</strong><span aria-hidden="true">▾</span></span>
-   </button>
-   {expanded === section.key && <div style={{borderTop:border,padding:'14px 18px'}}>
+   </summary>
+   <div style={{borderTop:border,padding:'14px 18px'}}>
     {section.key === 'consumption' && <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',paddingBottom:14}}>
      <span style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>Berekeningswijze</span>
      <div style={{display:'flex',border,borderRadius:9,overflow:'hidden'}}>
