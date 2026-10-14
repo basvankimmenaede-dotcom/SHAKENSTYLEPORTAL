@@ -18,7 +18,6 @@ const border = '1px solid var(--border, #e5e7eb)';
 export default function BillingProductUsage({ id, canManage, locked }: { id: string; canManage: boolean; locked: boolean }) {
  const [products, setProducts] = useState<Product[]>([]);
  const [mode, setMode] = useState<Mode>('sets');
- const [expanded, setExpanded] = useState<Section | null>('consumption');
  const [openFolders, setOpenFolders] = useState<string[]>([]);
  const [message, setMessage] = useState('');
  const [warning, setWarning] = useState('');
@@ -108,10 +107,10 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Wijzigingen opslaan'}</button>}
    </div>
   </div>
-  {grouped.map(section => <section key={section.key} className="card" style={{padding:0,overflow:'hidden',minWidth:0}}>
-   <button type="button" onClick={() => setExpanded(current => current === section.key ? null : section.key)} aria-expanded={expanded === section.key} style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,border:0,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left'}}>
+  {grouped.map(section => <details key={section.key} className="card" style={{padding:0,minWidth:0}} open={undefined}>
+   <summary style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left',listStyle:'none'}}>
     <span style={{display:'grid',gap:3}}><strong style={{fontSize:15}}>{section.label} <span style={{fontSize:12,color:'var(--muted)',fontWeight:400}}>({section.items.length})</span></strong><span style={{fontSize:12,color:'var(--muted)'}}>{section.detail}</span></span>
-    <span style={{display:'flex',alignItems:'center',gap:14,whiteSpace:'nowrap'}}><strong style={{fontSize:15}}>{money(section.total)}</strong><span aria-hidden="true">{expanded === section.key ? '▴' : '▾'}</span></span>
+    <span style={{display:'flex',alignItems:'center',gap:14,whiteSpace:'nowrap'}}><strong style={{fontSize:15}}>{money(section.total)}</strong><span aria-hidden="true">▾</span></span>
    </button>
    {expanded === section.key && <div style={{borderTop:border,padding:'14px 18px'}}>
     {section.key === 'consumption' && <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',paddingBottom:14}}>
@@ -153,8 +152,8 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginTop:12,fontSize:12,color:'var(--muted)'}}>
      <span>{section.missing} prijzen te controleren</span><span>{section.items.length} regels · {money(section.total)}</span>
     </div>
-   </div>}
-  </section>)}
+   </div>
+  </details>)}
   {message && <div role="status" aria-live="polite" style={{fontSize:12,color:'var(--muted)'}}>{message}</div>}
  </div>;
 }
