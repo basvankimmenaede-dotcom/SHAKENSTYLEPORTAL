@@ -70,7 +70,7 @@ export default function BillingTransport({ id }: {
       </div>
       {vehicleTrips.length > 0 && <div style={{borderTop:'1px solid var(--border,#ddd)',paddingTop:8}}>
         {vehicleTrips.map(trip => <div key={trip.id} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'4px 0'}}>
-          <span>{trip.name} · {trip.direction === 'round_trip' ? 'heen en terug' : trip.direction === 'only_way_there' ? 'heen' : trip.direction === 'only_way_back' ? 'terug' : 'rit onbekend'}</span>
+          <span>{trip.name} · {trip.direction === 'round_trip' ? 'heen en terug' : trip.direction === 'one_way' ? 'enkele reis' : trip.direction === 'only_way_there' ? 'heen' : trip.direction === 'only_way_back' ? 'terug' : 'rit onbekend'}</span>
           <strong>{trip.kilometers === null ? '—' : trip.kilometers.toLocaleString('nl-NL') + ' km'}</strong>
         </div>)}
         <div style={{display:'flex',justifyContent:'space-between',gap:12,padding:'6px 0'}}><strong>{unknownTrips ? 'Bekende geplande kilometers' : 'Totaal geplande kilometers'}</strong><strong>{totalKm.toLocaleString('nl-NL')} km</strong></div>
