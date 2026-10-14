@@ -73,7 +73,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         if (!response.ok) return;
         const payload = await response.json();
         const fn = payload?.data?.function;
-        const functionId = typeof fn === 'number' ? fn : typeof fn === 'string' ? Number(fn.match(/(\\d+)$/)?.[1]) : Number(fn?.id);
+        const functionId = typeof fn === 'number' ? fn : typeof fn === 'string' ? Number(fn.match(/([0-9]+)$/)?.[1]) : Number(fn?.id);
         if (Number.isSafeInteger(functionId) && functions.some(f => f.id === functionId)) functionByCrewId.set(crewId, functionId);
       } catch (error) { console.error('Rentman function lookup failed for crew assignment', crewId, error); }
     }));
