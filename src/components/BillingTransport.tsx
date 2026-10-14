@@ -10,7 +10,7 @@ const rentalRate = (name: string) => /bakwagen|vrachtwagen/i.test(name) ? 100 : 
 export default function BillingTransport({ id }: {
   id: string; lines: TransportLine[]; canManage: boolean; onChange: (lines: TransportLine[]) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleTrips, setVehicleTrips] = useState<VehicleTrip[]>([]);
   useEffect(() => {
@@ -33,18 +33,18 @@ export default function BillingTransport({ id }: {
   const totalKm = vehicleTrips.reduce((sum, trip) => sum + (trip.kilometers ?? 0), 0);
   const unknownTrips = vehicleTrips.filter(trip => trip.kilometers === null).length;
   const total = planned.reduce((sum, vehicle) => sum + (vehicle.rate ?? 0) * vehicle.amount, 0);
-  return <section className="card" style={{padding:12,marginBottom:10}}>
+  return <section className="card" style={{padding:20,marginBottom:14,minWidth:0}}>
     <button type="button" onClick={() => setExpanded(value => !value)} style={{display:'flex',justifyContent:'space-between',width:'100%',background:'transparent',border:0,padding:4,cursor:'pointer',textAlign:'left'}}>
-      <strong>Transport & logistiek ({planned.length})</strong><span>{money(total)} {expanded?'▴':'▾'}</span>
+      <strong style={{fontSize:17}}>Transport & logistiek ({planned.length})</strong><span>{money(total)} {expanded?'▴':'▾'}</span>
     </button>
     {expanded && <div style={{marginTop:12}}>
       <div style={{overflowX:'auto'}}>
-        <div style={{minWidth:400}}>
-          <div style={{display:'grid',gridTemplateColumns:'minmax(150px,2fr) 70px 90px 90px',gap:8,fontSize:12,opacity:.7}}>
-            <span>Omschrijving</span><span>Aantal</span><span>Tarief</span><span>Totaal</span>
+        <div style={{minWidth:660}}>
+          <div style={{display:'grid',gridTemplateColumns:'minmax(170px,2fr) 70px 100px 100px 100px',gap:8,fontSize:12,opacity:.7}}>
+            <span>Voertuig</span><span>Aantal</span><span>Km gepland</span><span>Tarief</span><span>Totaal</span>
           </div>
           {planned.map(vehicle => <div key={vehicle.id} style={{display:'grid',gridTemplateColumns:'minmax(150px,2fr) 70px 90px 90px',gap:8,padding:'7px 0',borderTop:'1px solid var(--border,#ddd)',alignItems:'center'}}>
-            <span>{vehicle.name}</span><span>{vehicle.amount}</span><span>{vehicle.rate === null ? '—' : money(vehicle.rate)}</span><strong>{vehicle.rate === null ? '—' : money(vehicle.amount * vehicle.rate)}</strong>
+            <span>{vehicle.name}</span><span>{vehicle.amount}</span><span>{vehicleTrips.length ? 'Zie ritten' : '—'}</span><span>{vehicle.rate === null ? '—' : money(vehicle.rate)}</span><strong>{vehicle.rate === null ? '—' : money(vehicle.amount * vehicle.rate)}</strong>
           </div>)}
           {!planned.length && <p style={{fontSize:13,color:'var(--muted)'}}>Geen transport gepland in Rentman.</p>}
         </div>
