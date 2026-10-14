@@ -6450,3 +6450,8 @@ table td{font-size:12px}
     min-height: 32px;
   }
 }
+
+/* Billing detail: keep sidebar usable on narrow screens. */
+@media (max-width: 800px) {
+  .billing-draft-layout { grid-template-columns: minmax(0, 1fr) !important; }
+}
