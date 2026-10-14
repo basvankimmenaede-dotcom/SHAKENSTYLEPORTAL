@@ -103,11 +103,8 @@ async function sourceProducts(projectId: number, mode: IngredientMode): Promise<
     const folderName = saleSet ? 'Cocktails / sets' : ingredientIndex >= 0 ? (ingredientFolder || 'Ingrediënten') : (segments.length ? segments.slice(-2).join(' / ') : 'Zonder Rentman-map');
     const unitPrice = number(r.unit_price) ?? number(meta.price);
     const quantity = number(r.quantity_total) ?? number(r.quantity) ?? 0;
-    // A repeated booking of the same article at the same price is one invoice row with summed quantity.
-    // Different prices remain separate to avoid hiding project-specific pricing.
-    const existing = products.find(p => p.source === 'rentman' && p.id.startsWith('equipment:') && p.name === name && p.section === section && p.folderPath === path && p.unitPrice === unitPrice && p.factor === (number(r.factor) ?? 1) && p.discount === (number(r.discount) ?? 0) && p.unit === (label(meta.unit) || 'stuks'));
-    if (existing) existing.quantity += quantity;
-    else products.push({ id: 'equipment:' + r.id, section, category: folderName, folderPath: path, name, quantity, unit: label(meta.unit) || 'stuks', unitPrice, factor: number(r.factor) ?? 1, discount: number(r.discount) ?? 0, source: 'rentman' });
+    // Keep every Rentman booking distinct so overrides and exclusions remain linked to its original ID.
+    products.push({ id: 'equipment:' + r.id, section, category: folderName, folderPath: path, name, quantity, unit: label(meta.unit) || 'stuks', unitPrice, factor: number(r.factor) ?? 1, discount: number(r.discount) ?? 0, source: 'rentman' });
   }
   for (const r of costs) {
     const name = String(r.name ?? 'Overige kosten');
