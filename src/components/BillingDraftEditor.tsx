@@ -69,6 +69,40 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     setDraft(d => ({ ...d, lines: d.lines.map((l, i) => i === index ? { ...l, [key]: key === 'description' ? value : Number(value) } : l) }));
     setState('Niet-opgeslagen wijzigingen');
   }
+
+  async function exportPdf() {
+    // Open synchronously so browser popup blockers do not prevent the print-ready report.
+    const report = window.open('', '_blank');
+    if (!report) { setState('Sta pop-ups toe om de PDF te openen.'); return; }
+    report.document.write('<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Projectafrekening</title></head><body><p>Rapport wordt opgebouwd…</p></body></html>');
+    const escapeHtml = (value:unknown) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] || ch));
+    const table = (headings:string[], entries:string[][]) => '<table><thead><tr>' + headings.map(h=>'<th>'+escapeHtml(h)+'</th>').join('') + '</tr></thead><tbody>' + entries.map(entry=>'<tr>'+entry.map(cell=>'<td>'+escapeHtml(cell)+'</td>').join('')+'</tr>').join('') + '</tbody></table>';
+    try {
+      const [productsResponse,hoursResponse] = await Promise.all([
+        fetch('/api/planning/billing/products/'+encodeURIComponent(id)),
+        fetch('/api/planning/billing/hours/'+encodeURIComponent(id))
+      ]);
+      if(!productsResponse.ok || !hoursResponse.ok) throw new Error('Projectgegevens ophalen mislukt');
+      const productsData=await productsResponse.json();
+      const hoursData=await hoursResponse.json();
+      const products = (productsData.products || []) as {section:string;category:string;name:string;quantity:number;unit:string;unitPrice:number|null}[];
+      const personnel = (hoursData.rows || []) as {name:string;amount:number;plannedHours:number|null;plannedTravelOutHours:number;plannedTravelBackHours:number;type:string|null}[];
+      const sectionNames:Record<string,string>={consumption:'Ingrediënten',rental:'Materiaal & verhuur',external_rental:'Externe inhuur',external_sale:'Externe verkoop',review:'Overige artikelen'};
+      const productSections=Object.entries(sectionNames).map(([key,label])=>{
+        const items=products.filter(p=>p.section===key);
+        if(!items.length)return '';
+        return '<h2>'+escapeHtml(label)+'</h2>'+table(['Map','Artikel','Aantal','Prijs/st.','Totaal'],items.map(p=>[p.category,p.name, String(p.quantity)+' '+p.unit,p.unitPrice===null?'Niet ingevuld':money(p.unitPrice),p.unitPrice===null?'—':money(p.quantity*p.unitPrice)]));
+      }).join('');
+      const otherLines=draft.lines.filter(l=>l.description.trim()&&!l.description.startsWith('[Transport] '));
+      const html='<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Projectafrekening '+escapeHtml(item?.rentman_project_number||id)+'</title><style>@page{size:A4;margin:16mm}body{font-family:Arial,sans-serif;color:#202020;font-size:11px}h1{font-size:24px;margin:0 0 8px}h2{font-size:15px;margin:25px 0 9px;border-bottom:1px solid #bbb;padding-bottom:5px}p{line-height:1.5}table{width:100%;border-collapse:collapse;margin-bottom:14px}th{text-align:left;background:#f1f1f1}th,td{padding:7px 6px;border-bottom:1px solid #ddd;vertical-align:top}tr{break-inside:avoid}th:nth-last-child(-n+2),td:nth-last-child(-n+2){text-align:right}.muted{color:#777}.total{text-align:right;font-size:16px;font-weight:bold}.actions{margin-bottom:20px}@media print{.actions{display:none}body{print-color-adjust:exact}}</style></head><body><div class="actions"><button onclick="window.print()">Opslaan als PDF / Afdrukken</button></div><h1>Projectafrekening</h1><p><strong>#'+escapeHtml(item?.rentman_project_number||id)+' · '+escapeHtml(item?.project_name)+'</strong><br>'+escapeHtml(draft.customer_name||item?.customer_name)+'<br>'+escapeHtml(draft.customer_address).replace(/\\n/g,'<br>')+'</p><p class="muted">Conceptoverzicht · bedragen excl. btw tenzij anders vermeld</p><h2>Personeel & uren</h2>'+table(['Functie','Aantal','Werk','Reistijd'],personnel.filter(p=>p.type!=='vehicle_function'&&!/bakwagen|bestelbus|vrachtwagen/i.test(p.name)).map(p=>[p.name,String(p.amount),p.plannedHours===null?'—':String(p.plannedHours)+' u',String((p.plannedTravelOutHours||0)+(p.plannedTravelBackHours||0))+' u']))+'<h2>Transport & logistiek</h2>'+table(['Voertuig','Aantal'],personnel.filter(p=>p.type==='vehicle_function'||/bakwagen|bestelbus|vrachtwagen/i.test(p.name)).map(p=>[p.name,String(p.amount)])) +productSections+(otherLines.length?'<h2>Overige factuurregels</h2>'+table(['Omschrijving','Aantal','Prijs/st.','Totaal'],otherLines.map(l=>[l.description,String(l.quantity),money(l.unitPrice),money(l.quantity*l.unitPrice)])):'')+'<p class="total">Producten & verbruik: '+money(products.reduce((sum,p)=>sum+p.quantity*(p.unitPrice||0),0))+'</p><p class="muted">Dit is een projectafrekening ter controle, geen definitieve factuur. Niet-opgeslagen wijzigingen worden niet meegenomen.</p></body></html>';
+      report.document.open();
+      report.document.write(html);
+      report.document.close();
+      report.focus();
+    } catch(e) {
+      report.document.body.textContent='PDF-overzicht kon niet worden opgebouwd: '+(e instanceof Error?e.message:'Onbekende fout');
+    }
+  }
   async function save() {
     setSaving(true); setState('Concept wordt opgeslagen…');
     try {
@@ -86,6 +120,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     <h1 style={{ fontSize: 32, margin: '12px 0' }}>Projectafrekening</h1>
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
     {!item ? <p role="status">{state}</p> : <>
+      <div style={{display:'flex',justifyContent:'flex-end',marginTop:-44,marginBottom:16}}><button type="button" className="button secondary" onClick={exportPdf}>PDF downloaden / afdrukken</button></div>
       <nav aria-label="Projectafrekening navigatie" style={{display:'flex',flexWrap:'wrap',width:'fit-content',margin:'20px 0',border:'1px solid var(--border,#ddd)',borderRadius:10,overflow:'hidden'}}>
        {([{id:'overzicht',label:'Overzicht'},{id:'personeel',label:'Personeel'},{id:'transport',label:'Transport'},{id:'materiaal',label:'Materiaal'},{id:'overig',label:'Overig'}]).map(tab=><button key={tab.id} type="button" onClick={()=>navigate(tab.id)} style={{padding:'11px 18px',border:0,borderRight:'1px solid var(--border,#ddd)',background:activeTab===tab.id?'#262626':'transparent',color:activeTab===tab.id?'#fff':'inherit',cursor:'pointer',fontSize:13}}>{tab.label}</button>)}
       </nav>
