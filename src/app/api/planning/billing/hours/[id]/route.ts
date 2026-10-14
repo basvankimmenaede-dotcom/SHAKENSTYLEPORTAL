@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireModulePermission } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getPlanningProjectFunctionsForProject, getPlanningCrewAssignmentsForProject, getPlanningProjects } from '@/lib/rentman';
+import { getPlanningProjectFunctionsForProject, getPlanningCrewAssignmentsForProject, getPlanningProjectVehiclesForProject, getPlanningProjects } from '@/lib/rentman';
 export const runtime = 'nodejs';
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   await requireModulePermission('billing', 'view');
@@ -12,9 +12,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!item) return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 });
   if (!item.rentman_project_id) return NextResponse.json({ rows: [], warning: 'Geen Rentman-project gekoppeld' });
   try {
-    const [functions, projectCrew, projects] = await Promise.all([getPlanningProjectFunctionsForProject(Number(item.rentman_project_id)), getPlanningCrewAssignmentsForProject(Number(item.rentman_project_id)), getPlanningProjects()]);
+    const [functions, projectCrew, projectVehicles, projects] = await Promise.all([getPlanningProjectFunctionsForProject(Number(item.rentman_project_id)), getPlanningCrewAssignmentsForProject(Number(item.rentman_project_id)), getPlanningProjectVehiclesForProject(Number(item.rentman_project_id)), getPlanningProjects()]);
     const project = projects.allProjects.find(p => p.id === Number(item.rentman_project_id));
     const rentmanOneWayKm = typeof project?.location?.distance === 'number' ? project.location.distance : null;
+    const vehicleTrips = projectVehicles.map(vehicle => {
+      const transport = vehicle.transport;
+      const outward = transport === 'round_trip' || transport === 'only_way_there';
+      const returning = transport === 'round_trip' || transport === 'only_way_back';
+      const legs = outward && returning ? 2 : outward || returning ? 1 : null;
+      return { id: vehicle.id, name: vehicle.vehicle?.displayname || vehicle.vehicle?.name || vehicle.function?.displayname || 'Voertuig', direction: transport, legs, kilometers: legs !== null && rentmanOneWayKm !== null ? Math.round(legs * rentmanOneWayKm * 100) / 100 : null };
+    });
     const functionByCrewId = new Map(projectCrew.map(crew => [crew.id, crew.function?.id ?? null]));
     const travelByFunction = new Map<number, {outboundMinutes:number;returnMinutes:number}>();
     for (const crew of projectCrew) {
@@ -78,7 +85,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         plannedStartsAt: assignment?.starts_at ?? null, plannedEndsAt: assignment?.ends_at ?? null, workStartedAt: report.work_started_at, workEndedAt: report.work_ended_at, travelMinutes: report.travel_minutes, expensesAmount: report.expenses_amount, expensesDescription: report.expenses_description, notes: report.notes, breakageOverTen: report.breakage_over_ten,
         missingMaterials: report.missing_materials, missingMaterialsDescription: report.missing_materials_description, status: report.status };
     });
-    return NextResponse.json({ rows, recorded, assignedCount: ids.length, rentmanOneWayKm, source: 'rentman+crew_shift_reports', recordedConnected: true });
+    return NextResponse.json({ rows, recorded, assignedCount: ids.length, rentmanOneWayKm, vehicleTrips, source: 'rentman+crew_shift_reports', recordedConnected: true });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Rentman-uren ophalen mislukt' }, { status: 502 });
   }
