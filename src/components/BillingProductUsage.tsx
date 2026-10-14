@@ -165,4 +165,5 @@ const BillingProductUsage = forwardRef<BillingProductUsageHandle, { id: string; 
   </div>
   {message && <div role="status" aria-live="polite" style={{fontSize:12,color:'var(--muted)'}}>{message}</div>}
  </div>;
-}
+});
+export default BillingProductUsage;
