@@ -14,15 +14,16 @@ export default function BillingTransport({ id, lines, canManage, onChange }: {
   id: string; lines: TransportLine[]; canManage: boolean; onChange: (lines: TransportLine[]) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [rentmanOneWayKm,setRentmanOneWayKm] = useState<number|null>(null);
   const [vehicles, setVehicles] = useState<{id:number;name:string;amount:number}[]>([]);
   useEffect(() => {
     let active = true;
     fetch('/api/planning/billing/hours/' + encodeURIComponent(id))
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Rentman niet beschikbaar')))
       .then(data => {
-        if (active) setVehicles((data.rows || []).filter((row: {type?:string;name:string}) =>
+        if (active) { setRentmanOneWayKm(typeof data.rentmanOneWayKm === 'number' ? data.rentmanOneWayKm : null); setVehicles((data.rows || []).filter((row: {type?:string;name:string}) =>
           row.type === 'vehicle_function' || /bakwagen|bestelbus|bestelauto|vrachtwagen|transport/i.test(row.name)
-        ).map((row: {id:number;name:string;amount:number}) => ({id:row.id,name:row.name,amount:row.amount})));
+        ).map((row: {id:number;name:string;amount:number}) => ({id:row.id,name:row.name,amount:row.amount}))); }
       }).catch(() => { if (active) setVehicles([]); });
     return () => { active = false; };
   }, [id]);
@@ -50,6 +51,10 @@ export default function BillingTransport({ id, lines, canManage, onChange }: {
     </button>
     {expanded && <div style={{marginTop:12}}>
       <p style={{fontSize:12,color:'var(--muted)'}}>Voertuigen in Rentman: {vehicles.length ? vehicles.map(v=>v.name+' ('+v.amount+'× gepland)').join(' · ') : 'Geen voertuigplanning gevonden'}. Controleer huurperiodes en kilometers; deze worden niet automatisch uit een route geschat.</p>
+      <p style={{fontSize:12,color:'var(--muted)'}}>Rentman locatieafstand: {rentmanOneWayKm === null ? 'niet ingevuld' : rentmanOneWayKm.toLocaleString('nl-NL') + ' km enkele reis'}. Dit is een locatieafstand, geen bevestigde kilometerstand of gereden kilometers. Neem de afstand alleen over als die klopt voor de rit.</p>
+      {canManage && rentmanOneWayKm !== null && rentmanOneWayKm > 0 && <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:10}}>
+        <button type="button" className="button secondary" onClick={()=>onChange([...lines,{description:'[Transport] Kilometers overig vervoer (Rentman locatieafstand, retour)',quantity:rentmanOneWayKm*2,unitPrice:0.55,vatRate:21}])}>+ Retourkilometers overnemen ({rentmanOneWayKm*2} km)</button>
+      </div>}
       <div style={{overflowX:'auto'}}><div style={{minWidth:530}}>
         <div style={{display:'grid',gridTemplateColumns:'minmax(170px,2fr) 80px 95px 95px 30px',gap:8,fontSize:12,opacity:.7}}><span>Omschrijving</span><span>Aantal</span><span>Tarief</span><span>Totaal</span><span/></div>
         {suggested.map(vehicle => <div key={vehicle.key} style={{display:'grid',gridTemplateColumns:'minmax(170px,2fr) 80px 95px 95px 30px',gap:8,padding:'7px 0',borderTop:'1px solid var(--border,#ddd)',alignItems:'center'}}>
