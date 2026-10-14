@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 type Category = string;
 type IngredientMode = 'sets' | 'loose';
 type Section = 'consumption' | 'rental' | 'external_rental' | 'external_sale' | 'review';
-type Product = { id: string; section: Section; category: Category; folderPath?: string; name: string; quantity: number; unit: string; unitPrice: number | null; source: 'rentman' | 'manual' };
+type Product = { id: string; section: Section; category: Category; folderPath?: string; name: string; quantity: number; unit: string; unitPrice: number | null; source: 'rentman' | 'manual'; billingMode?: IngredientMode };
 const categories: Category[] = ['Ijs', 'Fruit / Groentes', 'Spirits', "Soda's", 'Overig'];
 function classify(name: string, group = ''): Category {
   const s = (name + ' ' + group).toLowerCase();
@@ -130,7 +130,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (error) return NextResponse.json({ error: 'Productgegevens niet beschikbaar.' }, { status: 500 });
   const stored = draft?.product_usage;
   const saved = Array.isArray(stored) ? stored : (stored && typeof stored === 'object' && Array.isArray(stored.products) ? stored.products : null);
-  const savedMode: IngredientMode = !Array.isArray(stored) && stored?.mode === 'loose' ? 'loose' : 'sets';
+  const savedMode: IngredientMode = (!Array.isArray(stored) && stored?.mode === 'loose') || (Array.isArray(saved) && saved[0]?.billingMode === 'loose') ? 'loose' : 'sets';
   const requested = new URL(request.url).searchParams.get('mode');
   const mode: IngredientMode = requested === 'loose' ? 'loose' : requested === 'sets' ? 'sets' : savedMode;
   
@@ -171,9 +171,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!name || name.length > 250 || !unit || unit.length > 50 || quantity === null || quantity > 1000000 || (price !== null && price > 100000000) || (typeof category !== 'string' || !category.trim() || category.length > 180) || !['consumption','rental','external_rental','external_sale','review'].includes(section)) {
       return NextResponse.json({ error: 'Controleer naam, categorie, aantal, eenheid en verkoopprijs.' }, { status: 400 });
     }
-    products.push({ id: String(p.id ?? '').slice(0, 100), name, section, category, folderPath: typeof p.folderPath === 'string' ? p.folderPath.slice(0, 400) : undefined, quantity, unit, unitPrice: price, source: p.source === 'rentman' ? 'rentman' : 'manual' });
+    products.push({ id: String(p.id ?? '').slice(0, 100), name, section, category, folderPath: typeof p.folderPath === 'string' ? p.folderPath.slice(0, 400) : undefined, quantity, unit, unitPrice: price, source: p.source === 'rentman' ? 'rentman' : 'manual', billingMode: mode });
   }
-  const { error } = await ctx.admin.from('billing_drafts').upsert({ billing_item_id: id, product_usage: { mode, products }, updated_by: user.id, updated_at: new Date().toISOString() }, { onConflict: 'billing_item_id' });
+  const { error } = await ctx.admin.from('billing_drafts').upsert({ billing_item_id: id, product_usage: products, updated_by: user.id, updated_at: new Date().toISOString() }, { onConflict: 'billing_item_id' });
   if (error) return NextResponse.json({ error: 'Producten opslaan mislukt.' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
