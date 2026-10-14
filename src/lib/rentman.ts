@@ -678,6 +678,9 @@ export type RentmanPlanningProjectFunction = {
   usageperiod_start?: string | null;
   usageperiod_end?: string | null;
   amount?: number | null;
+  price_rate?: string | null;
+  price_travel?: number | null;
+  price_other?: number | null;
   travel_time_before?: number | null;
   travel_time_after?: number | null;
   distance?: number | null;
