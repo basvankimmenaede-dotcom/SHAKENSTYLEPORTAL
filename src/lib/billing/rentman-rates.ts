@@ -1,4 +1,4 @@
-export type RentmanRateFactor = { from: number; to: number; price: number; fixed: number };
+export type RentmanRateFactor = { from: number; to: number; price: number | null; fixed: number | null };
 export type RentmanRate = { id: number; name: string; type: string; factors: RentmanRateFactor[] };
 const num = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : typeof value === 'string' && value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
 export const rentmanId = (value: unknown): number | null => {
@@ -24,6 +24,6 @@ export async function loadRentmanRate(reference: unknown): Promise<RentmanRate |
   const factors = Array.isArray(rawFactors) ? rawFactors : [];
   return { id, name: String(rate.displayname ?? rate.name ?? id), type: String(rate.type ?? ''), factors: factors.map((f: unknown) => {
     const v = f as Record<string, unknown>;
-    return { from: num(v.from) ?? 0, to: num(v.to) ?? Number.MAX_SAFE_INTEGER, price: num(v.price) ?? num(v.hourly_rate) ?? 0, fixed: num(v.fixed) ?? num(v.fixed_price) ?? 0 };
+    return { from: num(v.from) ?? 0, to: num(v.to) ?? Number.MAX_SAFE_INTEGER, price: num(v.price) ?? num(v.hourly_rate), fixed: num(v.fixed) ?? num(v.fixed_price) };
   }) };
 }
