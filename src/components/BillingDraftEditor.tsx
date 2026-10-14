@@ -60,15 +60,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     <h1 style={{ fontSize: 25, margin: '10px 0' }}>Projectafrekening</h1>
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
     {!item ? <p role="status">{state}</p> : <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(240px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
-      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
-        <strong>Klant: {draft.customer_name || item.customer_name || "Onbekend"}</strong>
-        <details style={{ marginTop: 8 }}><summary style={{ cursor: "pointer" }}>Factuurgegevens bewerken</summary>
-        {([['customer_name', 'Klant'], ['customer_email', 'E-mailadres'], ['customer_address', 'Factuuradres'], ['reference', 'Referentie / PO-nummer'], ['description', 'Factuuromschrijving']] as const).map(([key, label]) =>
-          <div className="field" key={key}><label htmlFor={key}>{label}</label>
-            <input className="input" id={key} value={draft[key]} disabled={!canManage || item.status === 'invoiced'} onChange={e => change(key, e.target.value)} /></div>)}
-        </details>
-      </section>
+      <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
       <BillingHours id={id} />
       <BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} />
       <BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} />
@@ -94,7 +86,15 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         {canManage && item.status !== 'invoiced' && <button type="button" className="button orange" disabled={saving} onClick={save}>{saving ? 'Opslaan…' : 'Concept opslaan'}</button>}
         <span role="status" aria-live="polite">{state}</span>
       </div>
-      </div><BillingChecks id={id} canManage={canManage} locked={item.status === 'invoiced'} /></div>
+      </div><aside style={{minWidth:0}}>      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
+        <strong>Klant: {draft.customer_name || item.customer_name || "Onbekend"}</strong>
+        <details style={{ marginTop: 8 }}><summary style={{ cursor: "pointer" }}>Factuurgegevens bewerken</summary>
+        {([['customer_name', 'Klant'], ['customer_email', 'E-mailadres'], ['customer_address', 'Factuuradres'], ['reference', 'Referentie / PO-nummer'], ['description', 'Factuuromschrijving']] as const).map(([key, label]) =>
+          <div className="field" key={key}><label htmlFor={key}>{label}</label>
+            <input className="input" id={key} value={draft[key]} disabled={!canManage || item.status === 'invoiced'} onChange={e => change(key, e.target.value)} /></div>)}
+        </details>
+      </section>
+      <BillingChecks id={id} canManage={canManage} locked={item.status === 'invoiced'} /></aside></div>
     </>}
   </main>;
 }
