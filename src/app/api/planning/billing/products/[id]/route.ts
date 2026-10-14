@@ -91,7 +91,16 @@ async function sourceProducts(projectId: number): Promise<Product[]> {
     const path = folderPath(meta.folder);
     const ingredientIndex = path.split('/').indexOf('Ingrediënten');
     const ingredientFolder = ingredientIndex >= 0 ? path.split('/').slice(ingredientIndex + 1).join('/') : '';
-    products.push({ id: 'equipment:' + r.id, section: ingredientIndex >= 0 ? 'consumption' : sectionFor(meta), category: ingredientIndex >= 0 ? (ingredientFolder || 'Overig') : classify(name), folderPath: path, name, quantity: number(r.quantity) ?? 0, unit: label(meta.unit) || 'stuks', unitPrice: number(r.unit_price) ?? number(meta.price), source: 'rentman' });
+    const section = ingredientIndex >= 0 ? 'consumption' : sectionFor(meta);
+    const segments = path.split('/').filter(Boolean);
+    const folderName = ingredientIndex >= 0 ? (ingredientFolder || 'Ingrediënten') : (segments.length ? segments.slice(-2).join(' / ') : 'Zonder Rentman-map');
+    const unitPrice = number(r.unit_price) ?? number(meta.price);
+    const quantity = number(r.quantity_total) ?? number(r.quantity) ?? 0;
+    // A repeated booking of the same article at the same price is one invoice row with summed quantity.
+    // Different prices remain separate to avoid hiding project-specific pricing.
+    const existing = products.find(p => p.source === 'rentman' && p.id.startsWith('equipment:') && p.name === name && p.section === section && p.folderPath === path && p.unitPrice === unitPrice && p.unit === (label(meta.unit) || 'stuks'));
+    if (existing) existing.quantity += quantity;
+    else products.push({ id: 'equipment:' + r.id, section, category: folderName, folderPath: path, name, quantity, unit: label(meta.unit) || 'stuks', unitPrice, source: 'rentman' });
   }
   for (const r of costs) {
     const name = String(r.name ?? 'Overige kosten');
