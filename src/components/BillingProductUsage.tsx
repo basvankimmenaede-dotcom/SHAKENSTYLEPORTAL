@@ -101,12 +101,8 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
  const toggleFolder = (key: string) => setOpenFolders(current => current.includes(key) ? current.filter(x => x !== key) : [...current, key]);
  const grandTotal = grouped.reduce((sum, section) => sum + section.total, 0);
  return <div style={{display:'grid',gap:12,minWidth:0}}>
-  <div className="card" style={{padding:'16px 18px',display:'flex',justifyContent:'space-between',gap:16,alignItems:'center',flexWrap:'wrap'}}>
+  <div className="card" style={{padding:'16px 18px'}}>
    <div><div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>PRODUCTEN & VERBRUIK</div><strong style={{fontSize:20}}>{money(grandTotal)}</strong><div style={{fontSize:12,color:'var(--muted)',marginTop:3}}>{products.length} artikelregels uit de projectafrekening</div></div>
-   <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-    {dirty && <span style={{fontSize:12,color:'var(--muted)'}}>Niet opgeslagen</span>}
-    {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Wijzigingen opslaan'}</button>}
-   </div>
   </div>
   {grouped.filter(section => section.items.length > 0 || loading).map(section => <section key={section.key} className="card" style={{padding:0,minWidth:0}}>
    <button type="button" aria-expanded={openSections.includes(section.key)} onClick={() => setOpenSections(current => current.includes(section.key) ? current.filter(k => k !== section.key) : [...current,section.key])} style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left',border:0}}>
@@ -155,6 +151,10 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     </div>
    </div>}
   </section>)}
+  <div className="billing-product-actions" style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:12,flexWrap:'wrap',padding:'0 4px 8px'}}>
+    {dirty && <span style={{fontSize:12,color:'var(--muted)'}}>Niet opgeslagen</span>}
+    {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Productwijzigingen opslaan'}</button>}
+  </div>
   {message && <div role="status" aria-live="polite" style={{fontSize:12,color:'var(--muted)'}}>{message}</div>}
  </div>;
 }
