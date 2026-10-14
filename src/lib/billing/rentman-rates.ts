@@ -4,7 +4,7 @@ const num = (value: unknown): number | null => typeof value === 'number' && Numb
 export const rentmanId = (value: unknown): number | null => {
   if (typeof value === 'number') return Number.isSafeInteger(value) ? value : null;
   if (typeof value !== 'string') return null;
-  const match = value.match(/(?:^|\\/)(\\d+)$/);
+  const match = value.match(/([0-9]+)$/);
   return match ? Number(match[1]) : null;
 };
 async function getRentman(path: string): Promise<unknown> {
