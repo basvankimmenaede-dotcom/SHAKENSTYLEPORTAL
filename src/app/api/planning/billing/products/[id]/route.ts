@@ -141,7 +141,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (Array.isArray(saved) && mode === savedMode) {
       const merged = saved.map((p: Product) => {
         const live = byId.get(p.id);
-        return live ? { ...p, name: live.name, quantity: live.quantity, unit: live.unit, section: live.section, category: live.category, folderPath: live.folderPath, unitPrice: p.unitPrice ?? live.unitPrice } : p.source === 'manual' ? p : null;
+        return live ? { ...p, name: live.name, quantity: p.quantity, factor: p.factor ?? live.factor, discount: p.discount ?? live.discount, unit: live.unit, section: live.section, category: live.category, folderPath: live.folderPath, unitPrice: p.unitPrice ?? live.unitPrice } : p.source === 'manual' ? p : null;
       }).filter((p): p is Product => p !== null);
       for (const p of products) if (!merged.some((x: Product) => x.id === p.id)) merged.push(p);
       return NextResponse.json({ products: merged, source: 'saved', mode });
@@ -164,6 +164,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   for (const p of body.products) {
     const quantity = number(p?.quantity);
     const price = number(p?.unitPrice);
+    const factor = number(p?.factor) ?? 1;
+    const discount = number(p?.discount) ?? 0;
     const name = String(p?.name ?? '').trim();
     const unit = String(p?.unit ?? '').trim();
     const category = p?.category as Category;
@@ -171,7 +173,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!name || name.length > 250 || !unit || unit.length > 50 || quantity === null || quantity > 1000000 || (price !== null && price > 100000000) || (typeof category !== 'string' || !category.trim() || category.length > 180) || !['consumption','rental','external_rental','external_sale','review'].includes(section)) {
       return NextResponse.json({ error: 'Controleer naam, categorie, aantal, eenheid en verkoopprijs.' }, { status: 400 });
     }
-    products.push({ id: String(p.id ?? '').slice(0, 100), name, section, category, folderPath: typeof p.folderPath === 'string' ? p.folderPath.slice(0, 400) : undefined, quantity, unit, unitPrice: price, source: p.source === 'rentman' ? 'rentman' : 'manual', billingMode: mode });
+    products.push({ id: String(p.id ?? '').slice(0, 100), name, section, category, folderPath: typeof p.folderPath === 'string' ? p.folderPath.slice(0, 400) : undefined, quantity, unit, unitPrice: price, factor, discount, excluded: p.excluded === true, source: p.source === 'rentman' ? 'rentman' : 'manual', billingMode: mode });
   }
   const { error } = await ctx.admin.from('billing_drafts').upsert({ billing_item_id: id, product_usage: products, updated_by: user.id, updated_at: new Date().toISOString() }, { onConflict: 'billing_item_id' });
   if (error) return NextResponse.json({ error: 'Producten opslaan mislukt.' }, { status: 500 });
