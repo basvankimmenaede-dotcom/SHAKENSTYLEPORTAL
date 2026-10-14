@@ -81,6 +81,11 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
   setDirty(true);
   setMessage('Niet-opgeslagen wijzigingen');
  }
+ function updateFactor(productId: string, value: string) {
+  setProducts(current => current.map(p => p.id === productId ? { ...p, factor: value === '' ? 0 : Math.max(0, Number(value) || 0) } : p));
+  setDirty(true);
+  setMessage('Niet-opgeslagen wijzigingen');
+ }
  function remove(productId: string) {
   setProducts(current => current.map(p => p.id === productId ? { ...p, excluded: true } : p));
   setDirty(true);
@@ -131,16 +136,17 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
        {isOpen && <div style={{overflowX:'auto'}}>
         <table style={{width:'100%',borderCollapse:'collapse',minWidth:590,fontSize:12}}>
          <thead><tr style={{color:'var(--muted)',textAlign:'left',borderBottom:border}}>
-          <th style={{padding:'10px 12px',fontWeight:500}}>Artikel</th><th style={{padding:'10px 8px',width:105,fontWeight:500}}>Aantal</th><th style={{padding:'10px 8px',width:120,fontWeight:500}}>Prijs per stuk</th><th style={{padding:'10px 8px',width:105,textAlign:'right',fontWeight:500}}>Regeltotaal</th><th style={{width:36}}/>
+          <th style={{padding:'10px 12px',fontWeight:500}}>Artikel</th><th style={{padding:'10px 8px',width:105,fontWeight:500}}>Aantal</th>{(section.key === 'rental' || section.key === 'external_rental') && <th style={{padding:'10px 8px',width:92,fontWeight:500}}>Huurfactor</th>}<th style={{padding:'10px 8px',width:120,fontWeight:500}}>Prijs per stuk</th><th style={{padding:'10px 8px',width:105,textAlign:'right',fontWeight:500}}>Regeltotaal</th><th style={{width:36}}/>
          </tr></thead>
          <tbody>{items.map(p => <tr key={p.id} style={{borderBottom:border}}>
-          <td style={{padding:'11px 12px',minWidth:150}}><strong style={{fontWeight:600}}>{p.name}</strong><div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>{p.source === 'rentman' ? 'Rentman' : 'Handmatig'} · {p.unit}{(p.section === 'rental' || p.section === 'external_rental') && (p.factor ?? 1) !== 1 ? ' · verhuurfactor '+p.factor+'×' : ''}</div></td>
+          <td style={{padding:'11px 12px',minWidth:150}}><strong style={{fontWeight:600}}>{p.name}</strong><div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>{p.source === 'rentman' ? 'Rentman' : 'Handmatig'} · {p.unit}</div></td>
           <td style={{padding:'8px'}}><input className="input" aria-label={'Aantal ' + p.name} type="number" min="0" step="any" value={p.quantity} disabled={!editable} onChange={e => updateQuantity(p.id,e.target.value)} style={{width:'100%',minHeight:34,padding:'5px 7px',fontSize:12}}/></td>
+          {(section.key === 'rental' || section.key === 'external_rental') && <td style={{padding:'8px'}}><div style={{display:'flex',alignItems:'center',gap:4}}><input className="input" aria-label={'Huurfactor ' + p.name} type="number" min="0" step="any" value={p.factor ?? 1} disabled={!editable} onChange={e => updateFactor(p.id,e.target.value)} style={{width:'100%',minWidth:0,minHeight:34,padding:'5px 7px',fontSize:12}}/><span aria-hidden="true">×</span></div></td>}
           <td style={{padding:'8px'}}><div style={{display:'flex',alignItems:'center',gap:5}}><span aria-hidden="true" style={{fontWeight:600}}>€</span><input className="input" aria-label={'Prijs per stuk ' + p.name} type="number" min="0" step="any" placeholder="€ —" value={p.unitPrice ?? ''} disabled={!editable} onChange={e => updatePrice(p.id,e.target.value)} style={{width:'100%',minWidth:0,minHeight:34,padding:'5px 7px',fontSize:12}}/></div></td>
           <td style={{padding:'8px',textAlign:'right',whiteSpace:'nowrap',fontWeight:600}}>{p.unitPrice === null ? '—' : money(total(p))}</td>
           <td style={{padding:'8px 8px 8px 0'}}><button type="button" aria-label={'Verwijder ' + p.name} title="Verwijderen" disabled={!editable} onClick={() => remove(p.id)} style={{width:30,height:30,border,borderRadius:7,background:'transparent',cursor:editable?'pointer':'default'}}>×</button></td>
          </tr>)}</tbody>
-         <tfoot><tr><td colSpan={3} style={{padding:'10px 12px',fontWeight:600}}>Subtotaal {folder}</td><td style={{padding:'10px 8px',textAlign:'right',fontWeight:700}}>{money(folderTotal)}</td><td/></tr></tfoot>
+         <tfoot><tr><td colSpan={(section.key === 'rental' || section.key === 'external_rental') ? 4 : 3} style={{padding:'10px 12px',fontWeight:600}}>Subtotaal {folder}</td><td style={{padding:'10px 8px',textAlign:'right',fontWeight:700}}>{money(folderTotal)}</td><td/></tr></tfoot>
         </table>
        </div>}
       </div>;
