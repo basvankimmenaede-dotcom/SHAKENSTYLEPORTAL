@@ -19,7 +19,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const parseSubprojectId = (value: unknown): number | null => {
       if (typeof value === 'number') return Number.isSafeInteger(value) ? value : null;
       if (typeof value === 'string') {
-        const match = value.match(/(?:^|\\/)(\\d+)$/);
+        const match = value.match(/[0-9]+$/);
         return match ? Number(match[1]) : null;
       }
       return null;
