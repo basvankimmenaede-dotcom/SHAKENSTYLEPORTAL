@@ -14,11 +14,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const [functions, projectCrew] = await Promise.all([getPlanningProjectFunctionsForProject(Number(item.rentman_project_id)), getPlanningCrewAssignmentsForProject(Number(item.rentman_project_id))]);
     const functionByCrewId = new Map(projectCrew.map(crew => [crew.id, crew.function?.id ?? null]));
+    const travelByFunction = new Map<number, {outboundMinutes:number;returnMinutes:number}>();
+    for (const crew of projectCrew) {
+      const fn = crew.function;
+      if (!fn?.id) continue;
+      const outbound = crew.transport === 'round_trip' || crew.transport === 'only_way_there';
+      const inbound = crew.transport === 'round_trip' || crew.transport === 'only_way_back';
+      const current = travelByFunction.get(fn.id) || {outboundMinutes:0,returnMinutes:0};
+      current.outboundMinutes += outbound ? Number(fn.travel_time_before || 0)/60 : 0;
+      current.returnMinutes += inbound ? Number(fn.travel_time_after || 0)/60 : 0;
+      travelByFunction.set(fn.id,current);
+    }
     const rows = functions.map(f => {
       const start = f.planperiod_start ? Date.parse(f.planperiod_start) : NaN;
       const end = f.planperiod_end ? Date.parse(f.planperiod_end) : NaN;
       const hours = Number.isFinite(start) && Number.isFinite(end) && end >= start ? Math.round((end - start) / 36000) / 100 : null;
-      return { id: f.id, type: f.type ?? null, name: f.displayname || f.name || 'Personeelsfunctie', group: f.group?.displayname || f.group?.name || f.displayname || f.name || 'Overig', startsAt: f.planperiod_start ?? null, endsAt: f.planperiod_end ?? null, amount: f.amount ?? 1, hoursPerPerson: hours, plannedHours: hours === null ? null : Math.round(hours * (f.amount ?? 1) * 100) / 100 };
+      return { id: f.id, type: f.type ?? null, name: f.displayname || f.name || 'Personeelsfunctie', group: f.group?.displayname || f.group?.name || f.displayname || f.name || 'Overig', startsAt: f.planperiod_start ?? null, endsAt: f.planperiod_end ?? null, amount: f.amount ?? 1, hoursPerPerson: hours, plannedHours: hours === null ? null : Math.round(hours * (f.amount ?? 1) * 100) / 100, plannedTravelOutHours: Math.round((travelByFunction.get(f.id)?.outboundMinutes || 0)/60*100)/100, plannedTravelBackHours: Math.round((travelByFunction.get(f.id)?.returnMinutes || 0)/60*100)/100 };
     });
     const { data: assignments, error: assignmentError } = await admin.from('crew_portal_assignments')
       .select('id,crew_member_id,starts_at,ends_at,rentman_projectcrew_id')
