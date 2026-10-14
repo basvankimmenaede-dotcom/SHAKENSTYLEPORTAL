@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-type HourRow = { id:number; type:string|null; name:string; group:string; startsAt:string|null; endsAt:string|null; amount:number; plannedHours:number|null; plannedTravelOutHours:number; plannedTravelBackHours:number };
+type HourRow = { id:number; type:string|null; name:string; group:string; startsAt:string|null; endsAt:string|null; amount:number; plannedHours:number|null; plannedTravelOutHours:number; plannedTravelBackHours:number; priceRateRef?:string|null; priceTravel?:number|null; priceOther?:number|null };
 type Recorded = { id:string; functionId:number|null; workStartedAt:string; workEndedAt:string; hours:number|null; status:string; crewMemberName:string };
 const fmt = (n:number) => n.toLocaleString('nl-NL',{maximumFractionDigits:2}) + ' u';
 const clock = (value:string|null) => value ? new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'}).format(new Date(value)) : '—';
@@ -54,7 +54,7 @@ export default function BillingHours({id}:{id:string}) {
               const difference = plannedForSubmitted === null || !sheets.some(sheet=>sheet.hours !== null) ? null : Math.round((worked-plannedForSubmitted)*100)/100;
               return <div key={row.id} style={{borderBottom:'1px solid var(--border,#ddd)'}}>
                 <div style={{display:'grid',gridTemplateColumns:columns,gap:5,padding:'10px 2px',fontSize:12,alignItems:'center'}}>
-                  <span style={{fontWeight:600}}>{row.name}</span><span>{row.amount}×</span><span>{clock(row.startsAt)}–{clock(row.endsAt)}</span>
+                  <span style={{fontWeight:600}} title={row.priceRateRef ? 'Rentman tarief: '+row.priceRateRef : 'Geen Rentman-tarief gekoppeld'}>{row.name}{!row.priceRateRef && <span style={{color:'var(--muted)',fontWeight:400}}> · tarief ontbreekt</span>}</span><span>{row.amount}×</span><span>{clock(row.startsAt)}–{clock(row.endsAt)}</span>
                   <strong>{row.plannedHours===null?'—':fmt(row.plannedHours)}</strong>
                   <span title={'Heen: '+fmt(row.plannedTravelOutHours)+' · Terug: '+fmt(row.plannedTravelBackHours)}>{fmt(row.plannedTravelOutHours+row.plannedTravelBackHours)}</span>
                   <span>{sheets.length?fmt(worked):'—'}</span>
