@@ -1,3 +1,4 @@
+import { loadRentmanRate } from '@/lib/billing/rentman-rates';
 import { NextResponse } from 'next/server';
 import { requireModulePermission } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -36,11 +37,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     });
     const functionByCrewId = new Map(projectCrew.map(crew => [crew.id, crew.function?.id ?? null]));
+    const rateReferences = [...new Set(functions.map(f => f.price_rate).filter((value): value is string => typeof value === 'string' && value.length > 0))];
+    const rateResults = await Promise.allSettled(rateReferences.map(reference => loadRentmanRate(reference)));
+    const ratesByReference = new Map(rateReferences.map((reference, index) => [reference, rateResults[index].status === 'fulfilled' ? rateResults[index].value : null]));
     const rows = functions.map(f => {
       const start = f.planperiod_start ? Date.parse(f.planperiod_start) : NaN;
       const end = f.planperiod_end ? Date.parse(f.planperiod_end) : NaN;
       const hours = Number.isFinite(start) && Number.isFinite(end) && end >= start ? Math.round((end - start) / 36000) / 100 : null;
-      return { id: f.id, type: f.type ?? null, name: f.displayname || f.name || 'Personeelsfunctie', group: f.group?.displayname || f.group?.name || f.displayname || f.name || 'Overig', startsAt: f.planperiod_start ?? null, endsAt: f.planperiod_end ?? null, amount: f.amount ?? 1, priceRateRef: f.price_rate ?? null, priceTravel: f.price_travel ?? null, priceOther: f.price_other ?? null, hoursPerPerson: hours, plannedHours: hours === null ? null : Math.round(hours * (f.amount ?? 1) * 100) / 100, plannedTravelOutHours: Math.round(Number(f.travel_time_before || 0) / 3600 * (f.amount ?? 1) * 100) / 100, plannedTravelBackHours: Math.round(Number(f.travel_time_after || 0) / 3600 * (f.amount ?? 1) * 100) / 100 };
+      return { id: f.id, type: f.type ?? null, name: f.displayname || f.name || 'Personeelsfunctie', group: f.group?.displayname || f.group?.name || f.displayname || f.name || 'Overig', startsAt: f.planperiod_start ?? null, endsAt: f.planperiod_end ?? null, amount: f.amount ?? 1, priceRateRef: f.price_rate ?? null, priceRate: f.price_rate ? ratesByReference.get(f.price_rate) ?? null : null, priceTravel: f.price_travel ?? null, priceOther: f.price_other ?? null, hoursPerPerson: hours, plannedHours: hours === null ? null : Math.round(hours * (f.amount ?? 1) * 100) / 100, plannedTravelOutHours: Math.round(Number(f.travel_time_before || 0) / 3600 * (f.amount ?? 1) * 100) / 100, plannedTravelBackHours: Math.round(Number(f.travel_time_after || 0) / 3600 * (f.amount ?? 1) * 100) / 100 };
     });
     const { data: assignments, error: assignmentError } = await admin.from('crew_portal_assignments')
       .select('id,crew_member_id,starts_at,ends_at,rentman_projectcrew_id')
