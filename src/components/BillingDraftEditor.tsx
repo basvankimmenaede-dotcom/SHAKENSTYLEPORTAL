@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
-import BillingProductUsage from './BillingProductUsage';
+import BillingProductUsage, { type BillingProductUsageHandle } from './BillingProductUsage';
 import BillingChecks from './BillingChecks';
 import BillingHours from './BillingHours';
 import BillingTransport from './BillingTransport';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Line = { description: string; quantity: number; unitPrice: number; vatRate: number };
 type Draft = { reference: string; customer_name: string; customer_email: string; customer_address: string; description: string; notes: string; lines: Line[] };
@@ -13,6 +13,7 @@ const blank = (): Line => ({ description: '', quantity: 1, unitPrice: 0, vatRate
 const money = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n);
 
 export default function BillingDraftEditor({ id, canManage }: { id: string; canManage: boolean }) {
+  const productRef = useRef<BillingProductUsageHandle>(null);
   const [item, setItem] = useState<Item | null>(null);
   const [draft, setDraft] = useState<Draft>({ reference: '', customer_name: '', customer_email: '', customer_address: '', description: '', notes: '', lines: [blank()] });
   const [state, setState] = useState('Laden…');
@@ -111,7 +112,8 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Opslaan mislukt');
-      setState('✓ Concept succesvol opgeslagen');
+      await productRef.current?.save();
+      setState('✓ Concept en producten opgeslagen');
     } catch (e) { setState('Opslaan mislukt: ' + (e instanceof Error ? e.message : 'Onbekende fout')); }
     finally { setSaving(false); }
   }
@@ -130,7 +132,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       </div>
       <div id="billing-personeel"><BillingHours id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} /></div>
       <div id="billing-transport"><BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} /></div>
-      <div id="billing-materiaal"><BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} /></div>
+      <div id="billing-materiaal"><BillingProductUsage ref={productRef} id={id} canManage={canManage} locked={item.status === 'invoiced'} /></div>
       <section id="billing-overig" className="card" style={{ padding: 16, marginBottom: 12 }}>
         <details><summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14, padding: "4px 0" }}>Overige factuurregels ({draft.lines.filter(l => l.description.trim() && !l.description.startsWith('[Transport] ')).length})</summary>
         {draft.lines.map((line, i) => line.description.startsWith('[Transport] ') ? null : <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 3fr) 85px 110px 95px auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
@@ -149,10 +151,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       <section className="card" style={{ padding: 12, marginBottom: 10 }}>
         <details><summary style={{ cursor: "pointer", fontSize: 14 }}>Interne notities</summary><div className="field"><label htmlFor="notes">Interne notities</label><textarea id="notes" className="input" value={draft.notes} disabled={!canManage || item.status === 'invoiced'} onChange={e => change('notes', e.target.value)} /></div></details>
       </section>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        {canManage && item.status !== 'invoiced' && <button type="button" className="button orange" disabled={saving} onClick={save}>{saving ? 'Opslaan…' : 'Concept opslaan'}</button>}
-        <span role="status" aria-live="polite">{state}</span>
-      </div>
+
       </div><aside style={{minWidth:0}}>      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
         <h3 style={{margin:'0 0 14px'}}>Klant</h3><strong>{draft.customer_name || item.customer_name || 'Onbekend'}</strong><p style={{whiteSpace:'pre-line',fontSize:13,color:'var(--muted)'}}>{draft.customer_address}</p><p style={{fontSize:13,color:'var(--muted)'}}>{draft.customer_email}</p>
         <details style={{ marginTop: 8 }}><summary style={{ cursor: "pointer" }}>Factuurgegevens bewerken</summary>
@@ -162,6 +161,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         </details>
       </section>
       <BillingChecks id={id} canManage={canManage} locked={item.status === 'invoiced'} /></aside></div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:16,flexWrap:'wrap',marginTop:20,padding:'16px 0 8px',borderTop:'1px solid var(--border,#ddd)'}}><span role="status" aria-live="polite" style={{fontSize:12,color:'var(--muted)',marginRight:'auto'}}>{state}</span>{canManage && item.status !== 'invoiced' && <button type="button" className="button orange" disabled={saving} onClick={save} style={{minWidth:170,minHeight:42,padding:'10px 24px',fontSize:14,fontWeight:600,borderRadius:10}}>{saving ? 'Opslaan…' : 'Wijzigingen opslaan'}</button>}</div>
     </>}
   </main>;
 }
