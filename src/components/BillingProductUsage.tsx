@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 type Section = 'consumption' | 'rental' | 'external_rental' | 'external_sale' | 'review';
 type Mode = 'sets' | 'loose';
-type Product = { id: string; section: Section; category: string; folderPath?: string; name: string; quantity: number; unit: string; unitPrice: number | null; source: 'rentman' | 'manual' };
+type Product = { id: string; section: Section; category: string; folderPath?: string; name: string; quantity: number; unit: string; unitPrice: number | null; factor?: number; discount?: number; excluded?: boolean; source: 'rentman' | 'manual' };
 const sections: { key: Section; label: string; detail: string }[] = [
  { key: 'consumption', label: 'Ingrediënten', detail: 'Cocktails en verbruik' },
  { key: 'rental', label: 'Materiaal & verhuur', detail: 'Geplande verhuurartikelen' },
@@ -13,7 +13,7 @@ const sections: { key: Section; label: string; detail: string }[] = [
 ];
 const money = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n);
 const quantityLabel = (n: number) => new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 3 }).format(n);
-const total = (p: Product) => p.quantity * (p.unitPrice ?? 0);
+const total = (p: Product) => p.excluded || p.unitPrice === null ? 0 : Math.round(p.quantity * p.unitPrice * (p.factor ?? 1) * (1 - (p.discount ?? 0) / 100) * 100) / 100;
 const border = '1px solid var(--border, #e5e7eb)';
 export default function BillingProductUsage({ id, canManage, locked }: { id: string; canManage: boolean; locked: boolean }) {
  const [products, setProducts] = useState<Product[]>([]);
@@ -45,7 +45,7 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
   return () => { active = false; };
  }, [id]);
  const grouped = useMemo(() => sections.map(section => {
-  const items = products.filter(p => p.section === section.key);
+  const items = products.filter(p => p.section === section.key && !p.excluded);
   const groups = new Map<string, Product[]>();
   for (const p of items) {
    const folder = p.category?.trim() || 'Zonder map';
@@ -82,7 +82,7 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
   setMessage('Niet-opgeslagen wijzigingen');
  }
  function remove(productId: string) {
-  setProducts(current => current.filter(p => p.id !== productId));
+  setProducts(current => current.map(p => p.id === productId ? { ...p, excluded: true } : p));
   setDirty(true);
   setMessage('Niet-opgeslagen wijzigingen');
  }
@@ -102,7 +102,7 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
  const grandTotal = grouped.reduce((sum, section) => sum + section.total, 0);
  return <div style={{display:'grid',gap:12,minWidth:0}}>
   <div className="card" style={{padding:'16px 18px'}}>
-   <div><div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>PRODUCTEN & VERBRUIK</div><strong style={{fontSize:20}}>{money(grandTotal)}</strong><div style={{fontSize:12,color:'var(--muted)',marginTop:3}}>{products.length} artikelregels uit de projectafrekening</div></div>
+   <div><div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>PRODUCTEN & VERBRUIK</div><strong style={{fontSize:20}}>{money(grandTotal)}</strong><div style={{fontSize:12,color:'var(--muted)',marginTop:3}}>{products.filter(p => !p.excluded).length} artikelregels uit de projectafrekening</div></div>
   </div>
   {grouped.filter(section => section.items.length > 0 || loading).map(section => <section key={section.key} className="card" style={{padding:0,minWidth:0}}>
    <button type="button" aria-expanded={openSections.includes(section.key)} onClick={() => setOpenSections(current => current.includes(section.key) ? current.filter(k => k !== section.key) : [...current,section.key])} style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left',border:0}}>
