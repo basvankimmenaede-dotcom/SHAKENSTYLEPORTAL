@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 type Category = string;
 type IngredientMode = 'sets' | 'loose';
 type Section = 'consumption' | 'rental' | 'external_rental' | 'external_sale' | 'review';
-type Product = { id: string; section: Section; category: Category; folderPath?: string; name: string; quantity: number; unit: string; unitPrice: number | null; source: 'rentman' | 'manual'; billingMode?: IngredientMode };
+type Product = { id: string; section: Section; category: Category; folderPath?: string; name: string; quantity: number; unit: string; unitPrice: number | null; factor?: number; discount?: number; excluded?: boolean; source: 'rentman' | 'manual'; billingMode?: IngredientMode };
 const categories: Category[] = ['Ijs', 'Fruit / Groentes', 'Spirits', "Soda's", 'Overig'];
 function classify(name: string, group = ''): Category {
   const s = (name + ' ' + group).toLowerCase();
@@ -105,9 +105,9 @@ async function sourceProducts(projectId: number, mode: IngredientMode): Promise<
     const quantity = number(r.quantity_total) ?? number(r.quantity) ?? 0;
     // A repeated booking of the same article at the same price is one invoice row with summed quantity.
     // Different prices remain separate to avoid hiding project-specific pricing.
-    const existing = products.find(p => p.source === 'rentman' && p.id.startsWith('equipment:') && p.name === name && p.section === section && p.folderPath === path && p.unitPrice === unitPrice && p.unit === (label(meta.unit) || 'stuks'));
+    const existing = products.find(p => p.source === 'rentman' && p.id.startsWith('equipment:') && p.name === name && p.section === section && p.folderPath === path && p.unitPrice === unitPrice && p.factor === (number(r.factor) ?? 1) && p.discount === (number(r.discount) ?? 0) && p.unit === (label(meta.unit) || 'stuks'));
     if (existing) existing.quantity += quantity;
-    else products.push({ id: 'equipment:' + r.id, section, category: folderName, folderPath: path, name, quantity, unit: label(meta.unit) || 'stuks', unitPrice, source: 'rentman' });
+    else products.push({ id: 'equipment:' + r.id, section, category: folderName, folderPath: path, name, quantity, unit: label(meta.unit) || 'stuks', unitPrice, factor: number(r.factor) ?? 1, discount: number(r.discount) ?? 0, source: 'rentman' });
   }
   for (const r of costs) {
     const name = String(r.name ?? 'Overige kosten');
