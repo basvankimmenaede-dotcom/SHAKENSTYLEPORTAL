@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 export type TransportLine = { description: string; quantity: number; unitPrice: number; vatRate: number };
 type VehicleTrip = {id:number; name:string; direction:string|null; legs:number|null; kilometers:number|null};
-type Vehicle = { id: number; name: string; amount: number };
+type Vehicle = { id: number; name: string; amount: number; rateName: string | null };
 const money = (value: number) => value.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
 const rentalRate = (_name: string): number | null => null;
 
@@ -21,7 +21,7 @@ export default function BillingTransport({ id }: {
         if (active) setVehicleTrips(Array.isArray(data.vehicleTrips) ? data.vehicleTrips : []);
         if (active) setVehicles((data.rows || [])
           .filter((row: {type?: string; name: string}) => row.type === 'vehicle_function' || /bakwagen|bestelbus|bestelauto|vrachtwagen|transport/i.test(row.name))
-          .map((row: Vehicle) => ({id: row.id, name: row.name, amount: row.amount})));
+          .map((row: {id:number;name:string;amount:number;priceRate?:{name?:string}|null}) => ({id: row.id, name: row.name, amount: row.amount, rateName: row.priceRate?.name ?? null})));
       })
       .catch(() => { if (active) setVehicles([]); });
     return () => { active = false; };
@@ -62,7 +62,7 @@ export default function BillingTransport({ id }: {
               <td style={{padding:'12px 8px',fontWeight:600}}>{vehicle.name}</td>
               <td style={{padding:'12px 8px',textAlign:'right'}}>{vehicle.amount}</td>
               <td style={{padding:'12px 8px',textAlign:'right'}}>{kilometers===null?'Zie ritten':kilometers.toLocaleString('nl-NL')+' km'}</td>
-              <td style={{padding:'12px 8px',textAlign:'right'}}>{vehicle.rate===null?'—':money(vehicle.rate)}</td>
+              <td style={{padding:'12px 8px',textAlign:'right'}}>{vehicle.rate===null?(vehicle.rateName ?? 'Tarief ontbreekt'):money(vehicle.rate)}</td>
               <td style={{padding:'12px 8px',textAlign:'right',fontWeight:700}}>{vehicle.rate===null?'—':money(vehicle.amount*vehicle.rate)}</td>
             </tr>;
           })}</tbody>
