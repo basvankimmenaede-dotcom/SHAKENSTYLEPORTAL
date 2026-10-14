@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 export type TransportLine = { description: string; quantity: number; unitPrice: number; vatRate: number };
 type VehicleTrip = {id:number; name:string; direction:string|null; legs:number|null; kilometers:number|null};
-type Vehicle = { id: number; name: string; amount: number; rateName: string | null };
+type Vehicle = { id: number; name: string; amount: number; rateName: string | null; fixedFromRentman: number | null };
 const money = (value: number) => value.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
 const rateFromName = (name: string | null) => { const amounts = [...(name ?? '').matchAll(/€\s*([0-9]+(?:[.,][0-9]+)?)/g)].map(m => Number(m[1].replace(',', '.'))); return amounts.length >= 2 ? { km: amounts[0], fixed: amounts[1] } : null; };
 const keyFor = (id: number, part: string) => 'Rentman transport #' + id + ' ' + part;
@@ -22,7 +22,7 @@ export default function BillingTransport({ id, lines, canManage, onChange }: {
         if (active) setVehicleTrips(Array.isArray(data.vehicleTrips) ? data.vehicleTrips : []);
         if (active) setVehicles((data.rows || [])
           .filter((row: {type?: string; name: string}) => row.type === 'vehicle_function' || /bakwagen|bestelbus|bestelauto|vrachtwagen|transport/i.test(row.name))
-          .map((row: {id:number;name:string;amount:number;priceRate?:{name?:string}|null}) => ({id: row.id, name: row.name, amount: row.amount, rateName: row.priceRate?.name ?? null})));
+          .map((row: {id:number;name:string;amount:number;priceRate?:{name?:string;factors?:{fixed:number|null}[]}|null}) => ({id: row.id, name: row.name, amount: row.amount, rateName: row.priceRate?.name ?? null, fixedFromRentman: row.priceRate?.factors?.[0]?.fixed ?? null})));
       })
       .catch(() => { if (active) setVehicles([]); });
     return () => { active = false; };
@@ -37,7 +37,7 @@ export default function BillingTransport({ id, lines, canManage, onChange }: {
     const matches = vehicleTrips.filter(trip => { const b = trip.name.toLowerCase(); return b.includes(a) || a.includes(b) || (/bakwagen/.test(a) && /bakwagen/.test(b)) || (/bestelbus/.test(a) && /bestelbus/.test(b)); });
     const initialKm = matches.length && matches.every(trip => trip.kilometers !== null) ? matches.reduce((sum, trip) => sum + (trip.kilometers ?? 0), 0) : null;
     const kmLine = override(vehicle.id, 'kilometers'), fixedLine = override(vehicle.id, 'vast');
-    const km = kmLine?.quantity ?? initialKm, kmRate = kmLine?.unitPrice ?? vehicle.rate?.km ?? null, fixed = fixedLine?.unitPrice ?? vehicle.rate?.fixed ?? null, amount = fixedLine?.quantity ?? vehicle.amount;
+    const km = kmLine?.quantity ?? initialKm, kmRate = kmLine?.unitPrice ?? vehicle.rate?.km ?? null, fixed = fixedLine?.unitPrice ?? vehicle.fixedFromRentman ?? vehicle.rate?.fixed ?? null, amount = fixedLine?.quantity ?? vehicle.amount;
     return { ...vehicle, km, kmRate, fixed, amount, subtotal: km !== null && kmRate !== null && fixed !== null ? Math.round((km * kmRate + amount * fixed) * 100) / 100 : null };
   });
   const missingRates = plannedRows.some(vehicle => vehicle.subtotal === null);
