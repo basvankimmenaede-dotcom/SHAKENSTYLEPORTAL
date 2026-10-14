@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!item.rentman_project_id) return NextResponse.json({ rows: [], warning: 'Geen Rentman-project gekoppeld' });
   try {
     const [functions, projectCrew, projects] = await Promise.all([getPlanningProjectFunctionsForProject(Number(item.rentman_project_id)), getPlanningCrewAssignmentsForProject(Number(item.rentman_project_id)), getPlanningProjects()]);
-    const project = projects.find(p => p.id === Number(item.rentman_project_id));
+    const project = projects.allProjects.find(p => p.id === Number(item.rentman_project_id));
     const rentmanOneWayKm = typeof project?.location?.distance === 'number' ? project.location.distance : null;
     const functionByCrewId = new Map(projectCrew.map(crew => [crew.id, crew.function?.id ?? null]));
     const travelByFunction = new Map<number, {outboundMinutes:number;returnMinutes:number}>();
