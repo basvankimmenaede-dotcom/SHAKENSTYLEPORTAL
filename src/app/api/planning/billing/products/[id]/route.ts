@@ -3,10 +3,10 @@ import { requireModulePermission } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
-type Category = 'IJs' | 'Fruit' | 'Spirits' | "Soda's" | 'Overig';
+type Category = string;
 type Section = 'consumption' | 'rental' | 'external_rental' | 'external_sale' | 'review';
-type Product = { id: string; section: Section; category: Category; name: string; quantity: number; unit: string; unitPrice: number | null; source: 'rentman' | 'manual' };
-const categories: Category[] = ['IJs', 'Fruit', 'Spirits', "Soda's", 'Overig'];
+type Product = { id: string; section: Section; category: Category; folderPath?: string; name: string; quantity: number; unit: string; unitPrice: number | null; source: 'rentman' | 'manual' };
+const categories: Category[] = ['Ijs', 'Fruit / Groentes', 'Spirits', "Soda's", 'Overig'];
 function classify(name: string, group = ''): Category {
   const s = (name + ' ' + group).toLowerCase();
   if (/\b(ijs|ice|crushed|blokjes)\b/.test(s)) return 'IJs';
@@ -56,15 +56,20 @@ async function sourceProducts(projectId: number): Promise<Product[]> {
     rentmanRows('/projects/' + projectId + '/costs?fields=id,name,quantity,sale_price&limit=300'),
   ]);
   const products: Product[] = [];
-  const catalogRows = await rentmanRows('/equipment?fields=id,name,rental_sales,temporary,unit,price&limit=1500');
+  const [catalogRows, folderRows] = await Promise.all([rentmanRows('/equipment?fields=id,name,rental_sales,temporary,unit,price,folder&limit=1500'), rentmanRows('/folders?fields=id,name,parent,itemtype&limit=1500')]);
+  const folderById = new Map(folderRows.map(folder => [Number(folder.id), folder]));
+  const folderId = (value: unknown): number | null => { const raw = typeof value === 'object' && value !== null ? (value as Record<string, unknown>).id : value; const match = String(raw ?? '').match(/([0-9]+)$/); return match ? Number(match[1]) : null; };
+  const folderPath = (value: unknown): string => { const names: string[] = []; let id = folderId(value); const seen = new Set<number>(); while (id !== null && !seen.has(id)) { seen.add(id); const folder = folderById.get(id); if (!folder) break; names.unshift(String(folder.name ?? '')); id = folderId(folder.parent); } return names.join('/'); };
   const catalog = new Map(catalogRows.map(item => [Number(item.id), item]));
   for (const r of equipment) {
     const equipmentInfo = r.equipment && typeof r.equipment === 'object' ? r.equipment as Record<string, unknown> : {};
     const name = label(r.equipment) || label(r.displayname) || 'Rentman-artikel ' + r.id;
     const equipmentId = Number(equipmentInfo.id ?? String(r.equipment ?? '').split('/').pop());
     const meta = catalog.get(equipmentId) ?? equipmentInfo;
-    const group = label(meta.folder);
-    products.push({ id: 'equipment:' + r.id, section: sectionFor(meta), category: classify(name, group), name, quantity: number(r.quantity) ?? 0, unit: label(meta.unit) || 'stuks', unitPrice: number(r.price), source: 'rentman' });
+    const path = folderPath(meta.folder);
+    const ingredientIndex = path.split('/').indexOf('Ingrediënten');
+    const ingredientFolder = ingredientIndex >= 0 ? path.split('/').slice(ingredientIndex + 1).join('/') : '';
+    products.push({ id: 'equipment:' + r.id, section: ingredientIndex >= 0 ? 'consumption' : sectionFor(meta), category: ingredientIndex >= 0 ? (ingredientFolder || 'Overig') : classify(name), folderPath: path, name, quantity: number(r.quantity) ?? 0, unit: label(meta.unit) || 'stuks', unitPrice: number(r.price), source: 'rentman' });
   }
   for (const r of costs) {
     const name = String(r.name ?? 'Overige kosten');
@@ -94,7 +99,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (Array.isArray(saved)) {
       const merged = saved.map((p: Product) => {
         const live = byId.get(p.id);
-        return { ...p, section: live?.section ?? p.section ?? 'review' };
+        return { ...p, section: live?.section ?? p.section ?? 'review', category: live?.category ?? p.category, folderPath: live?.folderPath ?? p.folderPath };
       });
       for (const p of products) if (!merged.some((x: Product) => x.id === p.id)) merged.push(p);
       return NextResponse.json({ products: merged, source: 'saved' });
@@ -120,10 +125,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const unit = String(p?.unit ?? '').trim();
     const category = p?.category as Category;
     const section = p?.section as Section;
-    if (!name || name.length > 250 || !unit || unit.length > 50 || quantity === null || quantity > 1000000 || (price !== null && price > 100000000) || !categories.includes(category) || !['consumption','rental','external_rental','external_sale','review'].includes(section)) {
+    if (!name || name.length > 250 || !unit || unit.length > 50 || quantity === null || quantity > 1000000 || (price !== null && price > 100000000) || (typeof category !== 'string' || !category.trim() || category.length > 180) || !['consumption','rental','external_rental','external_sale','review'].includes(section)) {
       return NextResponse.json({ error: 'Controleer naam, categorie, aantal, eenheid en verkoopprijs.' }, { status: 400 });
     }
-    products.push({ id: String(p.id ?? '').slice(0, 100), name, section, category, quantity, unit, unitPrice: price, source: p.source === 'rentman' ? 'rentman' : 'manual' });
+    products.push({ id: String(p.id ?? '').slice(0, 100), name, section, category, folderPath: typeof p.folderPath === 'string' ? p.folderPath.slice(0, 400) : undefined, quantity, unit, unitPrice: price, source: p.source === 'rentman' ? 'rentman' : 'manual' });
   }
   const { error } = await ctx.admin.from('billing_drafts').upsert({ billing_item_id: id, product_usage: products, updated_by: user.id, updated_at: new Date().toISOString() }, { onConflict: 'billing_item_id' });
   if (error) return NextResponse.json({ error: 'Producten opslaan mislukt.' }, { status: 500 });
