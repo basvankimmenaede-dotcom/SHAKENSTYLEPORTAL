@@ -52,7 +52,7 @@ function label(v: unknown): string {
 }
 async function sourceProducts(projectId: number): Promise<Product[]> {
   const [equipment, costs] = await Promise.all([
-    rentmanRows('/projects/' + projectId + '/projectequipment?fields=id,equipment,quantity,price&expand=equipment&limit=300'),
+    rentmanRows('/projects/' + projectId + '/projectequipment?fields=id,equipment,parent,quantity,quantity_total,unit_price,factor,discount&expand=equipment&limit=300'),
     rentmanRows('/projects/' + projectId + '/costs?fields=id,name,quantity,sale_price&limit=300'),
   ]);
   const products: Product[] = [];
@@ -61,15 +61,37 @@ async function sourceProducts(projectId: number): Promise<Product[]> {
   const folderId = (value: unknown): number | null => { const raw = typeof value === 'object' && value !== null ? (value as Record<string, unknown>).id : value; const match = String(raw ?? '').match(/([0-9]+)$/); return match ? Number(match[1]) : null; };
   const folderPath = (value: unknown): string => { const names: string[] = []; let id = folderId(value); const seen = new Set<number>(); while (id !== null && !seen.has(id)) { seen.add(id); const folder = folderById.get(id); if (!folder) break; names.unshift(String(folder.name ?? '')); id = folderId(folder.parent); } return names.join('/'); };
   const catalog = new Map(catalogRows.map(item => [Number(item.id), item]));
+  const projectRowById = new Map(equipment.map(row => [Number(row.id), row]));
+  const rowParentId = (value: unknown): number | null => {
+    const ref = value && typeof value === 'object' ? (value as Record<string, unknown>).id : value;
+    const match = String(ref ?? '').match(/([0-9]+)$/);
+    return match ? Number(match[1]) : null;
+  };
+  const hasRentalAncestor = (row: Record<string, unknown>): boolean => {
+    const seen = new Set<number>();
+    let parentId = rowParentId(row.parent);
+    while (parentId !== null && !seen.has(parentId)) {
+      seen.add(parentId);
+      const parent = projectRowById.get(parentId);
+      if (!parent) return true; // Nested set: never bill a component without its root.
+      const parentEquipment = parent.equipment && typeof parent.equipment === 'object' ? parent.equipment as Record<string, unknown> : {};
+      const parentCatalog = catalog.get(Number(parentEquipment.id ?? String(parent.equipment ?? '').split('/').pop())) ?? parentEquipment;
+      if (String(parentCatalog.rental_sales ?? '').toLowerCase() === 'rental') return true;
+      parentId = rowParentId(parent.parent);
+    }
+    return false;
+  };
   for (const r of equipment) {
     const equipmentInfo = r.equipment && typeof r.equipment === 'object' ? r.equipment as Record<string, unknown> : {};
     const name = label(r.equipment) || label(r.displayname) || 'Rentman-artikel ' + r.id;
     const equipmentId = Number(equipmentInfo.id ?? String(r.equipment ?? '').split('/').pop());
     const meta = catalog.get(equipmentId) ?? equipmentInfo;
+    // A planned virtual set is the billable item; its nested accessories are not.
+    if (hasRentalAncestor(r)) continue;
     const path = folderPath(meta.folder);
     const ingredientIndex = path.split('/').indexOf('Ingrediënten');
     const ingredientFolder = ingredientIndex >= 0 ? path.split('/').slice(ingredientIndex + 1).join('/') : '';
-    products.push({ id: 'equipment:' + r.id, section: ingredientIndex >= 0 ? 'consumption' : sectionFor(meta), category: ingredientIndex >= 0 ? (ingredientFolder || 'Overig') : classify(name), folderPath: path, name, quantity: number(r.quantity) ?? 0, unit: label(meta.unit) || 'stuks', unitPrice: number(r.price), source: 'rentman' });
+    products.push({ id: 'equipment:' + r.id, section: ingredientIndex >= 0 ? 'consumption' : sectionFor(meta), category: ingredientIndex >= 0 ? (ingredientFolder || 'Overig') : classify(name), folderPath: path, name, quantity: number(r.quantity) ?? 0, unit: label(meta.unit) || 'stuks', unitPrice: number(r.unit_price) ?? number(meta.price), source: 'rentman' });
   }
   for (const r of costs) {
     const name = String(r.name ?? 'Overige kosten');
@@ -99,8 +121,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (Array.isArray(saved)) {
       const merged = saved.map((p: Product) => {
         const live = byId.get(p.id);
-        return { ...p, section: live?.section ?? p.section ?? 'review', category: live?.category ?? p.category, folderPath: live?.folderPath ?? p.folderPath };
-      });
+        return live ? { ...p, name: live.name, quantity: live.quantity, unit: live.unit, section: live.section, category: live.category, folderPath: live.folderPath, unitPrice: p.unitPrice ?? live.unitPrice } : p.source === 'manual' ? p : null;
+      }).filter((p): p is Product => p !== null);
       for (const p of products) if (!merged.some((x: Product) => x.id === p.id)) merged.push(p);
       return NextResponse.json({ products: merged, source: 'saved' });
     }
