@@ -5,7 +5,7 @@ export type TransportLine = { description: string; quantity: number; unitPrice: 
 type VehicleTrip = {id:number; name:string; direction:string|null; legs:number|null; kilometers:number|null};
 type Vehicle = { id: number; name: string; amount: number };
 const money = (value: number) => value.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
-const rentalRate = (name: string) => /bakwagen|vrachtwagen/i.test(name) ? 100 : /bestelbus/i.test(name) ? 80 : /bestelauto|auto\b/i.test(name) ? 40 : null;
+const rentalRate = (_name: string): number | null => null;
 
 export default function BillingTransport({ id }: {
   id: string; lines: TransportLine[]; canManage: boolean; onChange: (lines: TransportLine[]) => void;
