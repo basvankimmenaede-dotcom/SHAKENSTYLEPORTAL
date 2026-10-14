@@ -108,7 +108,7 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Wijzigingen opslaan'}</button>}
    </div>
   </div>
-  {grouped.map(section => <section key={section.key} className="card" style={{padding:0,minWidth:0}}>
+  {grouped.filter(section => section.items.length > 0 || loading).map(section => <section key={section.key} className="card" style={{padding:0,minWidth:0}}>
    <button type="button" aria-expanded={openSections.includes(section.key)} onClick={() => setOpenSections(current => current.includes(section.key) ? current.filter(k => k !== section.key) : [...current,section.key])} style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left',border:0}}>
     <span style={{display:'grid',gap:3}}><strong style={{fontSize:15}}>{section.label} <span style={{fontSize:12,color:'var(--muted)',fontWeight:400}}>({section.items.length})</span></strong><span style={{fontSize:12,color:'var(--muted)'}}>{section.detail}</span></span>
     <span style={{display:'flex',alignItems:'center',gap:14,whiteSpace:'nowrap'}}><strong style={{fontSize:15}}>{money(section.total)}</strong><span aria-hidden="true">{openSections.includes(section.key) ? "▴" : "▾"}</span></span>
