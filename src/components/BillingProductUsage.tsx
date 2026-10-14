@@ -13,7 +13,7 @@ const sections: { key: Section; label: string; detail: string }[] = [
 ];
 const money = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n);
 const quantityLabel = (n: number) => new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 3 }).format(n);
-const total = (p: Product) => p.excluded || p.unitPrice === null ? 0 : Math.round(p.quantity * p.unitPrice * (p.factor ?? 1) * (1 - (p.discount ?? 0) / 100) * 100) / 100;
+const total = (p: Product) => p.excluded || p.unitPrice === null ? 0 : Math.round(p.quantity * p.unitPrice * (p.section === 'rental' || p.section === 'external_rental' ? (p.factor ?? 1) : 1) * (1 - (p.discount ?? 0) / 100) * 100) / 100;
 const border = '1px solid var(--border, #e5e7eb)';
 export default function BillingProductUsage({ id, canManage, locked }: { id: string; canManage: boolean; locked: boolean }) {
  const [products, setProducts] = useState<Product[]>([]);
@@ -100,7 +100,7 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
  }
  const toggleFolder = (key: string) => setOpenFolders(current => current.includes(key) ? current.filter(x => x !== key) : [...current, key]);
  const grandTotal = grouped.reduce((sum, section) => sum + section.total, 0);
- return <div style={{display:'grid',gap:12,minWidth:0}}>
+ return <div style={{display:'grid',gap:12,minWidth:0,maxWidth:'100%'}}>
   <div className="card" style={{padding:'16px 18px'}}>
    <div><div style={{fontSize:12,color:'var(--muted)',marginBottom:4}}>PRODUCTEN & VERBRUIK</div><strong style={{fontSize:20}}>{money(grandTotal)}</strong><div style={{fontSize:12,color:'var(--muted)',marginTop:3}}>{products.filter(p => !p.excluded).length} artikelregels uit de projectafrekening</div></div>
   </div>
@@ -134,9 +134,9 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
           <th style={{padding:'10px 12px',fontWeight:500}}>Artikel</th><th style={{padding:'10px 8px',width:105,fontWeight:500}}>Aantal</th><th style={{padding:'10px 8px',width:120,fontWeight:500}}>Prijs per stuk</th><th style={{padding:'10px 8px',width:105,textAlign:'right',fontWeight:500}}>Regeltotaal</th><th style={{width:36}}/>
          </tr></thead>
          <tbody>{items.map(p => <tr key={p.id} style={{borderBottom:border}}>
-          <td style={{padding:'11px 12px',minWidth:150}}><strong style={{fontWeight:600}}>{p.name}</strong><div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>{p.source === 'rentman' ? 'Rentman' : 'Handmatig'} · {p.unit}</div></td>
+          <td style={{padding:'11px 12px',minWidth:150}}><strong style={{fontWeight:600}}>{p.name}</strong><div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>{p.source === 'rentman' ? 'Rentman' : 'Handmatig'} · {p.unit}{(p.section === 'rental' || p.section === 'external_rental') && (p.factor ?? 1) !== 1 ? ' · verhuurfactor '+p.factor+'×' : ''}</div></td>
           <td style={{padding:'8px'}}><input className="input" aria-label={'Aantal ' + p.name} type="number" min="0" step="any" value={p.quantity} disabled={!editable} onChange={e => updateQuantity(p.id,e.target.value)} style={{width:'100%',minHeight:34,padding:'5px 7px',fontSize:12}}/></td>
-          <td style={{padding:'8px'}}><input className="input" aria-label={'Prijs per stuk ' + p.name} type="number" min="0" step="any" placeholder="€ —" value={p.unitPrice ?? ''} disabled={!editable} onChange={e => updatePrice(p.id,e.target.value)} style={{width:'100%',minHeight:34,padding:'5px 7px',fontSize:12}}/></td>
+          <td style={{padding:'8px'}}><div style={{display:'flex',alignItems:'center',gap:5}}><span aria-hidden="true" style={{fontWeight:600}}>€</span><input className="input" aria-label={'Prijs per stuk ' + p.name} type="number" min="0" step="any" placeholder="€ —" value={p.unitPrice ?? ''} disabled={!editable} onChange={e => updatePrice(p.id,e.target.value)} style={{width:'100%',minWidth:0,minHeight:34,padding:'5px 7px',fontSize:12}}/></div></td>
           <td style={{padding:'8px',textAlign:'right',whiteSpace:'nowrap',fontWeight:600}}>{p.unitPrice === null ? '—' : money(total(p))}</td>
           <td style={{padding:'8px 8px 8px 0'}}><button type="button" aria-label={'Verwijder ' + p.name} title="Verwijderen" disabled={!editable} onClick={() => remove(p.id)} style={{width:30,height:30,border,borderRadius:7,background:'transparent',cursor:editable?'pointer':'default'}}>×</button></td>
          </tr>)}</tbody>
