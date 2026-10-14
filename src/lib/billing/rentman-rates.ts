@@ -10,7 +10,7 @@ export const rentmanId = (value: unknown): number | null => {
 async function getRentman(path: string): Promise<unknown> {
   const token = process.env.RENTMAN_API_TOKEN;
   if (!token) throw new Error('Rentman API token ontbreekt');
-  const response = await fetch('https://api.rentman.net' + path, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }, next: { revalidate: 60 } });
+  const response = await fetch('https://api.rentman.net' + path, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }, cache: 'no-store' });
   if (!response.ok) throw new Error('Rentman tarief ophalen mislukt (' + response.status + ')');
   const payload: unknown = await response.json();
   return payload && typeof payload === 'object' && 'data' in payload ? (payload as { data: unknown }).data : null;
