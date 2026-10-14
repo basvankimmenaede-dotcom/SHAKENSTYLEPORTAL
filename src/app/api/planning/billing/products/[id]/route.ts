@@ -170,7 +170,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const unit = String(p?.unit ?? '').trim();
     const category = p?.category as Category;
     const section = p?.section as Section;
-    if (!name || name.length > 250 || !unit || unit.length > 50 || quantity === null || quantity > 1000000 || (price !== null && price > 100000000) || (typeof category !== 'string' || !category.trim() || category.length > 180) || !['consumption','rental','external_rental','external_sale','review'].includes(section)) {
+    if (!name || name.length > 250 || !unit || unit.length > 50 || quantity === null || quantity > 1000000 || factor > 1000000 || discount > 100 || (price !== null && price > 100000000) || (typeof category !== 'string' || !category.trim() || category.length > 180) || !['consumption','rental','external_rental','external_sale','review'].includes(section)) {
       return NextResponse.json({ error: 'Controleer naam, categorie, aantal, eenheid en verkoopprijs.' }, { status: 400 });
     }
     products.push({ id: String(p.id ?? '').slice(0, 100), name, section, category, folderPath: typeof p.folderPath === 'string' ? p.folderPath.slice(0, 400) : undefined, quantity, unit, unitPrice: price, factor, discount, excluded: p.excluded === true, source: p.source === 'rentman' ? 'rentman' : 'manual', billingMode: mode });
