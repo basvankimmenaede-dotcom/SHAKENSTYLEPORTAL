@@ -27,7 +27,7 @@ export default function BillingProductUsage({id,canManage,locked}:{id:string;can
  {warning&&<p style={{fontSize:12,color:'var(--muted)'}}>{warning}</p>}
  {loading?<p>Laden…</p>:section.items.length===0?<p style={{fontSize:13,color:'var(--muted)'}}>Geen artikelen.</p>:section.groups.map(([folder,items])=>{
  const folderKey=section.key+':'+folder;
- const isOpen=openFolders.includes(folderKey)||(!openFolders.some(x=>x.startsWith(section.key+':'))&&section.groups[0]?.[0]===folder);
+ const isOpen=openFolders.includes(folderKey);
  return <div key={folderKey} style={{borderTop:'1px solid var(--border,#ddd)'}}>
  <button type="button" onClick={()=>toggleFolder(folderKey)} style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:10,border:0,background:'var(--surface-secondary,#fafafa)',padding:'10px 12px',cursor:'pointer',textAlign:'left'}}>
  <strong style={{fontSize:13}}>▱ {folder} ({items.length})</strong><span style={{fontSize:13}}>{money(items.reduce((sum,p)=>sum+p.quantity*(p.unitPrice||0),0))} {isOpen?'▴':'▾'}</span></button>
