@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 type HourRow = { id:number; type:string|null; name:string; group:string; startsAt:string|null; endsAt:string|null; amount:number; plannedHours:number|null; plannedTravelOutHours:number; plannedTravelBackHours:number };
-type Recorded = { id:string; functionId:number|null; workStartedAt:string; workEndedAt:string; hours:number|null; status:string };
+type Recorded = { id:string; functionId:number|null; workStartedAt:string; workEndedAt:string; hours:number|null; status:string; crewMemberName:string };
 const fmt = (n:number) => n.toLocaleString('nl-NL',{maximumFractionDigits:2}) + ' u';
 const clock = (value:string|null) => value ? new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'}).format(new Date(value)) : '—';
 export default function BillingHours({id}:{id:string}) {
@@ -50,23 +50,25 @@ export default function BillingHours({id}:{id:string}) {
               const sheets=mapped.filter(sheet=>sheet.functionId===row.id);
               const worked=sheets.reduce((sum,sheet)=>sum+(sheet.hours || 0),0);
               const isComplete=sheets.length>=row.amount && sheets.every(sheet=>sheet.hours !== null);
-              const difference=isComplete && row.plannedHours !== null ? worked-row.plannedHours : null;
+              const plannedForSubmitted = row.plannedHours === null ? null : row.plannedHours / Math.max(1,row.amount) * sheets.filter(sheet=>sheet.hours !== null).length;
+              const difference = plannedForSubmitted === null || !sheets.some(sheet=>sheet.hours !== null) ? null : Math.round((worked-plannedForSubmitted)*100)/100;
               return <div key={row.id} style={{borderBottom:'1px solid var(--border,#ddd)'}}>
                 <div style={{display:'grid',gridTemplateColumns:columns,gap:5,padding:'10px 2px',fontSize:12,alignItems:'center'}}>
                   <span style={{fontWeight:600}}>{row.name}</span><span>{row.amount}×</span><span>{clock(row.startsAt)}–{clock(row.endsAt)}</span>
                   <strong>{row.plannedHours===null?'—':fmt(row.plannedHours)}</strong>
                   <span title={'Heen: '+fmt(row.plannedTravelOutHours)+' · Terug: '+fmt(row.plannedTravelBackHours)}>{fmt(row.plannedTravelOutHours+row.plannedTravelBackHours)}</span>
                   <span>{sheets.length?fmt(worked):'—'}</span>
-                  <strong>{difference===null?'—':(difference>0?'+':'')+fmt(difference)}</strong>
+                  <strong title={isComplete?'Verschil met volledige planning':'Voorlopig verschil voor ingediende sheets'}>{difference===null?'—':(difference>0?'+':'')+fmt(difference)+(isComplete?'':' *')}</strong>
                 </div>
-                {sheets.length>0 && <details style={{fontSize:12,padding:'0 4px 8px'}}><summary style={{cursor:'pointer',color:'var(--muted)'}}>{sheets.length} {sheets.length===1?'sheet':'sheets'} bekijken{!isComplete?' · onvolledig':''}</summary>
-                  {sheets.map(sheet=><div key={sheet.id} style={{display:'flex',justifyContent:'space-between',padding:'5px 8px'}}><span>{clock(sheet.workStartedAt)}–{clock(sheet.workEndedAt)}</span><strong>{sheet.hours===null?'—':fmt(sheet.hours)}</strong></div>)}
+                {sheets.length>0 && <details style={{fontSize:12,padding:'0 4px 8px'}}><summary style={{cursor:'pointer',color:'var(--muted)'}}>{sheets.length} {sheets.length===1?'registratie':'registraties'} bekijken{!isComplete?' · verschil voorlopig':''}</summary>
+                  {sheets.map(sheet=><div key={sheet.id} style={{display:'flex',justifyContent:'space-between',padding:'5px 8px'}}><span><strong>{sheet.crewMemberName || 'Onbekende medewerker'}</strong> · {clock(sheet.workStartedAt)}–{clock(sheet.workEndedAt)}</span><strong>{sheet.hours===null?'—':fmt(sheet.hours)}</strong></div>)}
                 </details>}
               </div>;
             })}
           </div>
         </div>
       </div>)}
+      <p style={{fontSize:11,color:'var(--muted)',marginTop:10}}>* Voorlopig verschil: alleen ingediende registraties vergeleken met de geplande uren voor die medewerkers.</p>
       {!personnel.length && !status && <p style={{fontSize:13,color:'var(--muted)'}}>Geen personeelsfuncties gepland in Rentman.</p>}
       {unlinked.length>0 && <p style={{fontSize:12,color:'var(--muted)'}}>{unlinked.length} sheets niet aan een personeelsfunctie gekoppeld; deze tellen wel mee in geregistreerde uren.</p>}
     </div>}
