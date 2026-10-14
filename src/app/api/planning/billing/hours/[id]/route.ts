@@ -26,14 +26,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       return null;
     };
     const vehicleTrips = projectVehicles.map(vehicle => {
-      const subprojectId = parseSubprojectId(vehicle.function?.subproject);
-      const subproject = subprojectId === null ? null : subprojectById.get(subprojectId);
-      const oneWayKm = subprojectId === null ? rentmanOneWayKm : typeof subproject?.location?.distance === 'number' ? subproject.location.distance : null;
       const fn = functions.find(f => f.id === vehicle.function?.id);
-      const distance = typeof fn?.distance === 'number' ? fn.distance : null;
-      const legs = fn?.twoway === true ? 2 : fn?.twoway === false ? 1 : null;
+      const subprojectId = parseSubprojectId(fn?.subproject ?? vehicle.function?.subproject);
+      const subproject = subprojectId === null ? null : subprojectById.get(subprojectId);
+      const subprojectKm = subproject?.location?.distance;
+      const oneWayKm = typeof subprojectKm === 'number' ? subprojectKm : rentmanOneWayKm;
+      const distance = typeof fn?.distance === 'number' ? fn.distance : typeof vehicle.function?.distance === 'number' ? vehicle.function.distance : null;
+      const twoWay = fn?.twoway ?? vehicle.function?.twoway;
+      const legs = twoWay === true ? 2 : twoWay === false ? 1 : null;
       const calculatedKm = distance !== null ? distance : legs !== null && oneWayKm !== null ? legs * oneWayKm : null;
-      return { id: vehicle.id, functionId: fn?.id ?? vehicle.function?.id ?? null, subprojectId, subprojectName: subproject?.name ?? null, name: vehicle.vehicle?.displayname || vehicle.vehicle?.name || vehicle.function?.displayname || 'Voertuig', direction: fn?.twoway === true ? 'round_trip' : fn?.twoway === false ? 'one_way' : null, legs, kilometers: calculatedKm };
+      return { id: vehicle.id, functionId: fn?.id ?? vehicle.function?.id ?? null, subprojectId, subprojectName: subproject?.name ?? null, name: vehicle.vehicle?.displayname || vehicle.vehicle?.name || vehicle.function?.displayname || 'Voertuig', direction: twoWay === true ? 'round_trip' : twoWay === false ? 'one_way' : null, legs, kilometers: calculatedKm };
 
     });
     const functionByCrewId = new Map(projectCrew.map(crew => [crew.id, crew.function?.id ?? null]));
@@ -44,7 +46,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       const start = f.planperiod_start ? Date.parse(f.planperiod_start) : NaN;
       const end = f.planperiod_end ? Date.parse(f.planperiod_end) : NaN;
       const hours = Number.isFinite(start) && Number.isFinite(end) && end >= start ? Math.round((end - start) / 36000) / 100 : null;
-      return { id: f.id, type: f.type ?? null, name: f.displayname || f.name || 'Personeelsfunctie', group: f.group?.displayname || f.group?.name || f.displayname || f.name || 'Overig', startsAt: f.planperiod_start ?? null, endsAt: f.planperiod_end ?? null, amount: f.amount ?? 1, priceRateRef: f.price_rate ?? null, priceRate: f.price_rate ? ratesByReference.get(f.price_rate) ?? null : null, priceTravel: f.price_travel ?? null, priceOther: f.price_other ?? null, hoursPerPerson: hours, plannedHours: hours === null ? null : Math.round(hours * (f.amount ?? 1) * 100) / 100, plannedTravelOutHours: Math.round(Number(f.travel_time_before || 0) / 3600 * (f.amount ?? 1) * 100) / 100, plannedTravelBackHours: Math.round(Number(f.travel_time_after || 0) / 3600 * (f.amount ?? 1) * 100) / 100 };
+      return { id: f.id, type: f.type ?? null, name: f.displayname || f.name || 'Personeelsfunctie', group: f.group?.displayname || f.group?.name || f.displayname || f.name || 'Overig', startsAt: f.planperiod_start ?? null, endsAt: f.planperiod_end ?? null, amount: f.amount ?? 1, priceRateRef: f.price_rate ?? null, priceRate: f.price_rate ? ratesByReference.get(f.price_rate) ?? null : null, priceTravel: f.price_travel ?? null, priceOther: f.price_other ?? null, hoursPerPerson: hours, plannedHours: hours === null ? null : Math.round(hours * (f.amount ?? 1) * 100) / 100, plannedTravelOutHours: Math.round(Number(f.travel_time_before ?? 0) / 3600 * (f.amount ?? 1) * 100) / 100, plannedTravelBackHours: Math.round(Number(f.travel_time_after ?? 0) / 3600 * (f.amount ?? 1) * 100) / 100 };
     });
     const { data: assignments, error: assignmentError } = await admin.from('crew_portal_assignments')
       .select('id,crew_member_id,starts_at,ends_at,rentman_projectcrew_id')
