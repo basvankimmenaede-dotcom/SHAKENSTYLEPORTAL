@@ -1,83 +1,46 @@
 'use client';
-import { useEffect, useState } from 'react';
-
-type Category = 'IJs' | 'Fruit' | 'Spirits' | "Soda's" | 'Overig';
+import { useEffect, useMemo, useState } from 'react';
 type Section = 'consumption' | 'rental' | 'external_rental' | 'external_sale' | 'review';
-type Product = { id: string; section: Section; category: Category; name: string; quantity: number; unit: string; unitPrice: number | null; source: 'rentman' | 'manual' };
-const sections: { key: Section; label: string }[] = [{ key: 'consumption', label: 'Product & verbruik' }, { key: 'rental', label: 'Materiaal & verhuur' }, { key: 'external_rental', label: 'Externe inhuur' }, { key: 'external_sale', label: 'Externe verkoop' }, { key: 'review', label: 'Nog indelen' }];
-const categories: Category[] = ['IJs', 'Fruit', 'Spirits', "Soda's", 'Overig'];
-const money = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n);
-
-export default function BillingProductUsage({ id, canManage, locked }: { id: string; canManage: boolean; locked: boolean }) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [category, setCategory] = useState<Category>('IJs');
-  const [expanded, setExpanded] = useState<Section | null>(null);
-  const [message, setMessage] = useState('Producten laden uit Rentman…');
-  const [warning, setWarning] = useState('');
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let active = true;
-    fetch('/api/planning/billing/products/' + encodeURIComponent(id))
-      .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Ophalen mislukt'); return data; })
-      .then(data => { if (!active) return; setProducts(data.products); setWarning(data.warning || ''); setMessage(data.source === 'saved' ? 'Eerder opgeslagen productoverzicht geladen' : 'Producten uit Rentman geladen'); setLoading(false); })
-      .catch(e => { if (active) { setMessage('Fout: ' + e.message); setLoading(false); } });
-    return () => { active = false; };
-  }, [id]);
-
-  const missing = products.filter(p => p.unitPrice === null).length;
-  const editable = canManage && !locked;
-  function change(id: string, key: keyof Product, value: string) {
-    setProducts(current => current.map(p => p.id === id ? { ...p, [key]: key === 'quantity' ? Math.max(0, Number(value) || 0) : key === 'unitPrice' ? (value === '' ? null : Math.max(0, Number(value) || 0)) : value } : p));
-    setDirty(true); setMessage('Niet-opgeslagen wijzigingen');
-  }
-  async function save() {
-    setSaving(true); setMessage('Producten opslaan…');
-    try {
-      const response = await fetch('/api/planning/billing/products/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ products }) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Opslaan mislukt');
-      setDirty(false); setMessage('✓ Producten opgeslagen in de portal (Rentman ongewijzigd)');
-    } catch (e) { setMessage('Opslaan mislukt: ' + (e instanceof Error ? e.message : 'Onbekende fout')); }
-    finally { setSaving(false); }
-  }
-  return <div>
-    {sections.map(section => <section key={section.key} className="card" style={{ padding: 12, marginBottom: 10 }}>
-    <button type="button" onClick={() => setExpanded(v => v === section.key ? null : section.key)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', border: 0, background: 'transparent', cursor: 'pointer', padding: 4, textAlign: 'left' }}><strong>{section.label} <small>({products.filter(p => p.section === section.key).length})</small></strong><span>{money(products.filter(p => p.section === section.key).reduce((s,p) => s + p.quantity * (p.unitPrice ?? 0), 0))} &nbsp; {expanded === section.key ? '▴' : '▾'}</span></button>
-    {expanded === section.key && <>
-    {warning && <p style={{ color: 'var(--color-warning, #b66b00)' }}>{warning}</p>}
-    {section.key === "consumption" && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-      {categories.map(cat => <button type="button" key={cat} className={'button ' + (category === cat ? 'orange' : 'secondary')} style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setCategory(cat)}>{cat} ({products.filter(p => p.section === section.key && p.category === cat).length})</button>)}
-    </div>}
-    {loading ? <p>Laden…</p> : products.filter(p => p.section === section.key && (section.key !== 'consumption' || p.category === category)).length === 0 ? <p>Geen producten in deze categorie.</p> : products.filter(p => p.section === section.key && (section.key !== 'consumption' || p.category === category)).map(p =>
-      <div key={p.id} style={{ borderBottom: '1px solid var(--border, #ddd)', padding: '8px 0', marginBottom: 4 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 2fr) minmax(100px, 1fr)', gap: 8, alignItems: 'end' }}>
-          <div className="field"><label>Product</label><input className="input" style={{ minHeight: 34, height: 34, padding: "5px 9px", fontSize: 13 }} aria-label="Productnaam" disabled={!editable} value={p.name} onChange={e => change(p.id, 'name', e.target.value)} /></div>
-          <div className="field"><label>Indeling</label><select className="input" disabled={!editable} value={p.section} onChange={e => change(p.id, 'section', e.target.value)}>{sections.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select>{section.key === "consumption" && <><label>Categorie</label><select className="input" disabled={!editable} value={p.category} onChange={e => change(p.id, 'category', e.target.value)}>{categories.map(cat => <option key={cat}>{cat}</option>)}</select></>}</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, alignItems: 'end' }}>
-          <div className="field"><label>Aantal</label><input className="input" type="number" min="0" step="0.01" disabled={!editable} value={p.quantity} onChange={e => change(p.id, 'quantity', e.target.value)} /></div>
-          <div className="field"><label>Eenheid</label><input className="input" disabled={!editable} value={p.unit} onChange={e => change(p.id, 'unit', e.target.value)} /></div>
-          <div className="field"><label>Verkoopprijs / eenheid</label><input className="input" type="number" min="0" step="0.01" placeholder="Controleren" disabled={!editable} value={p.unitPrice ?? ''} onChange={e => change(p.id, 'unitPrice', e.target.value)} /></div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 8 }}>
-          <small>{p.source === 'rentman' ? 'Rentman · bewerkbare kopie' : 'Handmatig toegevoegd'}</small>
-          <strong>{p.unitPrice === null ? 'Prijs controleren' : money(p.quantity * p.unitPrice)}</strong>
-          {editable && <button type="button" className="button secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => { setProducts(current => current.filter(x => x.id !== p.id)); setDirty(true); setMessage('Niet-opgeslagen wijzigingen'); }}>Verwijderen</button>}
-        </div>
-      </div>)}
-    {editable && <button type="button" className="button secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => { setProducts(current => [...current, { id: 'manual:' + Date.now(), section: section.key, category, name: 'Nieuw product', quantity: 1, unit: 'stuks', unitPrice: null, source: 'manual' }]); setDirty(true); setMessage('Niet-opgeslagen wijzigingen'); }}>+ {section.key === "consumption" ? "Product toevoegen aan " + category : section.key === "external_sale" ? "Extern verkoopartikel toevoegen" : "Materiaal toevoegen"}</button>}
-    {section.key === 'consumption' && <div style={{ background: 'var(--surface-secondary, #f5f5f5)', padding: 14, borderRadius: 10, marginTop: 16 }}>
-      {categories.map(cat => <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}><span>{cat}</span><strong>{money(products.filter(p => p.section === section.key && p.category === cat).reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0))}</strong></div>)}
-      <hr /><div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>Totaal excl. btw</strong><strong>{money(products.filter(p => p.section === section.key).reduce((sum, p) => sum + p.quantity * (p.unitPrice ?? 0), 0))}</strong></div>
-      {missing > 0 && <p style={{ marginBottom: 0 }}>{missing} prijs{missing === 1 ? '' : 'en'} nog te controleren. Totaal is voorlopig.</p>}
-    </div>}
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 16 }}>
-      {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Producten opslaan'}</button>}
-      <span role="status" aria-live="polite">{message}</span>
-    </div>
-    </>}
-    </section>)}
-  </div>;
+type Product = {id:string;section:Section;category:string;folderPath?:string;name:string;quantity:number;unit:string;unitPrice:number|null;source:'rentman'|'manual'};
+const sections: {key:Section;label:string}[] = [{key:'consumption',label:'Ingrediënten'},{key:'rental',label:'Materiaal & verhuur'},{key:'external_rental',label:'Externe inhuur'},{key:'external_sale',label:'Externe verkoop'},{key:'review',label:'Overige artikelen'}];
+const money=(n:number)=>new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'}).format(n);
+export default function BillingProductUsage({id,canManage,locked}:{id:string;canManage:boolean;locked:boolean}) {
+ const [products,setProducts]=useState<Product[]>([]);
+ const [expanded,setExpanded]=useState<Section|null>(null);
+ const [openFolders,setOpenFolders]=useState<string[]>([]);
+ const [message,setMessage]=useState('Producten laden…');
+ const [warning,setWarning]=useState('');
+ const [loading,setLoading]=useState(true);
+ const [dirty,setDirty]=useState(false);
+ const [saving,setSaving]=useState(false);
+ const editable=canManage&&!locked;
+ useEffect(()=>{let active=true;fetch('/api/planning/billing/products/'+encodeURIComponent(id)).then(async r=>{const data=await r.json();if(!r.ok)throw new Error(data.error||'Ophalen mislukt');return data;}).then(data=>{if(!active)return;setProducts(data.products||[]);setWarning(data.warning||'');setLoading(false);setMessage('');}).catch(e=>{if(active){setMessage('Fout: '+e.message);setLoading(false);}});return()=>{active=false;};},[id]);
+ const grouped=useMemo(()=>sections.map(section=>{const items=products.filter(p=>p.section===section.key);const groups=new Map<string,Product[]>();for(const p of items){const folder=p.category||'Overig';groups.set(folder,[...(groups.get(folder)||[]),p]);}return {...section,items,groups:[...groups.entries()],total:items.reduce((sum,p)=>sum+p.quantity*(p.unitPrice||0),0)};}),[products]);
+ function updatePrice(productId:string,value:string){setProducts(current=>current.map(p=>p.id===productId?{...p,unitPrice:value===''?null:Math.max(0,Number(value)||0)}:p));setDirty(true);setMessage('Niet-opgeslagen wijzigingen');}
+ function remove(productId:string){setProducts(current=>current.filter(p=>p.id!==productId));setDirty(true);setMessage('Niet-opgeslagen wijzigingen');}
+ async function save(){setSaving(true);setMessage('Producten opslaan…');try{const response=await fetch('/api/planning/billing/products/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({products})});const result=await response.json();if(!response.ok)throw new Error(result.error||'Opslaan mislukt');setDirty(false);setMessage('Producten opgeslagen (Rentman ongewijzigd)');}catch(e){setMessage('Opslaan mislukt: '+(e instanceof Error?e.message:'Onbekende fout'));}finally{setSaving(false);}}
+ const toggleFolder=(key:string)=>setOpenFolders(old=>old.includes(key)?old.filter(x=>x!==key):[...old,key]);
+ return <div>{grouped.map(section=><section key={section.key} className="card" style={{padding:14,marginBottom:10,minWidth:0}}>
+ <button type="button" onClick={()=>setExpanded(old=>old===section.key?null:section.key)} style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',width:'100%',border:0,background:'transparent',padding:4,cursor:'pointer',textAlign:'left'}}>
+ <strong>{section.label} ({section.items.length})</strong><span>{money(section.total)} {expanded===section.key?'▴':'▾'}</span></button>
+ {expanded===section.key&&<div style={{marginTop:12}}>
+ {warning&&<p style={{fontSize:12,color:'var(--muted)'}}>{warning}</p>}
+ {loading?<p>Laden…</p>:section.items.length===0?<p style={{fontSize:13,color:'var(--muted)'}}>Geen artikelen.</p>:section.groups.map(([folder,items])=>{
+ const folderKey=section.key+':'+folder;
+ const isOpen=openFolders.includes(folderKey)||(!openFolders.some(x=>x.startsWith(section.key+':'))&&section.groups[0]?.[0]===folder);
+ return <div key={folderKey} style={{borderTop:'1px solid var(--border,#ddd)'}}>
+ <button type="button" onClick={()=>toggleFolder(folderKey)} style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:10,border:0,background:'var(--surface-secondary,#fafafa)',padding:'10px 12px',cursor:'pointer',textAlign:'left'}}>
+ <strong style={{fontSize:13}}>▱ {folder} ({items.length})</strong><span style={{fontSize:13}}>{money(items.reduce((sum,p)=>sum+p.quantity*(p.unitPrice||0),0))} {isOpen?'▴':'▾'}</span></button>
+ {isOpen&&<div style={{padding:'0 8px'}}>
+ <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 110px 34px',gap:8,padding:'9px 0',fontSize:11,color:'var(--muted)'}}><span>Artikel</span><span>Prijsvoorstel</span><span/></div>
+ {items.map(p=><div key={p.id} style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 110px 34px',gap:8,alignItems:'center',padding:'8px 0',borderTop:'1px solid var(--border,#eee)'}}>
+ <div style={{minWidth:0}}><strong style={{fontSize:13,overflowWrap:'anywhere'}}>{p.name}</strong><div style={{fontSize:11,color:'var(--muted)'}}>{p.quantity.toLocaleString('nl-NL')} {p.unit}</div></div>
+ <input aria-label={'Prijsvoorstel '+p.name} className="input" type="number" min="0" step="0.01" placeholder="€ —" value={p.unitPrice??''} disabled={!editable} onChange={e=>updatePrice(p.id,e.target.value)} style={{width:'100%',height:34,minHeight:34,padding:'4px 7px',fontSize:12}}/>
+ <button type="button" aria-label={'Verwijder '+p.name} title="Verwijderen" disabled={!editable} onClick={()=>remove(p.id)} style={{width:32,height:32,border:'1px solid var(--border,#ddd)',borderRadius:7,background:'transparent',cursor:editable?'pointer':'default',color:'var(--muted)'}}>×</button>
+ </div>)}</div>}</div>;})}
+ <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginTop:12}}>
+ <span style={{fontSize:12,color:'var(--muted)'}}>{section.items.filter(p=>p.unitPrice===null).length} prijzen te controleren</span>
+ {editable&&<button type="button" className="button orange" disabled={!dirty||saving||loading} onClick={save}>{saving?'Opslaan…':'Producten opslaan'}</button>}</div>
+ <span role="status" aria-live="polite" style={{fontSize:12}}>{message}</span>
+ </div>}</section>)}</div>;
 }
