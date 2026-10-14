@@ -39,15 +39,34 @@ export default function BillingTransport({ id }: {
     </button>
     {expanded && <div style={{marginTop:12}}>
       <div style={{overflowX:'auto'}}>
-        <div style={{minWidth:660}}>
-          <div style={{display:'grid',gridTemplateColumns:'minmax(170px,2fr) 70px 100px 100px 100px',gap:8,fontSize:12,opacity:.7}}>
-            <span>Voertuig</span><span>Aantal</span><span>Km gepland</span><span>Tarief</span><span>Totaal</span>
-          </div>
-          {planned.map(vehicle => <div key={vehicle.id} style={{display:'grid',gridTemplateColumns:'minmax(150px,2fr) 70px 90px 90px',gap:8,padding:'7px 0',borderTop:'1px solid var(--border,#ddd)',alignItems:'center'}}>
-            <span>{vehicle.name}</span><span>{vehicle.amount}</span><span>{vehicleTrips.length ? 'Zie ritten' : '—'}</span><span>{vehicle.rate === null ? '—' : money(vehicle.rate)}</span><strong>{vehicle.rate === null ? '—' : money(vehicle.amount * vehicle.rate)}</strong>
-          </div>)}
-          {!planned.length && <p style={{fontSize:13,color:'var(--muted)'}}>Geen transport gepland in Rentman.</p>}
-        </div>
+        <table style={{width:'100%',minWidth:600,borderCollapse:'collapse',fontSize:13}}>
+          <thead><tr style={{textAlign:'left',color:'var(--muted)',borderBottom:'1px solid var(--border,#ddd)'}}>
+            <th style={{padding:'10px 8px'}}>Voertuig</th>
+            <th style={{padding:'10px 8px',textAlign:'right'}}>Aantal</th>
+            <th style={{padding:'10px 8px',textAlign:'right'}}>Km gepland</th>
+            <th style={{padding:'10px 8px',textAlign:'right'}}>Tarief</th>
+            <th style={{padding:'10px 8px',textAlign:'right'}}>Totaal</th>
+          </tr></thead>
+          <tbody>{planned.map(vehicle => {
+            const matchingTrips=vehicleTrips.filter(trip=>{
+              const vehicleName=vehicle.name.toLowerCase();
+              const tripName=trip.name.toLowerCase();
+              return tripName.includes(vehicleName) || vehicleName.includes(tripName) ||
+                (/bakwagen/i.test(vehicleName) && /bakwagen/i.test(tripName) && !/bestelbus/i.test(vehicleName)) ||
+                (/bestelbus/i.test(vehicleName) && /bestelbus/i.test(tripName));
+            });
+            const kilometers=matchingTrips.length && matchingTrips.every(trip=>trip.kilometers!==null)
+              ? matchingTrips.reduce((sum,trip)=>sum+(trip.kilometers??0),0) : null;
+            return <tr key={vehicle.id} style={{borderBottom:'1px solid var(--border,#ddd)'}}>
+              <td style={{padding:'12px 8px',fontWeight:600}}>{vehicle.name}</td>
+              <td style={{padding:'12px 8px',textAlign:'right'}}>{vehicle.amount}</td>
+              <td style={{padding:'12px 8px',textAlign:'right'}}>{kilometers===null?'Zie ritten':kilometers.toLocaleString('nl-NL')+' km'}</td>
+              <td style={{padding:'12px 8px',textAlign:'right'}}>{vehicle.rate===null?'—':money(vehicle.rate)}</td>
+              <td style={{padding:'12px 8px',textAlign:'right',fontWeight:700}}>{vehicle.rate===null?'—':money(vehicle.amount*vehicle.rate)}</td>
+            </tr>;
+          })}</tbody>
+        </table>
+        {!planned.length && <p style={{fontSize:13,color:'var(--muted)'}}>Geen transport gepland in Rentman.</p>}
       </div>
       {vehicleTrips.length > 0 && <div style={{borderTop:'1px solid var(--border,#ddd)',paddingTop:8}}>
         {vehicleTrips.map(trip => <div key={trip.id} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'4px 0'}}>
