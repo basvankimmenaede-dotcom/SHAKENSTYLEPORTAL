@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-type HourRow = { id: number; type: string | null; name: string; group: string; startsAt: string | null; endsAt: string | null; amount: number; hoursPerPerson: number | null; plannedHours: number | null };
+type HourRow = { id: number; type: string | null; name: string; group: string; startsAt: string | null; endsAt: string | null; amount: number; hoursPerPerson: number | null; plannedHours: number | null; plannedTravelOutHours: number; plannedTravelBackHours: number };
 type Recorded = { id: string; functionId: number | null; plannedStartsAt: string | null; plannedEndsAt: string | null; workStartedAt: string; workEndedAt: string; hours: number | null; travelMinutes: number; breakageOverTen: boolean; missingMaterials: boolean; missingMaterialsDescription: string | null; status: string };
 export default function BillingHours({ id }: { id: string }) {
   const [rows, setRows] = useState<HourRow[]>([]);
@@ -18,6 +18,7 @@ export default function BillingHours({ id }: { id: string }) {
   }, [id]);
   const personnelRows = rows.filter(row => row.type !== 'vehicle_function' && !/^(bakwagen|bestelbus|bestelauto|transport bestelbus|transport bakwagen|vrachtwagen|auto\\b)/i.test(row.name));
   const total = personnelRows.reduce((sum, row) => sum + (row.plannedHours || 0), 0);
+  const travelTotal = personnelRows.reduce((sum,row)=>sum+row.plannedTravelOutHours+row.plannedTravelBackHours,0);
   const recordedTotal = recorded.reduce((sum, row) => sum + (row.hours ?? 0), 0);
   const diff = Math.round((recordedTotal - total) * 100) / 100;
   const mapped = recorded.filter(r => r.functionId !== null && personnelRows.some(row => row.id === r.functionId));
@@ -29,7 +30,7 @@ export default function BillingHours({ id }: { id: string }) {
   const time = (value: string | null) => value ? new Intl.DateTimeFormat('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' }).format(new Date(value)) : '—';
   return <section className="card" style={{ padding: 12, marginBottom: 10 }}>
     <button type="button" onClick={() => setExpanded(v => !v)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', background: 'transparent', border: 0, padding: 4, cursor: 'pointer', textAlign: 'left' }}>
-      <strong>Personeel & uren ({personnelRows.length} functies)</strong><span>{total.toLocaleString('nl-NL')} gepland · {recorded.length ? recordedTotal.toLocaleString('nl-NL') + ' geregistreerd' + (recorded.length === assignedCount ? ' (' + (diff >= 0 ? '+' : '') + diff.toLocaleString('nl-NL') + ')' : ' (onvolledig)') : 'nog geen sheets'} {expanded ? '▴' : '▾'}</span>
+      <strong>Personeel & uren ({personnelRows.length} functies)</strong><span>{total.toLocaleString('nl-NL')} werk gepland · {travelTotal.toLocaleString('nl-NL')} reis · {recorded.length ? recordedTotal.toLocaleString('nl-NL') + ' geregistreerd' + (recorded.length === assignedCount ? ' (' + (diff >= 0 ? '+' : '') + diff.toLocaleString('nl-NL') + ')' : ' (onvolledig)') : 'nog geen sheets'} {expanded ? '▴' : '▾'}</span>
     </button>
     {expanded && <div style={{ marginTop: 12 }}>
       <p style={{ fontSize: 13 }}>{status}</p>
@@ -38,9 +39,9 @@ export default function BillingHours({ id }: { id: string }) {
       {grouped.map(([group, items]) => <div key={group} style={{ marginTop: 16 }}>
         <strong style={{ fontSize: 13 }}>{group}</strong>
         <div style={{ overflowX: 'auto' }}>
-          <div style={{ minWidth: 590 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(130px,2fr) 48px 115px 75px 100px 80px', gap: 8, fontSize: 12, padding: '7px 0', opacity: 0.7 }}>
-              <span>Functie</span><span>Aantal</span><span>Begin – eind</span><span>Gepland</span><span>Geregistreerd</span><span>Verschil</span>
+          <div style={{ minWidth: 730 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(110px,2fr) 42px 95px 65px 65px 65px 75px 70px', gap: 8, fontSize: 12, padding: '7px 0', opacity: 0.7 }}>
+              <span>Functie</span><span>Aantal</span><span>Begin – eind</span><span>Werk plan</span><span>Reis heen</span><span>Reis terug</span><span>Werk echt</span><span>Verschil werk</span>
             </div>
             {items.map(row => {
               const sheets = mapped.filter(report => report.functionId === row.id);
@@ -51,9 +52,10 @@ export default function BillingHours({ id }: { id: string }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(130px,2fr) 48px 115px 75px 100px 80px', gap: 8, fontSize: 13, alignItems: 'center' }}>
                   <span>{row.name}</span><span>{row.amount}×</span><span>{time(row.startsAt)} – {time(row.endsAt)}</span>
                   <strong>{row.plannedHours === null ? '—' : row.plannedHours.toLocaleString('nl-NL') + ' u'}</strong>
-                  <strong>{sheets.length ? hours.toLocaleString('nl-NL') + ' u' : 'Nog geen sheet'}</strong>
+                  <span>{row.plannedTravelOutHours.toLocaleString('nl-NL')} u</span><span>{row.plannedTravelBackHours.toLocaleString('nl-NL')} u</span><strong>{sheets.length ? hours.toLocaleString('nl-NL') + ' u' : 'Geen sheet'}</strong>
                   <strong>{difference === null ? '—' : (difference > 0 ? '+' : '') + difference.toLocaleString('nl-NL') + ' u' + (!complete ? ' *' : '')}</strong>
                 </div>
+                {(row.plannedTravelOutHours + row.plannedTravelBackHours) > 0 && <small style={{display:'block',color:'var(--muted)'}}>Totaal inclusief Rentman-reistijd: {((row.plannedHours || 0)+row.plannedTravelOutHours+row.plannedTravelBackHours).toLocaleString('nl-NL')} u (gepland werk + reis).</small>}
                 {difference !== null && !complete && <small style={{display:'block',color:'var(--muted)'}}> * Voorlopig verschil; nog niet alle sheets zijn ingediend.</small>}
                 {sheets.length > 0 && <details style={{ marginTop: 6, fontSize: 12 }}>
                   <summary style={{ cursor: 'pointer', color: 'var(--muted)' }}>Bekijk {sheets.length} {sheets.length === 1 ? 'sheet' : 'sheets'}{!complete ? ' · nog niet compleet' : ''}</summary>
