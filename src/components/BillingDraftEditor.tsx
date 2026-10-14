@@ -55,12 +55,12 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     } catch (e) { setState('Opslaan mislukt: ' + (e instanceof Error ? e.message : 'Onbekende fout')); }
     finally { setSaving(false); }
   }
-  return <main className="container" style={{ maxWidth: 1050, paddingBottom: 60 }}>
+  return <main className="container" style={{ maxWidth: 1600, paddingBottom: 60 }}>
     <Link href="/planning/billing">← Terug naar facturatie</Link>
     <h1 style={{ fontSize: 25, margin: '10px 0' }}>Projectafrekening</h1>
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
     {!item ? <p role="status">{state}</p> : <>
-      <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
+      <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(300px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
       <BillingHours id={id} />
       <BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} />
       <BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} />
