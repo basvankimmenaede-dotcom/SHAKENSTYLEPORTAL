@@ -31,10 +31,23 @@ export default function BillingHours({id,lines,canManage,onChange}:{id:string;li
   const unlinked = recorded.filter(sheet=>!personnel.some(row=>row.id===sheet.functionId));
   const groups: [string,HourRow[]][] = [['Alle functies',personnel]];
   const complete = assignedCount > 0 && recorded.length >= assignedCount && unlinked.length === 0 && recorded.every(sheet=>sheet.hours !== null);
-  const columns = 'minmax(160px,2fr) 55px 100px 85px 80px 85px 70px 90px 105px';
+  const columns = 'minmax(110px,1.5fr) 40px 85px 70px 70px 70px 65px 85px 90px';
   const rateKey=(id:number)=>'Rentman personeel #'+id;
   const getRate=(row:HourRow)=>lines.find(line=>line.description===rateKey(row.id))?.unitPrice ?? hourly(row.priceRate?.name);
-  const setRate=(row:HourRow,value:number)=>onChange([...lines.filter(line=>line.description!==rateKey(row.id)),{description:rateKey(row.id),quantity:row.plannedHours??0,unitPrice:value,vatRate:21}]);
+  const travelKey=(id:number)=>'Rentman personeel reis #'+id;
+  const workLine=(row:HourRow)=>lines.find(line=>line.description===rateKey(row.id));
+  const travelLine=(row:HourRow)=>lines.find(line=>line.description===travelKey(row.id));
+  const workHours=(row:HourRow)=>workLine(row)?.quantity ?? row.plannedHours ?? 0;
+  const travelHours=(row:HourRow)=>travelLine(row)?.quantity ?? (row.plannedTravelOutHours+row.plannedTravelBackHours);
+  const edit=(row:HourRow,part:'work'|'travel'|'rate',value:number)=>{
+    const rate=getRate(row)??0;
+    const work=part==='work'?value:workHours(row);
+    const travel=part==='travel'?value:travelHours(row);
+    const nextRate=part==='rate'?value:rate;
+    onChange([...lines.filter(line=>line.description!==rateKey(row.id)&&line.description!==travelKey(row.id)),
+      {description:rateKey(row.id),quantity:work,unitPrice:nextRate,vatRate:21},
+      {description:travelKey(row.id),quantity:travel,unitPrice:nextRate,vatRate:21}]);
+  };
   return <section className="card" style={{padding:20,marginBottom:14,minWidth:0}}>
     <button type="button" onClick={()=>setExpanded(value=>!value)} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8,background:'transparent',border:0,padding:4,cursor:'pointer',textAlign:'left'}}>
       <strong style={{fontSize:17}}>Personeel & uren</strong><span style={{fontSize:13,color:'var(--muted)'}}>{personnel.length} functies · {fmt(planned)} werk · {fmt(travel)} reis {expanded?'▴':'▾'}</span>
@@ -48,9 +61,9 @@ export default function BillingHours({id,lines,canManage,onChange}:{id:string;li
       {groups.map(([group,items])=><div key={group} style={{marginTop:14}}>
         <strong style={{display:'block',marginBottom:8,fontSize:13}}>{group}</strong>
         <div style={{overflowX:'auto',maxWidth:'100%'}}>
-          <div style={{minWidth:950}}>
-            <div style={{display:'grid',gridTemplateColumns:columns,gap:12,padding:'8px 2px',fontSize:11,color:'var(--muted)',borderBottom:'1px solid var(--border,#ddd)'}}>
-              <span>Functie</span><span>Aantal</span><span>Tijd</span><span>Werk plan</span><span>Reistijd</span><span>Geregistreerd</span><span>Verschil</span><span>€ / uur</span><span>Totaal</span>
+          <div style={{minWidth:0}}>
+            <div style={{display:'grid',gridTemplateColumns:columns,gap:5,padding:'8px 2px',fontSize:11,color:'var(--muted)',borderBottom:'1px solid var(--border,#ddd)'}}>
+              <span>Functie</span><span>Aantal</span><span>Tijd</span><span>Werkuren</span><span>Reisuren</span><span>Gereg.</span><span>Verschil</span><span>€ / uur</span><span>Totaal</span>
             </div>
             {items.map(row=>{
               const sheets=mapped.filter(sheet=>sheet.functionId===row.id);
@@ -61,12 +74,12 @@ export default function BillingHours({id,lines,canManage,onChange}:{id:string;li
               return <div key={row.id} style={{borderBottom:'1px solid var(--border,#ddd)'}}>
                 <div style={{display:'grid',gridTemplateColumns:columns,gap:5,padding:'10px 2px',fontSize:12,alignItems:'center'}}>
                   <span style={{fontWeight:600}} title={row.priceRateRef ? 'Rentman tarief: '+row.priceRateRef : 'Geen Rentman-tarief gekoppeld'}>{row.name}{!row.priceRateRef && <span style={{color:'var(--muted)',fontWeight:400}}> · tarief ontbreekt</span>}</span><span>{row.amount}×</span><span>{clock(row.startsAt)}–{clock(row.endsAt)}</span>
-                  <strong>{row.plannedHours===null?'—':fmt(row.plannedHours)}</strong>
-                  <span title={'Heen: '+fmt(row.plannedTravelOutHours)+' · Terug: '+fmt(row.plannedTravelBackHours)}>{fmt(row.plannedTravelOutHours+row.plannedTravelBackHours)}</span>
+                  <input className="input" aria-label={'Werkuren '+row.name} type="number" min="0" step="any" disabled={!canManage} value={workHours(row)} onChange={event=>edit(row,'work',Math.max(0,Number(event.target.value)||0))} style={{width:'100%',minWidth:0,padding:4,fontSize:11}}/>
+                  <input className="input" aria-label={'Reisuren '+row.name} title={'Heen: '+fmt(row.plannedTravelOutHours)+' · Terug: '+fmt(row.plannedTravelBackHours)} type="number" min="0" step="any" disabled={!canManage} value={travelHours(row)} onChange={event=>edit(row,'travel',Math.max(0,Number(event.target.value)||0))} style={{width:'100%',minWidth:0,padding:4,fontSize:11}}/>
                   <span>{sheets.length?fmt(worked):'—'}</span>
                   <strong title={isComplete?'Verschil met volledige planning':'Voorlopig verschil voor ingediende sheets'}>{difference===null?'—':(difference>0?'+':'')+fmt(difference)+(isComplete?'':' *')}</strong>
-                  <input className="input" aria-label={'Uurtarief '+row.name} type="number" min="0" step="0.01" disabled={!canManage} value={getRate(row)??''} placeholder="Tarief ontbreekt" onChange={event=>setRate(row,Math.max(0,Number(event.target.value)||0))} style={{width:'100%',minWidth:0,padding:5}}/>
-                  <strong>{getRate(row)===null||row.plannedHours===null?'—':euro(getRate(row)!*row.plannedHours)}</strong>
+                  <input className="input" aria-label={'Uurtarief '+row.name} type="number" min="0" step="0.01" disabled={!canManage} value={getRate(row)??''} placeholder="Tarief ontbreekt" onChange={event=>edit(row,'rate',Math.max(0,Number(event.target.value)||0))} style={{width:'100%',minWidth:0,padding:5}}/>
+                  <strong title={'Werk: '+euro(workHours(row)*(getRate(row)??0))+' · Reis: '+euro(travelHours(row)*(getRate(row)??0))}>{getRate(row)===null?'—':euro((workHours(row)+travelHours(row))*getRate(row)!)}</strong>
                 </div>
                 {sheets.length>0 && <details style={{fontSize:12,padding:'0 4px 8px'}}><summary style={{cursor:'pointer',color:'var(--muted)'}}>{sheets.length} {sheets.length===1?'registratie':'registraties'} bekijken{!isComplete?' · verschil voorlopig':''}</summary>
                   {sheets.map(sheet=><div key={sheet.id} style={{display:'flex',justifyContent:'space-between',padding:'5px 8px'}}><span><strong>{sheet.crewMemberName || 'Onbekende medewerker'}</strong> · {clock(sheet.workStartedAt)}–{clock(sheet.workEndedAt)}</span><strong>{sheet.hours===null?'—':fmt(sheet.hours)}</strong></div>)}
