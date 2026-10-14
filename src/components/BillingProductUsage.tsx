@@ -19,6 +19,7 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
  const [products, setProducts] = useState<Product[]>([]);
  const [mode, setMode] = useState<Mode>('sets');
  const [openFolders, setOpenFolders] = useState<string[]>([]);
+ const [openSections, setOpenSections] = useState<Section[]>(['consumption']);
  const [message, setMessage] = useState('');
  const [warning, setWarning] = useState('');
  const [loading, setLoading] = useState(true);
@@ -107,12 +108,12 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Wijzigingen opslaan'}</button>}
    </div>
   </div>
-  {grouped.map(section => <details key={section.key} className="card" style={{padding:0,minWidth:0}} open={undefined}>
-   <summary style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left',listStyle:'none'}}>
+  {grouped.map(section => <section key={section.key} className="card" style={{padding:0,minWidth:0}}>
+   <button type="button" aria-expanded={openSections.includes(section.key)} onClick={() => setOpenSections(current => current.includes(section.key) ? current.filter(k => k !== section.key) : [...current,section.key])} style={{display:'flex',width:'100%',justifyContent:'space-between',alignItems:'center',gap:12,background:'transparent',padding:'16px 18px',cursor:'pointer',textAlign:'left',border:0}}>
     <span style={{display:'grid',gap:3}}><strong style={{fontSize:15}}>{section.label} <span style={{fontSize:12,color:'var(--muted)',fontWeight:400}}>({section.items.length})</span></strong><span style={{fontSize:12,color:'var(--muted)'}}>{section.detail}</span></span>
-    <span style={{display:'flex',alignItems:'center',gap:14,whiteSpace:'nowrap'}}><strong style={{fontSize:15}}>{money(section.total)}</strong><span aria-hidden="true">▾</span></span>
-   </summary>
-   <div style={{borderTop:border,padding:'14px 18px'}}>
+    <span style={{display:'flex',alignItems:'center',gap:14,whiteSpace:'nowrap'}}><strong style={{fontSize:15}}>{money(section.total)}</strong><span aria-hidden="true">{openSections.includes(section.key) ? "▴" : "▾"}</span></span>
+   </button>
+   {openSections.includes(section.key) && <div style={{borderTop:border,padding:'14px 18px'}}>
     {section.key === 'consumption' && <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',paddingBottom:14}}>
      <span style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>Berekeningswijze</span>
      <div style={{display:'flex',border,borderRadius:9,overflow:'hidden'}}>
@@ -152,8 +153,8 @@ export default function BillingProductUsage({ id, canManage, locked }: { id: str
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap',marginTop:12,fontSize:12,color:'var(--muted)'}}>
      <span>{section.missing} prijzen te controleren</span><span>{section.items.length} regels · {money(section.total)}</span>
     </div>
-   </div>
-  </details>)}
+   </div>}
+  </section>)}
   {message && <div role="status" aria-live="polite" style={{fontSize:12,color:'var(--muted)'}}>{message}</div>}
  </div>;
 }
