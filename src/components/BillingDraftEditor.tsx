@@ -36,7 +36,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         kilometers:(hours.vehicleTrips||[]).reduce((s:number,r:{kilometers?:number})=>s+(r.kilometers||0),0),
         vehicles:rows.filter(isVehicle).length,
         products:products.filter((p:{excluded?:boolean})=>!p.excluded).length,
-        productTotal:products.reduce((s:number,p:{quantity:number;unitPrice:number|null;factor?:number;discount?:number;excluded?:boolean})=>s+(p.excluded?0:Math.round(p.quantity*(p.unitPrice||0)*(p.factor??1)*(1-(p.discount??0)/100)*100)/100),0)
+        productTotal:products.reduce((s:number,p:{quantity:number;unitPrice:number|null;factor?:number;discount?:number;excluded?:boolean})=>s+(p.excluded?0:Math.round(p.quantity*(p.unitPrice||0)*((p.section==='rental'||p.section==='external_rental')?(p.factor??1):1)*(1-(p.discount??0)/100)*100)/100),0)
       });
     });
     return ()=>{active=false};
@@ -115,7 +115,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     } catch (e) { setState('Opslaan mislukt: ' + (e instanceof Error ? e.message : 'Onbekende fout')); }
     finally { setSaving(false); }
   }
-  return <main className="container" style={{ maxWidth: 1600, paddingBottom: 60, width: '100%' }}>
+  return <main className="container" style={{ maxWidth: 1180, paddingBottom: 60, width: '100%', minWidth: 0, marginInline: 'auto' }}>
     <Link href="/planning/billing">← Terug naar facturatie</Link>
     <h1 style={{ fontSize: 32, margin: '12px 0' }}>Projectafrekening</h1>
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
@@ -124,7 +124,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       <nav aria-label="Projectafrekening navigatie" style={{display:'flex',flexWrap:'wrap',width:'fit-content',margin:'20px 0',border:'1px solid var(--border,#ddd)',borderRadius:10,overflow:'hidden'}}>
        {([{id:'overzicht',label:'Overzicht'},{id:'personeel',label:'Personeel'},{id:'transport',label:'Transport'},{id:'materiaal',label:'Materiaal'},{id:'overig',label:'Overig'}]).map(tab=><button key={tab.id} type="button" onClick={()=>navigate(tab.id)} style={{padding:'11px 18px',border:0,borderRight:'1px solid var(--border,#ddd)',background:activeTab===tab.id?'#262626':'transparent',color:activeTab===tab.id?'#fff':'inherit',cursor:'pointer',fontSize:13}}>{tab.label}</button>)}
       </nav>
-      <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(300px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
+      <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(250px, 290px)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
       <div id="billing-overzicht" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(165px,1fr))',gap:12,marginBottom:16}}>
        {([{label:'Personeel',value:summary.hours.toLocaleString('nl-NL',{maximumFractionDigits:2})+' u',detail:summary.functions+' functies',tab:'personeel'},{label:'Transport',value:summary.kilometers.toLocaleString('nl-NL')+' km',detail:summary.vehicles+' voertuigen',tab:'transport'},{label:'Materiaal',value:money(summary.productTotal),detail:summary.products+' artikelen',tab:'materiaal'},{label:'Factuurregels',value:money(totals.net),detail:'Overige regels excl. btw',tab:'overig'}]).map(card=><button key={card.tab} type="button" className="card" onClick={()=>navigate(card.tab)} style={{padding:16,textAlign:'left',cursor:'pointer',minWidth:0}}><span style={{fontSize:12,color:'var(--muted)',display:'block',marginBottom:10}}>{card.label} ↗</span><strong style={{fontSize:21,display:'block'}}>{card.value}</strong><span style={{fontSize:12,color:'var(--muted)',display:'block',marginTop:5}}>{card.detail}</span></button>)}
       </div>
