@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
-type HourRow = { id:number; type:string|null; name:string; group:string; startsAt:string|null; endsAt:string|null; amount:number; plannedHours:number|null; plannedTravelOutHours:number; plannedTravelBackHours:number; priceRateRef?:string|null; priceTravel?:number|null; priceOther?:number|null };
+type HourRow = { id:number; type:string|null; name:string; group:string; startsAt:string|null; endsAt:string|null; amount:number; plannedHours:number|null; plannedTravelOutHours:number; plannedTravelBackHours:number; priceRateRef?:string|null; priceTravel?:number|null; priceOther?:number|null; priceRate?:{name:string}|null };
 type Recorded = { id:string; functionId:number|null; workStartedAt:string; workEndedAt:string; hours:number|null; status:string; crewMemberName:string };
 const fmt = (n:number) => n.toLocaleString('nl-NL',{maximumFractionDigits:2}) + ' u';
 const clock = (value:string|null) => value ? new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit'}).format(new Date(value)) : '—';
-export default function BillingHours({id}:{id:string}) {
+type InvoiceLine = {description:string;quantity:number;unitPrice:number;vatRate:number};
+const euro=(value:number)=>new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'}).format(value);
+const hourly=(name:string|undefined):number|null=>{const match=name?.match(/€\s*([0-9]+(?:[.,][0-9]+)?)\s*\/\s*u/i);return match?Number(match[1].replace(',','.')):null;};
+export default function BillingHours({id,lines,canManage,onChange}:{id:string;lines:InvoiceLine[];canManage:boolean;onChange:(lines:InvoiceLine[])=>void}) {
   const [rows,setRows] = useState<HourRow[]>([]);
   const [recorded,setRecorded] = useState<Recorded[]>([]);
   const [assignedCount,setAssignedCount] = useState(0);
@@ -20,7 +23,7 @@ export default function BillingHours({id}:{id:string}) {
       .catch(error => {if(active)setStatus('Uren ophalen mislukt: '+error.message);});
     return () => {active=false;};
   },[id]);
-  const personnel = rows.filter(row => row.type !== 'vehicle_function' && !/^(bakwagen|bestelbus|bestelauto|transport bestelbus|transport bakwagen|vrachtwagen|auto\\b)/i.test(row.name));
+  const personnel = rows.filter(row => row.type !== 'vehicle_function' && row.type !== 'transport_function' && !/^(bakwagen|bestelbus|bestelauto|transport bestelbus|transport bakwagen|vrachtwagen|auto\\b)/i.test(row.name));
   const planned = personnel.reduce((sum,row)=>sum+(row.plannedHours || 0),0);
   const travel = personnel.reduce((sum,row)=>sum+row.plannedTravelOutHours+row.plannedTravelBackHours,0);
   const registered = recorded.reduce((sum,row)=>sum+(row.hours || 0),0);
@@ -28,7 +31,10 @@ export default function BillingHours({id}:{id:string}) {
   const unlinked = recorded.filter(sheet=>!personnel.some(row=>row.id===sheet.functionId));
   const groups: [string,HourRow[]][] = [['Alle functies',personnel]];
   const complete = assignedCount > 0 && recorded.length >= assignedCount && unlinked.length === 0 && recorded.every(sheet=>sheet.hours !== null);
-  const columns = 'minmax(190px,2fr) 65px 115px 100px 95px 105px 90px';
+  const columns = 'minmax(160px,2fr) 55px 100px 85px 80px 85px 70px 90px 105px';
+  const rateKey=(id:number)=>'Rentman personeel #'+id;
+  const getRate=(row:HourRow)=>lines.find(line=>line.description===rateKey(row.id))?.unitPrice ?? hourly(row.priceRate?.name);
+  const setRate=(row:HourRow,value:number)=>onChange([...lines.filter(line=>line.description!==rateKey(row.id)),{description:rateKey(row.id),quantity:row.plannedHours??0,unitPrice:value,vatRate:21}]);
   return <section className="card" style={{padding:20,marginBottom:14,minWidth:0}}>
     <button type="button" onClick={()=>setExpanded(value=>!value)} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8,background:'transparent',border:0,padding:4,cursor:'pointer',textAlign:'left'}}>
       <strong style={{fontSize:17}}>Personeel & uren</strong><span style={{fontSize:13,color:'var(--muted)'}}>{personnel.length} functies · {fmt(planned)} werk · {fmt(travel)} reis {expanded?'▴':'▾'}</span>
@@ -42,9 +48,9 @@ export default function BillingHours({id}:{id:string}) {
       {groups.map(([group,items])=><div key={group} style={{marginTop:14}}>
         <strong style={{display:'block',marginBottom:8,fontSize:13}}>{group}</strong>
         <div style={{overflowX:'auto',maxWidth:'100%'}}>
-          <div style={{minWidth:750}}>
+          <div style={{minWidth:950}}>
             <div style={{display:'grid',gridTemplateColumns:columns,gap:12,padding:'8px 2px',fontSize:11,color:'var(--muted)',borderBottom:'1px solid var(--border,#ddd)'}}>
-              <span>Functie</span><span>Aantal</span><span>Tijd</span><span>Werk plan</span><span>Reistijd</span><span>Geregistreerd</span><span>Verschil</span>
+              <span>Functie</span><span>Aantal</span><span>Tijd</span><span>Werk plan</span><span>Reistijd</span><span>Geregistreerd</span><span>Verschil</span><span>€ / uur</span><span>Totaal</span>
             </div>
             {items.map(row=>{
               const sheets=mapped.filter(sheet=>sheet.functionId===row.id);
@@ -59,6 +65,8 @@ export default function BillingHours({id}:{id:string}) {
                   <span title={'Heen: '+fmt(row.plannedTravelOutHours)+' · Terug: '+fmt(row.plannedTravelBackHours)}>{fmt(row.plannedTravelOutHours+row.plannedTravelBackHours)}</span>
                   <span>{sheets.length?fmt(worked):'—'}</span>
                   <strong title={isComplete?'Verschil met volledige planning':'Voorlopig verschil voor ingediende sheets'}>{difference===null?'—':(difference>0?'+':'')+fmt(difference)+(isComplete?'':' *')}</strong>
+                  <input className="input" aria-label={'Uurtarief '+row.name} type="number" min="0" step="0.01" disabled={!canManage} value={getRate(row)??''} placeholder="Tarief ontbreekt" onChange={event=>setRate(row,Math.max(0,Number(event.target.value)||0))} style={{width:'100%',minWidth:0,padding:5}}/>
+                  <strong>{getRate(row)===null||row.plannedHours===null?'—':euro(getRate(row)!*row.plannedHours)}</strong>
                 </div>
                 {sheets.length>0 && <details style={{fontSize:12,padding:'0 4px 8px'}}><summary style={{cursor:'pointer',color:'var(--muted)'}}>{sheets.length} {sheets.length===1?'registratie':'registraties'} bekijken{!isComplete?' · verschil voorlopig':''}</summary>
                   {sheets.map(sheet=><div key={sheet.id} style={{display:'flex',justifyContent:'space-between',padding:'5px 8px'}}><span><strong>{sheet.crewMemberName || 'Onbekende medewerker'}</strong> · {clock(sheet.workStartedAt)}–{clock(sheet.workEndedAt)}</span><strong>{sheet.hours===null?'—':fmt(sheet.hours)}</strong></div>)}
