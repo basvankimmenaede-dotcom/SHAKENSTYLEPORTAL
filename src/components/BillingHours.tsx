@@ -28,7 +28,7 @@ export default function BillingHours({id}:{id:string}) {
   const unlinked = recorded.filter(sheet=>!personnel.some(row=>row.id===sheet.functionId));
   const groups = Object.entries(personnel.reduce<Record<string,HourRow[]>>((acc,row)=>{(acc[row.group || 'Overig'] ??= []).push(row);return acc;},{}));
   const complete = assignedCount > 0 && recorded.length >= assignedCount && unlinked.length === 0 && recorded.every(sheet=>sheet.hours !== null);
-  const columns = 'minmax(150px,2fr) 48px 110px 76px 72px 72px 82px 78px';
+  const columns = 'minmax(105px,1.7fr) 45px minmax(90px,1.2fr) 72px 72px 72px 66px';
   return <section className="card" style={{padding:14,marginBottom:10,minWidth:0}}>
     <button type="button" onClick={()=>setExpanded(value=>!value)} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8,background:'transparent',border:0,padding:4,cursor:'pointer',textAlign:'left'}}>
       <strong>Personeel & uren</strong><span style={{fontSize:13,color:'var(--muted)'}}>{personnel.length} functies · {fmt(planned)} werk · {fmt(travel)} reis {expanded?'▴':'▾'}</span>
@@ -42,9 +42,9 @@ export default function BillingHours({id}:{id:string}) {
       {groups.map(([group,items])=><div key={group} style={{marginTop:14}}>
         <strong style={{display:'block',marginBottom:8,fontSize:13}}>{group}</strong>
         <div style={{overflowX:'auto',maxWidth:'100%'}}>
-          <div style={{minWidth:760}}>
-            <div style={{display:'grid',gridTemplateColumns:columns,gap:8,padding:'8px 4px',fontSize:11,color:'var(--muted)',borderBottom:'1px solid var(--border,#ddd)'}}>
-              <span>Functie</span><span>Aantal</span><span>Tijd</span><span>Werk plan</span><span>Reis heen</span><span>Reis terug</span><span>Werk echt</span><span>Verschil</span>
+          <div style={{minWidth:0}}>
+            <div style={{display:'grid',gridTemplateColumns:columns,gap:5,padding:'8px 2px',fontSize:11,color:'var(--muted)',borderBottom:'1px solid var(--border,#ddd)'}}>
+              <span>Functie</span><span>Aantal</span><span>Tijd</span><span>Werk plan</span><span>Reistijd</span><span>Werk echt</span><span>Verschil</span>
             </div>
             {items.map(row=>{
               const sheets=mapped.filter(sheet=>sheet.functionId===row.id);
@@ -52,10 +52,10 @@ export default function BillingHours({id}:{id:string}) {
               const isComplete=sheets.length>=row.amount && sheets.every(sheet=>sheet.hours !== null);
               const difference=isComplete && row.plannedHours !== null ? worked-row.plannedHours : null;
               return <div key={row.id} style={{borderBottom:'1px solid var(--border,#ddd)'}}>
-                <div style={{display:'grid',gridTemplateColumns:columns,gap:8,padding:'10px 4px',fontSize:12,alignItems:'center'}}>
+                <div style={{display:'grid',gridTemplateColumns:columns,gap:5,padding:'10px 2px',fontSize:12,alignItems:'center'}}>
                   <span style={{fontWeight:600}}>{row.name}</span><span>{row.amount}×</span><span>{clock(row.startsAt)}–{clock(row.endsAt)}</span>
                   <strong>{row.plannedHours===null?'—':fmt(row.plannedHours)}</strong>
-                  <span>{fmt(row.plannedTravelOutHours)}</span><span>{fmt(row.plannedTravelBackHours)}</span>
+                  <span title={'Heen: '+fmt(row.plannedTravelOutHours)+' · Terug: '+fmt(row.plannedTravelBackHours)}>{fmt(row.plannedTravelOutHours+row.plannedTravelBackHours)}</span>
                   <span>{sheets.length?fmt(worked):'—'}</span>
                   <strong>{difference===null?'—':(difference>0?'+':'')+fmt(difference)}</strong>
                 </div>
