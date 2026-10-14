@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 
 export type TransportLine = { description: string; quantity: number; unitPrice: number; vatRate: number };
-type VehicleTrip = {id:number; name:string; direction:string|null; legs:number|null; kilometers:number|null};
+type VehicleTrip = {id:number;functionId:number|null; name:string; direction:string|null; legs:number|null; kilometers:number|null};
 type Vehicle = { id: number; name: string; amount: number; rateName: string | null; fixedFromRentman: number | null };
 const money = (value: number) => value.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
 const rateFromName = (name: string | null) => { const amounts = [...(name ?? '').matchAll(/€\s*([0-9]+(?:[.,][0-9]+)?)/g)].map(m => Number(m[1].replace(',', '.'))); return amounts.length >= 2 ? { km: amounts[0], fixed: amounts[1] } : null; };
@@ -33,8 +33,7 @@ export default function BillingTransport({ id, lines, canManage, onChange }: {
   const totalKm = vehicleTrips.reduce((sum, trip) => sum + (trip.kilometers ?? 0), 0);
   const unknownTrips = vehicleTrips.filter(trip => trip.kilometers === null).length;
   const plannedRows = planned.map(vehicle => {
-    const a = vehicle.name.toLowerCase();
-    const matches = vehicleTrips.filter(trip => { const b = trip.name.toLowerCase(); return b.includes(a) || a.includes(b) || (/bakwagen/.test(a) && /bakwagen/.test(b)) || (/bestelbus/.test(a) && /bestelbus/.test(b)); });
+    const matches = vehicleTrips.filter(trip => trip.functionId === vehicle.id);
     const initialKm = matches.length && matches.every(trip => trip.kilometers !== null) ? matches.reduce((sum, trip) => sum + (trip.kilometers ?? 0), 0) : null;
     const kmLine = override(vehicle.id, 'kilometers'), fixedLine = override(vehicle.id, 'vast');
     const km = kmLine?.quantity ?? initialKm, kmRate = kmLine?.unitPrice ?? vehicle.rate?.km ?? null, fixed = fixedLine?.unitPrice ?? vehicle.fixedFromRentman ?? vehicle.rate?.fixed ?? null, amount = fixedLine?.quantity ?? vehicle.amount;
