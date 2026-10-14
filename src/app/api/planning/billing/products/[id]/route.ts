@@ -141,7 +141,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (Array.isArray(saved) && mode === savedMode) {
       const merged = saved.map((p: Product) => {
         const live = byId.get(p.id);
-        return live ? { ...p, name: live.name, quantity: p.quantity, factor: p.factor ?? live.factor, discount: p.discount ?? live.discount, unit: live.unit, section: live.section, category: live.category, folderPath: live.folderPath, unitPrice: p.unitPrice ?? live.unitPrice } : p.source === 'manual' ? p : null;
+        return live ? { ...p, name: live.name, quantity: p.quantity, factor: p.factor ?? live.factor, discount: p.discount ?? live.discount, unit: live.unit, section: live.section, category: live.category, folderPath: live.folderPath, unitPrice: p.unitPrice } : p.source === 'manual' ? p : null;
       }).filter((p): p is Product => p !== null);
       for (const p of products) if (!merged.some((x: Product) => x.id === p.id)) merged.push(p);
       return NextResponse.json({ products: merged, source: 'saved', mode });
