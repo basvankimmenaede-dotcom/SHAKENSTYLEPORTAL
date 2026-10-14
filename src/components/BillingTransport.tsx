@@ -11,11 +11,13 @@ export default function BillingTransport({ id }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [oneWayKm, setOneWayKm] = useState<number | null>(null);
   useEffect(() => {
     let active = true;
     fetch('/api/planning/billing/hours/' + encodeURIComponent(id))
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Rentman niet beschikbaar')))
       .then(data => {
+        if (active) setOneWayKm(typeof data.rentmanOneWayKm === 'number' && Number.isFinite(data.rentmanOneWayKm) ? data.rentmanOneWayKm : null);
         if (active) setVehicles((data.rows || [])
           .filter((row: {type?: string; name: string}) => row.type === 'vehicle_function' || /bakwagen|bestelbus|bestelauto|vrachtwagen|transport/i.test(row.name))
           .map((row: Vehicle) => ({id: row.id, name: row.name, amount: row.amount})));
@@ -44,6 +46,7 @@ export default function BillingTransport({ id }: {
           {!planned.length && <p style={{fontSize:13,color:'var(--muted)'}}>Geen transport gepland in Rentman.</p>}
         </div>
       </div>
+      {oneWayKm !== null && <div style={{display:'flex',justifyContent:'space-between',gap:12,padding:'8px 0',borderTop:'1px solid var(--border,#ddd)'}}><span>Afstand volgens Rentman (retour)</span><strong>{(oneWayKm * 2).toLocaleString('nl-NL')} km</strong></div>}
       <div style={{textAlign:'right',marginTop:10}}><strong>Totaal: {money(total)}</strong></div>
     </div>}
   </section>;
