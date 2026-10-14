@@ -33,7 +33,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       const distance = typeof fn?.distance === 'number' ? fn.distance : null;
       const legs = fn?.twoway === true ? 2 : fn?.twoway === false ? 1 : null;
       const calculatedKm = distance !== null ? distance : legs !== null && oneWayKm !== null ? legs * oneWayKm : null;
-      return { id: vehicle.id, subprojectId, subprojectName: subproject?.name ?? null, name: vehicle.vehicle?.displayname || vehicle.vehicle?.name || vehicle.function?.displayname || 'Voertuig', direction: fn?.twoway === true ? 'round_trip' : fn?.twoway === false ? 'one_way' : null, legs, kilometers: calculatedKm };
+      return { id: vehicle.id, functionId: fn?.id ?? vehicle.function?.id ?? null, subprojectId, subprojectName: subproject?.name ?? null, name: vehicle.vehicle?.displayname || vehicle.vehicle?.name || vehicle.function?.displayname || 'Voertuig', direction: fn?.twoway === true ? 'round_trip' : fn?.twoway === false ? 'one_way' : null, legs, kilometers: calculatedKm };
 
     });
     const functionByCrewId = new Map(projectCrew.map(crew => [crew.id, crew.function?.id ?? null]));
