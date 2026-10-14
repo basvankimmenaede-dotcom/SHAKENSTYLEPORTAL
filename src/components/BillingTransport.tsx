@@ -33,9 +33,10 @@ export default function BillingTransport({ id }: {
   const totalKm = vehicleTrips.reduce((sum, trip) => sum + (trip.kilometers ?? 0), 0);
   const unknownTrips = vehicleTrips.filter(trip => trip.kilometers === null).length;
   const total = planned.reduce((sum, vehicle) => sum + (vehicle.rate ?? 0) * vehicle.amount, 0);
+  const missingRates = planned.some(vehicle => vehicle.rate === null);
   return <section className="card" style={{padding:20,marginBottom:14,minWidth:0}}>
     <button type="button" onClick={() => setExpanded(value => !value)} style={{display:'flex',justifyContent:'space-between',width:'100%',background:'transparent',border:0,padding:4,cursor:'pointer',textAlign:'left'}}>
-      <strong style={{fontSize:17}}>Transport & logistiek ({planned.length})</strong><span>{money(total)} {expanded?'▴':'▾'}</span>
+      <strong style={{fontSize:17}}>Transport & logistiek ({planned.length})</strong><span>{missingRates ? 'Tarief ontbreekt' : money(total)} {expanded?'▴':'▾'}</span>
     </button>
     {expanded && <div style={{marginTop:12}}>
       <div style={{overflowX:'auto'}}>
@@ -75,7 +76,7 @@ export default function BillingTransport({ id }: {
         </div>)}
         <div style={{display:'flex',justifyContent:'space-between',gap:12,padding:'6px 0'}}><strong>{unknownTrips ? 'Bekende geplande kilometers' : 'Totaal geplande kilometers'}</strong><strong>{totalKm.toLocaleString('nl-NL')} km</strong></div>
       </div>}
-      <div style={{textAlign:'right',marginTop:10}}><strong>Totaal: {money(total)}</strong></div>
+      <div style={{textAlign:'right',marginTop:10}}><strong>{missingRates ? 'Totaal niet beschikbaar: Rentman-tarieven ophalen' : 'Totaal: ' + money(total)}</strong></div>
     </div>}
   </section>;
 }
