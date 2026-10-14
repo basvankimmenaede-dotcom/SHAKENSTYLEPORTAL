@@ -17,6 +17,32 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
   const [draft, setDraft] = useState<Draft>({ reference: '', customer_name: '', customer_email: '', customer_address: '', description: '', notes: '', lines: [blank()] });
   const [state, setState] = useState('Laden…');
   const [saving, setSaving] = useState(false);
+  const [activeTab,setActiveTab] = useState('overzicht');
+  const [summary,setSummary] = useState({hours:0,functions:0,kilometers:0,vehicles:0,products:0,productTotal:0});
+  useEffect(()=>{
+    let active=true;
+    Promise.allSettled([
+      fetch('/api/planning/billing/hours/'+encodeURIComponent(id)).then(r=>r.ok?r.json():Promise.reject()),
+      fetch('/api/planning/billing/products/'+encodeURIComponent(id)).then(r=>r.ok?r.json():Promise.reject())
+    ]).then(results=>{
+      if(!active)return;
+      const hours=results[0].status==='fulfilled'?results[0].value:{};
+      const products=results[1].status==='fulfilled'?(results[1].value.products||[]):[];
+      const rows=hours.rows||[];
+      const isVehicle=(r:{type?:string;name:string})=>r.type==='vehicle_function'||/bakwagen|bestelbus|bestelauto|vrachtwagen|transport/i.test(r.name);
+      setSummary({
+        hours:rows.filter((r:{type?:string;name:string})=>!isVehicle(r)).reduce((s:number,r:{plannedHours?:number})=>s+(r.plannedHours||0),0),
+        functions:rows.filter((r:{type?:string;name:string})=>!isVehicle(r)).length,
+        kilometers:(hours.vehicleTrips||[]).reduce((s:number,r:{kilometers?:number})=>s+(r.kilometers||0),0),
+        vehicles:rows.filter(isVehicle).length,
+        products:products.length,
+        productTotal:products.reduce((s:number,p:{quantity:number;unitPrice:number|null})=>s+p.quantity*(p.unitPrice||0),0)
+      });
+    });
+    return ()=>{active=false};
+  },[id]);
+  function navigate(tab:string){setActiveTab(tab);document.getElementById('billing-'+tab)?.scrollIntoView({behavior:'smooth',block:'start'});}
+
   useEffect(() => {
     let active = true;
     fetch('/api/planning/billing/drafts/' + encodeURIComponent(id))
@@ -55,16 +81,22 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     } catch (e) { setState('Opslaan mislukt: ' + (e instanceof Error ? e.message : 'Onbekende fout')); }
     finally { setSaving(false); }
   }
-  return <main className="container" style={{ maxWidth: 1600, paddingBottom: 60 }}>
+  return <main className="container" style={{ maxWidth: 1600, paddingBottom: 60, width: '100%' }}>
     <Link href="/planning/billing">← Terug naar facturatie</Link>
-    <h1 style={{ fontSize: 25, margin: '10px 0' }}>Projectafrekening</h1>
+    <h1 style={{ fontSize: 32, margin: '12px 0' }}>Projectafrekening</h1>
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
     {!item ? <p role="status">{state}</p> : <>
+      <nav aria-label="Projectafrekening navigatie" style={{display:'flex',flexWrap:'wrap',width:'fit-content',margin:'20px 0',border:'1px solid var(--border,#ddd)',borderRadius:10,overflow:'hidden'}}>
+       {([{id:'overzicht',label:'Overzicht'},{id:'personeel',label:'Personeel'},{id:'transport',label:'Transport'},{id:'materiaal',label:'Materiaal'},{id:'overig',label:'Overig'}]).map(tab=><button key={tab.id} type="button" onClick={()=>navigate(tab.id)} style={{padding:'11px 18px',border:0,borderRight:'1px solid var(--border,#ddd)',background:activeTab===tab.id?'#262626':'transparent',color:activeTab===tab.id?'#fff':'inherit',cursor:'pointer',fontSize:13}}>{tab.label}</button>)}
+      </nav>
       <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(300px, 1fr)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
-      <BillingHours id={id} />
-      <BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} />
-      <BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} />
-      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
+      <div id="billing-overzicht" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(165px,1fr))',gap:12,marginBottom:16}}>
+       {([{label:'Personeel',value:summary.hours.toLocaleString('nl-NL',{maximumFractionDigits:2})+' u',detail:summary.functions+' functies',tab:'personeel'},{label:'Transport',value:summary.kilometers.toLocaleString('nl-NL')+' km',detail:summary.vehicles+' voertuigen',tab:'transport'},{label:'Materiaal',value:money(summary.productTotal),detail:summary.products+' artikelen',tab:'materiaal'},{label:'Factuurregels',value:money(totals.net),detail:'Overige regels excl. btw',tab:'overig'}]).map(card=><button key={card.tab} type="button" className="card" onClick={()=>navigate(card.tab)} style={{padding:16,textAlign:'left',cursor:'pointer',minWidth:0}}><span style={{fontSize:12,color:'var(--muted)',display:'block',marginBottom:10}}>{card.label} ↗</span><strong style={{fontSize:21,display:'block'}}>{card.value}</strong><span style={{fontSize:12,color:'var(--muted)',display:'block',marginTop:5}}>{card.detail}</span></button>)}
+      </div>
+      <div id="billing-personeel"><BillingHours id={id} /></div>
+      <div id="billing-transport"><BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} /></div>
+      <div id="billing-materiaal"><BillingProductUsage id={id} canManage={canManage} locked={item.status === 'invoiced'} /></div>
+      <section id="billing-overig" className="card" style={{ padding: 16, marginBottom: 12 }}>
         <details><summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14, padding: "4px 0" }}>Overige factuurregels ({draft.lines.filter(l => l.description.trim() && !l.description.startsWith('[Transport] ')).length})</summary>
         {draft.lines.map((line, i) => line.description.startsWith('[Transport] ') ? null : <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 3fr) 85px 110px 95px auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
           <div className="field"><label>Omschrijving</label><input className="input" aria-label={'Omschrijving regel ' + (i + 1)} value={line.description} disabled={!canManage || item.status === 'invoiced'} onChange={e => changeLine(i, 'description', e.target.value)} /></div>
@@ -87,7 +119,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         <span role="status" aria-live="polite">{state}</span>
       </div>
       </div><aside style={{minWidth:0}}>      <section className="card" style={{ padding: 12, marginBottom: 10 }}>
-        <strong>Klant: {draft.customer_name || item.customer_name || "Onbekend"}</strong>
+        <h3 style={{margin:'0 0 14px'}}>Klant</h3><strong>{draft.customer_name || item.customer_name || 'Onbekend'}</strong><p style={{whiteSpace:'pre-line',fontSize:13,color:'var(--muted)'}}>{draft.customer_address}</p><p style={{fontSize:13,color:'var(--muted)'}}>{draft.customer_email}</p>
         <details style={{ marginTop: 8 }}><summary style={{ cursor: "pointer" }}>Factuurgegevens bewerken</summary>
         {([['customer_name', 'Klant'], ['customer_email', 'E-mailadres'], ['customer_address', 'Factuuradres'], ['reference', 'Referentie / PO-nummer'], ['description', 'Factuuromschrijving']] as const).map(([key, label]) =>
           <div className="field" key={key}><label htmlFor={key}>{label}</label>
