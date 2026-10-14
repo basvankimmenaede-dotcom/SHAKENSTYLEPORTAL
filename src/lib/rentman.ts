@@ -605,6 +605,7 @@ export type RentmanPlanningProjectVehicle = {
     usageperiod_end?: string | null;
     travel_time_before?: number | null;
     travel_time_after?: number | null;
+    distance?: number | null;
     twoway?: boolean | null;
     type?: string | null;
     group?: {
@@ -677,17 +678,21 @@ export type RentmanPlanningProjectFunction = {
   usageperiod_start?: string | null;
   usageperiod_end?: string | null;
   amount?: number | null;
+  travel_time_before?: number | null;
+  travel_time_after?: number | null;
+  distance?: number | null;
+  twoway?: boolean | null;
 };
 
 export async function getPlanningProjectFunctions() {
   return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
-    '/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&sort=-planperiod_start&limit=1500',
+    '/projectfunctions?fields=id,name,displayname,type,project,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount,travel_time_before,travel_time_after,distance,twoway&expand=group&sort=-planperiod_start&limit=1500',
   );
 }
 
 export async function getPlanningProjectFunctionsForProject(projectId: number) {
   return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
-    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&limit=300`,
+    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount,travel_time_before,travel_time_after,distance,twoway&expand=group&limit=300`,
   );
 }
 
