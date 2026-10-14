@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireModulePermission } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getPlanningProjectFunctionsForProject, getPlanningCrewAssignmentsForProject, getPlanningProjectVehiclesForProject, getPlanningProjects } from '@/lib/rentman';
+import { getPlanningProjectFunctionsForProject, getPlanningCrewAssignmentsForProject, getPlanningProjectVehiclesForProject, getPlanningSubprojectsForProject, getPlanningProjects } from '@/lib/rentman';
 export const runtime = 'nodejs';
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   await requireModulePermission('billing', 'view');
@@ -12,15 +12,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!item) return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 });
   if (!item.rentman_project_id) return NextResponse.json({ rows: [], warning: 'Geen Rentman-project gekoppeld' });
   try {
-    const [functions, projectCrew, projectVehicles, projects] = await Promise.all([getPlanningProjectFunctionsForProject(Number(item.rentman_project_id)), getPlanningCrewAssignmentsForProject(Number(item.rentman_project_id)), getPlanningProjectVehiclesForProject(Number(item.rentman_project_id)), getPlanningProjects()]);
+    const [functions, projectCrew, projectVehicles, subprojects, projects] = await Promise.all([getPlanningProjectFunctionsForProject(Number(item.rentman_project_id)), getPlanningCrewAssignmentsForProject(Number(item.rentman_project_id)), getPlanningProjectVehiclesForProject(Number(item.rentman_project_id)), getPlanningSubprojectsForProject(Number(item.rentman_project_id)), getPlanningProjects()]);
     const project = projects.allProjects.find(p => p.id === Number(item.rentman_project_id));
     const rentmanOneWayKm = typeof project?.location?.distance === 'number' ? project.location.distance : null;
+    const subprojectById = new Map(subprojects.map(subproject => [subproject.id, subproject]));
+    const parseSubprojectId = (value: unknown): number | null => {
+      if (typeof value === 'number') return Number.isSafeInteger(value) ? value : null;
+      if (typeof value === 'string') {
+        const match = value.match(/(?:^|\\/)(\\d+)$/);
+        return match ? Number(match[1]) : null;
+      }
+      return null;
+    };
     const vehicleTrips = projectVehicles.map(vehicle => {
+      const subprojectId = parseSubprojectId(vehicle.function?.subproject);
+      const subproject = subprojectId === null ? null : subprojectById.get(subprojectId);
+      const oneWayKm = subprojectId === null ? rentmanOneWayKm : typeof subproject?.location?.distance === 'number' ? subproject.location.distance : null;
       const transport = vehicle.transport;
       const outward = transport === 'round_trip' || transport === 'only_way_there';
       const returning = transport === 'round_trip' || transport === 'only_way_back';
       const legs = outward && returning ? 2 : outward || returning ? 1 : null;
-      return { id: vehicle.id, name: vehicle.vehicle?.displayname || vehicle.vehicle?.name || vehicle.function?.displayname || 'Voertuig', direction: transport, legs, kilometers: legs !== null && rentmanOneWayKm !== null ? Math.round(legs * rentmanOneWayKm * 100) / 100 : null };
+      return { id: vehicle.id, subprojectId, subprojectName: subproject?.name ?? null, name: vehicle.vehicle?.displayname || vehicle.vehicle?.name || vehicle.function?.displayname || 'Voertuig', direction: transport, legs, kilometers: legs !== null && oneWayKm !== null ? Math.round(legs * oneWayKm * 100) / 100 : null };
     });
     const functionByCrewId = new Map(projectCrew.map(crew => [crew.id, crew.function?.id ?? null]));
     const travelByFunction = new Map<number, {outboundMinutes:number;returnMinutes:number}>();
