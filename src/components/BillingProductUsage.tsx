@@ -161,7 +161,7 @@ const BillingProductUsage = forwardRef<BillingProductUsageHandle, { id: string; 
   </section>)}
   <div className="billing-product-actions" style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:12,flexWrap:'wrap',padding:'0 4px 8px'}}>
     {dirty && <span style={{fontSize:12,color:'var(--muted)'}}>Niet opgeslagen</span>}
-    {editable && <button type="button" className="button orange" disabled={!dirty || saving || loading} onClick={save}>{saving ? 'Opslaan…' : 'Productwijzigingen opslaan'}</button>}
+
   </div>
   {message && <div role="status" aria-live="polite" style={{fontSize:12,color:'var(--muted)'}}>{message}</div>}
  </div>;
