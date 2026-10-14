@@ -692,7 +692,7 @@ export async function getPlanningProjectFunctions() {
 
 export async function getPlanningProjectFunctionsForProject(projectId: number) {
   return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
-    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount,travel_time_before,travel_time_after,distance,twoway&expand=group&limit=300`,
+    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount,price_rate,price_travel,price_other,travel_time_before,travel_time_after,distance,twoway&expand=group&limit=300`,
   );
 }
 
