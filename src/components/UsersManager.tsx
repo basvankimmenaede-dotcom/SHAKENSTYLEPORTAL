@@ -325,6 +325,25 @@ export default function UsersManager({
             </div>
           </header>
 
+          <div className="usersUnifiedAdvanced">          <nav className="usersDetailTabs">
+            {([
+              ['general', 'Algemeen'],
+              ['rights', 'Rechten'],
+              ['portal', 'Klantenportaal'],
+              ['account', 'Account'],
+            ] as const).map(([key, label]) => (
+              <button
+                type="button"
+                className={tab === key ? 'active' : ''}
+                onClick={() => setTab(key)}
+                key={key}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+
+</div>
           {tab === 'general' ? (
             <div className="usersDetailPanel">
               <div className="usersDetailSectionHeader">
@@ -350,25 +369,6 @@ export default function UsersManager({
             </div>
           ) : null}
 
-          <div className="usersUnifiedAdvanced"><h3>Overige instellingen</h3>          <nav className="usersDetailTabs">
-            {([
-              ['general', 'Algemeen'],
-              ['rights', 'Rechten'],
-              ['portal', 'Klantenportaal'],
-              ['account', 'Account'],
-            ] as const).map(([key, label]) => (
-              <button
-                type="button"
-                className={tab === key ? 'active' : ''}
-                onClick={() => setTab(key)}
-                key={key}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-
-</div>
           {tab === 'rights' ? (
             <div className="usersDetailPanel">
               <div className="usersDetailSectionHeader">
