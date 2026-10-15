@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import CrewLogin from './ui/CrewLogin';
 import CrewDashboard from './ui/CrewDashboard';
 import {synchronizeCrewAssignments} from '@/lib/crew/synchronize-assignments';
-import {getPlanningProjects,getPlanningProjectFunctionsForProject} from '@/lib/rentman';
+import {getPlanningProjects,getPlanningProjectFunctionsForProject,getPlanningProjectFunctionsForRange,getPlanningCrewAssignmentsForRange} from '@/lib/rentman';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +46,21 @@ export default async function CrewPage() {
    const text=String(value).replace(/<br\s*\/?\s*>/gi,'\n').replace(/<\/(p|div|li)>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
    return text||null;
  };
+ // Crew can see open positions, but cannot book themselves into Rentman.
+ const localToday=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const [yy,mm,dd]=localToday.split('-').map(Number);
+ const endDate=new Date(Date.UTC(yy,mm-1,dd+30)).toISOString().slice(0,10);
+ const openShifts=await Promise.all([getPlanningProjectFunctionsForRange(localToday,endDate),getPlanningCrewAssignmentsForRange(localToday,endDate)]).then(([functions,crew])=>{
+  const filled=new Map<number,number>();
+  for(const item of crew){if(item.function?.id)filled.set(item.function.id,(filled.get(item.function.id)||0)+1);}
+  return functions.filter(fn=>fn.type==='crew_function').map(fn=>{
+   const needed=Math.max(0,Number(fn.amount||0));
+   const available=Math.max(0,needed-(filled.get(fn.id)||0));
+   const id=Number(fn.project?.split('/').pop());
+   const project=projectMap.get(id);
+   return {id:fn.id,projectName:project?.name||'',projectNumber:project?.number==null?'':String(project.number),functionName:fn.displayname||fn.name||'Crew',start:fn.planperiod_start||fn.usageperiod_start||'',end:fn.planperiod_end||fn.usageperiod_end||'',available};
+  }).filter(s=>s.available>0&&s.start&&s.end&&s.projectName).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,30);
+ }).catch(error=>{console.error('Crew open shifts could not be loaded',error);return [];});
  const linkedAssignments=(assignments||[]).map(a=>{
   const project=projectMap.get(Number(a.rentman_project_id));
   const location=project?.location;
@@ -70,5 +85,5 @@ export default async function CrewPage() {
    return Boolean(start&&start.slice(0,10)===a.starts_at.slice(0,10)&&fn.type!=='remark');
   }).map(fn=>({label:fn.displayname||fn.name||'Gepland onderdeel',start:fn.planperiod_start||fn.usageperiod_start||'',end:fn.planperiod_end||fn.usageperiod_end||''})).filter(fn=>fn.start&&fn.end).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,30)};
  });
- return <CrewDashboard memberName={member.full_name} assignments={linkedAssignments} reportsLoadError={Boolean(reportsError||assignmentsError)} />;
+ return <CrewDashboard memberName={member.full_name} assignments={linkedAssignments} openShifts={openShifts} reportsLoadError={Boolean(reportsError||assignmentsError)} />;
 }
