@@ -349,19 +349,21 @@ export default function UsersManager({
                 <div><h3>Basisgegevens</h3><p>Rol en organisatie bepalen de standaardtoegang van deze gebruiker.</p></div>
               </div>
 
-              <form action={saveUnifiedUser} key={selectedUser.id} className="usersProfilePanel" style={{maxWidth:'none'}}>
+              <form action={saveUnifiedUser} key={selectedUser.id} className="usersUnifiedForm">
                 <input type="hidden" name="user_id" value={selectedUser.id} />
-                <div className="field"><label>Weergavenaam</label><input className="input" name="full_name" defaultValue={selectedUser.fullName || ''} /></div>
-                <div className="field"><label>E-mailadres</label><input className="input" value={selectedUser.email} readOnly /></div>
-                <div className="field"><label>Organisatie</label><select className="select" name="distributor_id" defaultValue={selectedUser.distributorId ?? ''}><option value="">Geen organisatie</option>{distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
-                <div className="field"><label>Rollen & toegang</label>
-                  <p className="muted">Crew is apart instelbaar. Customer, Magazijn en Admin zijn exclusief om klantgegevens afgeschermd te houden.</p>
-                  <div style={{display:'grid',gap:10,marginTop:12}}>
-                    <label className="usersBrandOption"><span><strong>Crew</strong><small>{selectedUser.crewMember?.rentmanCrewId ? 'Rentman medewerker #' + selectedUser.crewMember.rentmanCrewId : 'Geen Rentman-koppeling'}</small></span><input type="checkbox" name="crew_enabled" defaultChecked={Boolean(selectedUser.crewMember?.active)} disabled={!selectedUser.crewMember?.rentmanCrewId} /></label>
-                    {(['customer','warehouse','admin'] as const).map(role => <label className="usersBrandOption" key={role}><span><strong>{role === 'customer' ? 'Customer' : role === 'warehouse' ? 'Magazijn' : 'Admin'}</strong></span><input type="radio" name="role" value={role} defaultChecked={selectedUser.role === role} required /></label>)}
-                  </div>
+                <input type="hidden" name="role" value={editRole ?? selectedUser.role} />
+                <div className="usersUnifiedFields">
+                  <div className="field"><label>Naam</label><input className="input" name="full_name" defaultValue={selectedUser.fullName || ''} /></div>
+                  <div className="field"><label>E-mailadres</label><input className="input" value={selectedUser.email} readOnly /></div>
+                  <div className="field"><label>Organisatie</label><select className="select" name="distributor_id" defaultValue={selectedUser.distributorId ?? ''}><option value="">Geen organisatie</option>{distributors.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
                 </div>
-                <div className="usersPanelFooter"><button className="button orange" type="submit">Wijzigingen opslaan</button></div>
+                <h3>Rollen & toegang</h3>
+                <p className="muted">Crew is aanvullend. Customer, Magazijn en Admin zijn exclusief om klantgegevens afgeschermd te houden.</p>
+                <div className="usersUnifiedRoles">
+                  <label className="usersUnifiedRole"><span><strong>Crew</strong><small>{selectedUser.crewMember?.rentmanCrewId ? 'Rentman medewerker #' + selectedUser.crewMember.rentmanCrewId : 'Rentman-koppeling vereist'}</small></span><input className="usersToggle" type="checkbox" name="crew_enabled" defaultChecked={Boolean(selectedUser.crewMember?.active)} disabled={!selectedUser.crewMember?.rentmanCrewId} /></label>
+                  {(['customer','warehouse','admin'] as const).map(role=><label className="usersUnifiedRole" key={role}><span><strong>{role==='customer'?'Customer':role==='warehouse'?'Magazijn':'Admin'}</strong></span><input className="usersToggle" type="checkbox" checked={(editRole??selectedUser.role)===role} onChange={checked=>{if(checked)setEditRole(role);}} /></label>)}
+                </div>
+                <div className="usersUnifiedFooter"><button className="button orange" type="submit">Wijzigingen opslaan</button></div>
               </form>
             </div>
           ) : null}
