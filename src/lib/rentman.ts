@@ -367,6 +367,7 @@ export type RentmanPlanningProject = {
     email?: string;
   } | null;
   customer?: { displayname?: string; name?: string } | null;
+  cust_contact?: { displayname?: string; firstname?: string; middle_name?: string; lastname?: string } | null;
   project_type?: { id?: number; displayname?: string; name?: string; color?: string } | null;
   custom?: Record<string, unknown>;
   is_cancelled?: boolean;
@@ -414,8 +415,8 @@ function overlapsDate(project: RentmanPlanningProject, dateKey: string) {
 
 export async function getPlanningProjects() {
   const params = new URLSearchParams({
-    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,loc_contact,customer,project_type,custom',
-    expand: 'location,loc_contact,customer,project_type',
+    fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,loc_contact,customer,cust_contact,project_type,custom',
+    expand: 'location,loc_contact,customer,cust_contact,project_type',
     sort: '-id',
     limit: '500',
   });
