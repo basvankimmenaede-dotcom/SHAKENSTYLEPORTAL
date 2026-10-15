@@ -452,7 +452,7 @@ export default function UsersManager({
               </div>
 
               <div className="usersAccountGrid">
-                <form action={setUserPassword} className="usersAccountPanel">
+                <form action={async (formData: FormData) => { await setUserPassword(formData); }} className="usersAccountPanel">
                   <input type="hidden" name="user_id" value={selectedUser.id} />
                   <div><strong>Wachtwoord wijzigen</strong><p>Stel direct een nieuw wachtwoord in.</p></div>
                   <div className="field"><label>Nieuw wachtwoord</label><input name="password" className="input" type="password" minLength={8} autoComplete="new-password" required /></div>
