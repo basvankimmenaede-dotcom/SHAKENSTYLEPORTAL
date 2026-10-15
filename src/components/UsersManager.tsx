@@ -116,6 +116,7 @@ export default function UsersManager({
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'invited' | 'inactive'>('all');
   const [tab, setTab] = useState<'general' | 'rights' | 'portal' | 'account'>('general');
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [editRole, setEditRole] = useState<'customer' | 'warehouse' | 'admin' | null>(null);
   const [inviteRole, setInviteRole] = useState<'customer' | 'warehouse' | 'admin'>('customer');
   const [accountMessage, setAccountMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [accountPending, startAccountTransition] = useTransition();
@@ -247,34 +248,13 @@ export default function UsersManager({
         </div>
       ) : null}
 
-      <section className="usersMetricGrid">
-        <div className="usersMetricCard"><span>Totaal</span><strong>{counts.total}</strong><small>gebruikers</small></div>
-        <div className="usersMetricCard active"><span>Actief</span><strong>{counts.active}</strong><small>kunnen inloggen</small></div>
-        <div className="usersMetricCard invited"><span>Uitgenodigd</span><strong>{counts.invited}</strong><small>activatie open</small></div>
-        <div className="usersMetricCard inactive"><span>Inactief</span><strong>{counts.inactive}</strong><small>nog niet actief</small></div>
-      </section>
-
       <section className="usersWorkspace">
         <aside className="usersDirectory">
-          <div className="usersDirectoryTabs">
-            {([
-              ['all', 'Alle', counts.total],
-              ['active', 'Actief', counts.active],
-              ['invited', 'Uitgenodigd', counts.invited],
-              ['inactive', 'Inactief', counts.inactive],
-            ] as const).map(([key, label, count]) => (
-              <button
-                type="button"
-                className={statusFilter === key ? 'active' : ''}
-                onClick={() => setStatusFilter(key)}
-                key={key}
-              >
-                {label} <b>{count}</b>
-              </button>
+          <div className="usersDirectoryTabs usersRoleFilterTabs">
+            {([['all','Alle'],['crew','Crew'],['customer','Klanten'],['warehouse','Magazijn'],['admin','Admins']] as const).map(([value,label]) => (
+              <button key={value} type="button" className={roleFilter===value?'active':''} onClick={()=>setRoleFilter(value)}>{label}</button>
             ))}
           </div>
-
-          <div style={{padding:"8px 12px"}}><select className="select" aria-label="Filter op type account" value={roleFilter} onChange={event=>setRoleFilter(event.target.value as typeof roleFilter)} style={{width:"100%",fontSize:12}}><option value="all">Alle accounts</option><option value="crew">Crew</option><option value="warehouse">Magazijn</option><option value="customer">Klanten</option><option value="admin">Beheerders</option></select></div>
           <div className="usersDirectorySearch">
             <span>⌕</span>
             <input
@@ -294,6 +274,7 @@ export default function UsersManager({
                   className={user.id === selectedUser.id ? 'usersDirectoryRow active' : 'usersDirectoryRow'}
                   onClick={() => {
                     setSelectedUserId(user.id);
+                    setEditRole(null);
                     setTab('general');
                     setAccountMessage(null);
                   }}
