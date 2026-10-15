@@ -303,11 +303,13 @@ export default function UsersManager({
                     <strong>{user.fullName?.replace(/@shakenstyle\.com$/i, '') || user.email.split('@')[0]}</strong>
                     <small>{user.email}</small>
                   </span>
-                  {user.crewMember && <span className="usersRoleBadge">Crew</span>}
-                  <span className={`usersRoleBadge ${user.role}`}>
-                    {user.role === 'admin' ? 'Admin' : user.role === 'warehouse' ? 'Magazijn' : 'Customer'}
+                  <span className="usersDirectoryMeta">
+                    {user.crewMember && <span className="usersRoleBadge">Crew</span>}
+                    <span className={`usersRoleBadge ${user.role}`}>
+                      {user.role === 'admin' ? 'Admin' : user.role === 'warehouse' ? 'Magazijn' : 'Customer'}
+                    </span>
+                    <i className={`usersStatusDot ${userStatus.key}`} aria-label={userStatus.label} />
                   </span>
-                  <i className={`usersStatusDot ${userStatus.key}`} aria-label={userStatus.label} />
                 </button>
               );
             })}
