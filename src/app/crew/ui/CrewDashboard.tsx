@@ -109,9 +109,6 @@ export default function CrewDashboard({memberName,assignments,adminPreview=false
   {(detail.eventInfo?.address||detail.project_location)&&<div className="crew-location-map"><iframe title="Google Maps locatie" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={'https://maps.google.com/maps?q='+encodeURIComponent([detail.eventInfo?.address,detail.eventInfo?.postalCity].filter(Boolean).join(' ')||detail.project_location||'')+'&output=embed'}/></div>}
   {(detail.eventInfo?.address||detail.project_location)&&<a className="crew-btn crew-btn-ghost crew-route-link" href={'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([detail.eventInfo?.address,detail.eventInfo?.postalCity].filter(Boolean).join(' ')||detail.project_location||'')} target="_blank" rel="noopener noreferrer"><Navigation size={15}/> Route openen</a>}
  </div>
- <div className="crew-panel crew-briefing"><h2><Clock3 size={21}/> Tijdschema van de dag</h2>
-  {detail.daySchedule?.length?<div className="crew-daily-schedule">{detail.daySchedule.map((item,i)=><div key={i} className="crew-schedule-item"><span>{timeLabel(item.start)} – {timeLabel(item.end)}</span><strong>{item.label}</strong></div>)}</div>:<div className="crew-briefing-timeline"><div><small>Start dienst</small><strong>{timeLabel(detail.starts_at)}</strong></div><div><small>Einde dienst</small><strong>{timeLabel(detail.ends_at)}</strong></div></div>}
- </div>
  <div className="crew-panel crew-briefing"><h2><Info size={21}/> Event informatie</h2>
   <div className="crew-briefing-info">
    <div><small>Event</small><strong>{detail.project_name}</strong></div>
