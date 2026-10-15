@@ -33,7 +33,7 @@ export default async function UsersPage() {
     admin.from('user_brand_access').select('user_id,brand_id'),
     admin.from('distributor_brands').select('distributor_id,brand_id'),
     admin.from('user_permissions').select('user_id,permission_key,access_level'),
-    admin.from('crew_portal_members').select('id,full_name,email,active'),
+    admin.from('crew_portal_members').select('id,full_name,email,active,rentman_crew_id'),
   ]);
 
   const crewByEmail = new Map((crewMembers ?? []).filter(member => member.email).map(member => [String(member.email).trim().toLowerCase(), member]));
@@ -96,7 +96,7 @@ export default async function UsersPage() {
 
     const crewMember = authUser.email ? crewByEmail.get(authUser.email.trim().toLowerCase()) : null;
     return {
-      crewMember: crewMember ? { id: String(crewMember.id), active: crewMember.active !== false } : null,
+      crewMember: crewMember ? { id: String(crewMember.id), active: crewMember.active !== false, rentmanCrewId: Number(crewMember.rentman_crew_id) || null } : null,
       id,
       email: authUser.email ?? profile?.full_name ?? id,
       fullName: profile?.full_name ? String(profile.full_name) : null,
