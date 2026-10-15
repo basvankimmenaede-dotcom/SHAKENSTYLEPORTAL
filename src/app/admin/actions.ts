@@ -435,3 +435,50 @@ export async function setCrewAccess(formData: FormData) {
   revalidatePath('/admin/users');
   revalidatePath('/crew');
 }
+
+/** Save the unified account form. Portal role remains exclusive; Crew is independent. */
+export async function saveUnifiedUser(formData: FormData) {
+  const session = await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const userId = String(formData.get('user_id') ?? '').trim();
+  const role = String(formData.get('role') ?? '');
+  const fullName = String(formData.get('full_name') ?? '').trim();
+  const distributorRaw = String(formData.get('distributor_id') ?? '');
+  const distributorId = distributorRaw ? Number(distributorRaw) : null;
+  const crewEnabled = formData.get('crew_enabled') === 'on';
+  if (!userId || !['admin','warehouse','customer'].includes(role)) throw new Error('Ongeldige rol.');
+  if (userId === session.user.id && role !== 'admin') throw new Error('Je kunt je eigen Adminrechten niet uitschakelen.');
+  if (role === 'customer' && (!Number.isSafeInteger(distributorId) || !distributorId || distributorId <= 0))
+    throw new Error('Kies een organisatie voor Customer.');
+  const { data: auth, error: authError } = await admin.auth.admin.getUserById(userId);
+  if (authError || !auth.user?.email) throw new Error('Account niet gevonden.');
+  const email = auth.user.email.trim().toLowerCase();
+  const { data: matches, error: crewError } = await admin.from('crew_portal_members')
+    .select('id,email,rentman_crew_id,active').ilike('email',email);
+  if (crewError) throw new Error(crewError.message);
+  const member = matches?.length === 1 && String(matches[0].email).trim().toLowerCase() === email ? matches[0] : null;
+  if (crewEnabled && (!member || !Number.isSafeInteger(Number(member.rentman_crew_id)) || Number(member.rentman_crew_id) <= 0))
+    throw new Error('Crew vereist een unieke, geldige Rentman-medewerkerskoppeling.');
+  const { data: existing, error: existingError } = await admin.from('profiles').select('role').eq('id',userId).single();
+  if (existingError || !existing) throw new Error('Profiel niet gevonden.');
+  const { error: profileError } = await admin.from('profiles').update({
+    full_name:fullName || null,role,distributor_id:role === 'customer' ? distributorId : null
+  }).eq('id',userId);
+  if (profileError) throw new Error(profileError.message);
+  if (existing.role !== role) {
+    const defaults = defaultPermissionsForRole(role).map(permission => ({
+      user_id:userId,...permission,updated_at:new Date().toISOString()
+    }));
+    const {error: permissionError}=await admin.from('user_permissions').upsert(defaults,{onConflict:'user_id,permission_key'});
+    if(permissionError)throw new Error(permissionError.message);
+  }
+  if (member && Boolean(member.active) !== crewEnabled) {
+    const {error: updateError}=await admin.from('crew_portal_members').update({active:crewEnabled}).eq('id',member.id);
+    if(updateError)throw new Error(updateError.message);
+  }
+  revalidatePath('/admin/users');
+  revalidatePath('/crew');
+  revalidatePath('/portal');
+  revalidatePath('/planning');
+}
