@@ -9,8 +9,8 @@ export default async function CrewPage() {
  const supabase = await createClient();
  const { data: { user } } = await supabase.auth.getUser();
  if (!user?.email) return <CrewLogin />;
- const { data: member } = await supabase.from('crew_portal_members').select('id,full_name,email').eq('active', true).maybeSingle();
- if (!member) return <CrewLogin signedInButNotLinked />;
+ const { data: member } = await supabase.from('crew_portal_members').select('id,full_name,email,rentman_crew_id').eq('active', true).maybeSingle();
+ if (!member || !Number.isSafeInteger(Number(member.rentman_crew_id)) || Number(member.rentman_crew_id) <= 0 || member.email?.trim().toLowerCase() !== user.email.trim().toLowerCase()) return <CrewLogin signedInButNotLinked />;
  // Refresh Rentman assignments on every authenticated Crew page opening.
  // A failed refresh must not hide previously synchronized assignments.
  const syncResult=await synchronizeCrewAssignments();
