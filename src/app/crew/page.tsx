@@ -61,8 +61,7 @@ export default async function CrewPage() {
    cocktailCount:customText(project?.custom,40),
    cocktails:customText(project?.custom,34),
    bar:customText(project?.custom,38),
-   brand:customText(project?.custom,79),
-   contactName:contact?.displayname||[contact?.firstname,contact?.middle_name,contact?.lastname].filter(Boolean).join(' ')||null
+   brand:customText(project?.custom,79)
   }:null,
   daySchedule:(projectFunctions.get(Number(a.rentman_project_id))||[]).filter(fn=>{
    const start=fn.planperiod_start||fn.usageperiod_start;
