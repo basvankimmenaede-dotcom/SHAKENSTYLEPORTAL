@@ -58,8 +58,8 @@ export default async function CrewPage() {
    const available=Math.max(0,needed-(filled.get(fn.id)||0));
    const id=Number(fn.project?.split('/').pop());
    const project=projectMap.get(id);
-   return {id:fn.id,projectName:project?.name||'',projectNumber:project?.number==null?'':String(project.number),functionName:fn.displayname||fn.name||'Crew',start:fn.planperiod_start||fn.usageperiod_start||'',end:fn.planperiod_end||fn.usageperiod_end||'',available};
-  }).filter(s=>s.available>0&&s.start&&s.end&&s.projectName).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,30);
+   return {id:fn.id,projectId:id,projectName:project?.name||'',projectNumber:project?.number==null?'':String(project.number),functionName:fn.displayname||fn.name||'Crew',start:fn.planperiod_start||fn.usageperiod_start||'',end:fn.planperiod_end||fn.usageperiod_end||'',available};
+  }).filter(s=>s.available>0&&s.start&&s.end&&s.projectName&&projectIds.includes(s.projectId)).sort((a,b)=>a.start.localeCompare(b.start));
  }).catch(error=>{console.error('Crew open shifts could not be loaded',error);return [];});
  const linkedAssignments=(assignments||[]).map(a=>{
   const project=projectMap.get(Number(a.rentman_project_id));
