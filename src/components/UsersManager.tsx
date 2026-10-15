@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
   assignUserProfile,
-  setCrewAccess,
+  saveUnifiedUser,
   deletePortalUser,
   inviteCustomer,
   resendUserInvite,
@@ -368,127 +368,20 @@ export default function UsersManager({
                 <div><h3>Basisgegevens</h3><p>Rol en organisatie bepalen de standaardtoegang van deze gebruiker.</p></div>
               </div>
 
-              <div className="usersGeneralGrid">
-                <form action={assignUserProfile} className="usersProfilePanel" key={`profile-${selectedUser.id}`}>
-                  <input type="hidden" name="user_id" value={selectedUser.id} />
-                  <div className="field">
-                    <label>Weergavenaam</label>
-                    <input
-                      className="input"
-                      name="full_name"
-                      defaultValue={selectedUser.fullName || ''}
-                      placeholder={selectedUser.email.split('@')[0]}
-                    />
-                    <small className="muted">Deze naam wordt gebruikt in de planning, taken en checklists.</small>
-                  </div>
-                  <div className="field">
-                    <label>E-mailadres</label>
-                    <input className="input" value={selectedUser.email} readOnly />
-                  </div>
-                  <div className="field">
-                    <label>Rol</label>
-                    <select name="role" className="select" defaultValue={selectedUser.role}>
-                      <option value="customer">Customer</option>
-                      <option value="warehouse">Magazijn</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Organisatie</label>
-                    <select name="distributor_id" className="select" defaultValue={selectedUser.distributorId ?? ''}>
-                      <option value="">Geen organisatie</option>
-                      {distributors.map((distributor) => (
-                        <option value={distributor.id} key={distributor.id}>{distributor.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {selectedUser.crewMember && <p className="muted" style={{fontSize:12}}>Gekoppeld aan Crew. De crewtoegang en planning worden apart beveiligd. Wijzig de portaalrol alleen als dit echt nodig is.</p>}
-                  <div className="usersPanelFooter">
-                    <button className="button orange" type="submit">Profiel opslaan</button>
-                  </div>
-                </form>
-
-                <div className="usersAccountStatusCard usersInviteStatusCard">
-                  <span>Crew & Rentman</span>
-                  <h3>Toegang tot Crew</h3>
-                  <p className="muted" style={{fontSize:12}}>Crew staat los van de portalrol. Alleen gekoppelde Rentman-medewerkers kunnen Crewtoegang krijgen.</p>
-                  <form action={setCrewAccess} key={`crew-${selectedUser.id}`}>
-                    <input type="hidden" name="user_id" value={selectedUser.id} />
-                    <label style={{display:'flex',alignItems:'center',gap:10,margin:'12px 0'}}>
-                      <input type="checkbox" name="crew_enabled" defaultChecked={Boolean(selectedUser.crewMember?.active)} disabled={!selectedUser.crewMember?.rentmanCrewId} />
-                      <strong>Crewtoegang actief</strong>
-                    </label>
-                    <small className="muted">{selectedUser.crewMember?.rentmanCrewId ? `Rentman medewerker #${selectedUser.crewMember.rentmanCrewId}` : 'Geen Rentman-koppeling: Crewtoegang geblokkeerd.'}</small>
-                    <div style={{marginTop:12}}><button type="submit" className="button secondary" disabled={!selectedUser.crewMember?.rentmanCrewId}>Crewtoegang opslaan</button></div>
-                  </form>
-                </div>
-                <div className="usersAccountStatusCard usersInviteStatusCard">
-                  <span>Account & uitnodiging</span>
-                  <div className="usersInviteStatusHeadline">
-                    <strong>{status.label}</strong>
-                    <i className={`usersStatusDot ${status.key}`} />
-                  </div>
-                  <div className="usersInviteTimeline">
-                    <div><small>Uitnodiging</small><b>{formatDateTime(selectedUser.invitedAt)}</b></div>
-                    <div><small>Activatie</small><b>{formatDateTime(selectedUser.confirmedAt)}</b></div>
-                    <div><small>Laatste login</small><b>{formatDateTime(selectedUser.lastSignInAt)}</b></div>
-                  </div>
-
-                  {status.key === 'invited' ? (
-                    <p>De uitnodiging is verstuurd, maar het account is nog niet geactiveerd.</p>
-                  ) : status.key === 'started' ? (
-                    <p>De uitnodigingslink is geopend, maar de activatie is nog niet afgerond.</p>
-                  ) : status.key === 'active' ? (
-                    <p>Jouw account is actief en is al gebruikt om in te loggen.</p>
-                  ) : (
-                    <p>Voor dit account is nog geen activatiestatus beschikbaar.</p>
-                  )}
-
-                  {accountMessage ? (
-                    <div className={accountMessage.ok ? 'usersAccountActionMessage success' : 'usersAccountActionMessage error'}>
-                      {accountMessage.text}
-                    </div>
-                  ) : null}
-
-                  <div className="usersAccountQuickActions">
-                    {!selectedUser.confirmedAt ? (
-                      <button
-                        className="button secondary"
-                        type="button"
-                        disabled={accountPending}
-                        onClick={() => {
-                          setAccountMessage(null);
-                          const formData = new FormData();
-                          formData.set('user_id', selectedUser.id);
-                          startAccountTransition(async () => {
-                            const result = await resendUserInvite(formData);
-                            setAccountMessage({ ok: result.ok, text: result.message });
-                          });
-                        }}
-                      >
-                        {accountPending ? 'Versturen...' : 'Nieuwe uitnodiging versturen'}
-                      </button>
-                    ) : (
-                      <button
-                        className="button secondary"
-                        type="button"
-                        disabled={accountPending}
-                        onClick={() => {
-                          setAccountMessage(null);
-                          const formData = new FormData();
-                          formData.set('user_id', selectedUser.id);
-                          startAccountTransition(async () => {
-                            const result = await sendUserPasswordReset(formData);
-                            setAccountMessage({ ok: result.ok, text: result.message });
-                          });
-                        }}
-                      >
-                        {accountPending ? 'Versturen...' : 'Wachtwoordreset versturen'}
-                      </button>
-                    )}
+              <form action={saveUnifiedUser} key={selectedUser.id} className="usersProfilePanel" style={{maxWidth:'none'}}>
+                <input type="hidden" name="user_id" value={selectedUser.id} />
+                <div className="field"><label>Weergavenaam</label><input className="input" name="full_name" defaultValue={selectedUser.fullName || ''} /></div>
+                <div className="field"><label>E-mailadres</label><input className="input" value={selectedUser.email} readOnly /></div>
+                <div className="field"><label>Organisatie</label><select className="select" name="distributor_id" defaultValue={selectedUser.distributorId ?? ''}><option value="">Geen organisatie</option>{distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
+                <div className="field"><label>Rollen & toegang</label>
+                  <p className="muted">Crew is apart instelbaar. Customer, Magazijn en Admin zijn exclusief om klantgegevens afgeschermd te houden.</p>
+                  <div style={{display:'grid',gap:10,marginTop:12}}>
+                    <label className="usersBrandOption"><span><strong>Crew</strong><small>{selectedUser.crewMember?.rentmanCrewId ? 'Rentman medewerker #' + selectedUser.crewMember.rentmanCrewId : 'Geen Rentman-koppeling'}</small></span><input type="checkbox" name="crew_enabled" defaultChecked={Boolean(selectedUser.crewMember?.active)} disabled={!selectedUser.crewMember?.rentmanCrewId} /></label>
+                    {(['customer','warehouse','admin'] as const).map(role => <label className="usersBrandOption" key={role}><span><strong>{role === 'customer' ? 'Customer' : role === 'warehouse' ? 'Magazijn' : 'Admin'}</strong></span><input type="radio" name="role" value={role} defaultChecked={selectedUser.role === role} required /></label>)}
                   </div>
                 </div>
-              </div>
+                <div className="usersPanelFooter"><button className="button orange" type="submit">Wijzigingen opslaan</button></div>
+              </form>
             </div>
           ) : null}
 
