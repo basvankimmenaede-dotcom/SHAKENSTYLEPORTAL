@@ -367,7 +367,7 @@ export type RentmanPlanningProject = {
     email?: string;
   } | null;
   customer?: { displayname?: string; name?: string } | null;
-  cust_contact?: { displayname?: string; firstname?: string; middle_name?: string; lastname?: string } | null;
+  cust_contact?: { displayname?: string; firstname?: string; middle_name?: string; lastname?: string; phone?: string; mobilephone?: string } | null;
   project_type?: { id?: number; displayname?: string; name?: string; color?: string } | null;
   custom?: Record<string, unknown>;
   is_cancelled?: boolean;
