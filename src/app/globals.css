@@ -6462,3 +6462,31 @@ table td{font-size:12px}
 .usersDirectoryMeta .usersStatusDot{flex:0 0 auto;margin:0}
 .usersDirectoryMeta .usersRoleBadge{flex:0 0 auto}
 @media(max-width:620px){.usersDirectoryMeta{max-width:95px}.usersDirectoryMeta .usersRoleBadge{font-size:8px;padding:0 5px}}
+
+/* Approved user management layout */
+.usersAdminPage .usersWorkspace{grid-template-columns:minmax(290px,36%) minmax(0,1fr);align-items:start;gap:18px}
+.usersAdminPage .usersDirectory,.usersAdminPage .usersDetail{border:1px solid #e8e3de;border-radius:18px;background:#fff;overflow:hidden;min-width:0}
+.usersAdminPage .usersRoleFilterTabs{display:flex;flex-wrap:wrap;gap:4px;padding:15px 12px 9px;border:0}
+.usersAdminPage .usersRoleFilterTabs button{flex:1 1 auto;white-space:nowrap;border-radius:9px;padding:9px 10px}
+.usersAdminPage .usersDirectorySearch{margin:4px 12px 12px;border-radius:10px}
+.usersAdminPage .usersDirectoryRow{grid-template-columns:38px minmax(0,1fr) auto;padding:13px 12px}
+.usersAdminPage .usersDirectoryMeta{max-width:130px}
+.usersAdminPage .usersDetailPanel{padding:22px}
+.usersAdminPage .usersUnifiedForm{display:grid;gap:17px}
+.usersAdminPage .usersUnifiedFields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.usersAdminPage .usersUnifiedFields .field:first-child{grid-column:1/-1}
+.usersAdminPage .usersUnifiedForm h3{margin:10px 0 0;font-size:18px}
+.usersAdminPage .usersUnifiedRoles{display:grid;gap:10px}
+.usersAdminPage .usersUnifiedRole{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 17px;border:1px solid #e9e3dc;border-radius:13px;background:#faf9f7;cursor:pointer}
+.usersAdminPage .usersUnifiedRole strong{display:block;font-size:14px}
+.usersAdminPage .usersUnifiedRole small{display:block;margin-top:4px;color:#8a817a;font-size:11px}
+.usersAdminPage .usersToggle{appearance:none;-webkit-appearance:none;width:42px;height:24px;flex:0 0 42px;border-radius:99px;background:#d4d0cc;position:relative;cursor:pointer;transition:background .15s}
+.usersAdminPage .usersToggle:before{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;box-shadow:0 1px 3px #0002;transition:transform .15s}
+.usersAdminPage .usersToggle:checked{background:#fa7422}
+.usersAdminPage .usersToggle:checked:before{transform:translateX(18px)}
+.usersAdminPage .usersToggle:disabled{opacity:.45;cursor:not-allowed}
+.usersAdminPage .usersUnifiedFooter{display:flex;justify-content:flex-end;padding-top:17px;border-top:1px solid #eee7df}
+.usersAdminPage .usersUnifiedAdvanced{padding:15px 22px 0;border-top:1px solid #eee7df}
+.usersAdminPage .usersUnifiedAdvanced h3{margin:0 0 12px;font-size:14px}
+@media(max-width:980px){.usersAdminPage .usersWorkspace{grid-template-columns:1fr}}
+@media(max-width:600px){.usersAdminPage .usersUnifiedFields{grid-template-columns:1fr}.usersAdminPage .usersUnifiedFields .field:first-child{grid-column:auto}}
