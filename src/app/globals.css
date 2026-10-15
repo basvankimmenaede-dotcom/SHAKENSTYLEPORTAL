@@ -6455,3 +6455,10 @@ table td{font-size:12px}
 @media (max-width: 800px) {
   .billing-draft-layout { grid-template-columns: minmax(0, 1fr) !important; }
 }
+
+/* Central user directory: prevent stacked or clipped crew/account badges. */
+.usersDirectoryRow{grid-template-columns:38px minmax(0,1fr) minmax(0,auto);gap:9px;min-width:0}
+.usersDirectoryMeta{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:5px;max-width:125px;min-width:0}
+.usersDirectoryMeta .usersStatusDot{flex:0 0 auto;margin:0}
+.usersDirectoryMeta .usersRoleBadge{flex:0 0 auto}
+@media(max-width:620px){.usersDirectoryMeta{max-width:95px}.usersDirectoryMeta .usersRoleBadge{font-size:8px;padding:0 5px}}
