@@ -18,6 +18,7 @@ export default async function UsersPage() {
     { data: accessRows },
     { data: distributorBrandRows },
     { data: permissionRows },
+    { data: crewMembers },
   ] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 200 }),
     admin.from('profiles').select('id,full_name,role,distributor_id'),
@@ -32,8 +33,10 @@ export default async function UsersPage() {
     admin.from('user_brand_access').select('user_id,brand_id'),
     admin.from('distributor_brands').select('distributor_id,brand_id'),
     admin.from('user_permissions').select('user_id,permission_key,access_level'),
+    admin.from('crew_portal_members').select('id,full_name,email,active'),
   ]);
 
+  const crewByEmail = new Map((crewMembers ?? []).filter(member => member.email).map(member => [String(member.email).trim().toLowerCase(), member]));
   const profileById = new Map((profiles ?? []).map((profile) => [String(profile.id), profile]));
   const distributorById = new Map((distributors ?? []).map((distributor) => [Number(distributor.id), String(distributor.name)]));
   const accessByUser = new Map<string, Set<number>>();
@@ -91,7 +94,9 @@ export default async function UsersPage() {
       ]),
     ) as Record<PermissionKey, PermissionLevel>;
 
+    const crewMember = authUser.email ? crewByEmail.get(authUser.email.trim().toLowerCase()) : null;
     return {
+      crewMember: crewMember ? { id: String(crewMember.id), active: crewMember.active !== false } : null,
       id,
       email: authUser.email ?? profile?.full_name ?? id,
       fullName: profile?.full_name ? String(profile.full_name) : null,
