@@ -325,24 +325,6 @@ export default function UsersManager({
             </div>
           </header>
 
-          <nav className="usersDetailTabs">
-            {([
-              ['general', 'Algemeen'],
-              ['rights', 'Rechten'],
-              ['portal', 'Klantenportaal'],
-              ['account', 'Account'],
-            ] as const).map(([key, label]) => (
-              <button
-                type="button"
-                className={tab === key ? 'active' : ''}
-                onClick={() => setTab(key)}
-                key={key}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-
           {tab === 'general' ? (
             <div className="usersDetailPanel">
               <div className="usersDetailSectionHeader">
@@ -361,13 +343,32 @@ export default function UsersManager({
                 <p className="muted">Crew is aanvullend. Customer, Magazijn en Admin zijn exclusief om klantgegevens afgeschermd te houden.</p>
                 <div className="usersUnifiedRoles">
                   <label className="usersUnifiedRole"><span><strong>Crew</strong><small>{selectedUser.crewMember?.rentmanCrewId ? 'Rentman medewerker #' + selectedUser.crewMember.rentmanCrewId : 'Rentman-koppeling vereist'}</small></span><input className="usersToggle" type="checkbox" name="crew_enabled" defaultChecked={Boolean(selectedUser.crewMember?.active)} disabled={!selectedUser.crewMember?.rentmanCrewId} /></label>
-                  {(['customer','warehouse','admin'] as const).map(role=><label className="usersUnifiedRole" key={role}><span><strong>{role==='customer'?'Customer':role==='warehouse'?'Magazijn':'Admin'}</strong></span><input className="usersToggle" type="checkbox" checked={(editRole??selectedUser.role)===role} onChange={checked=>{if(checked)setEditRole(role);}} /></label>)}
+                  {(['customer','warehouse','admin'] as const).map(role=><label className="usersUnifiedRole" key={role}><span><strong>{role==='customer'?'Customer':role==='warehouse'?'Magazijn':'Admin'}</strong></span><input className="usersToggle" type="checkbox" checked={(editRole??selectedUser.role)===role} onChange={event=>{if(event.target.checked)setEditRole(role);}} /></label>)}
                 </div>
                 <div className="usersUnifiedFooter"><button className="button orange" type="submit">Wijzigingen opslaan</button></div>
               </form>
             </div>
           ) : null}
 
+          <div className="usersUnifiedAdvanced"><h3>Overige instellingen</h3>          <nav className="usersDetailTabs">
+            {([
+              ['general', 'Algemeen'],
+              ['rights', 'Rechten'],
+              ['portal', 'Klantenportaal'],
+              ['account', 'Account'],
+            ] as const).map(([key, label]) => (
+              <button
+                type="button"
+                className={tab === key ? 'active' : ''}
+                onClick={() => setTab(key)}
+                key={key}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+
+</div>
           {tab === 'rights' ? (
             <div className="usersDetailPanel">
               <div className="usersDetailSectionHeader">
