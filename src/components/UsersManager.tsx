@@ -30,6 +30,7 @@ type UserItem = {
   role: 'admin' | 'warehouse' | 'customer';
   distributorId: number | null;
   distributorName: string | null;
+  crewMember: { id: string; active: boolean } | null;
   assignedBrandIds: number[];
   availableBrandIds: number[];
   permissions: Record<PermissionKey, PermissionLevel>;
@@ -110,6 +111,7 @@ export default function UsersManager({
 }) {
   const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? '');
   const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'crew' | 'customer' | 'warehouse' | 'admin'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'invited' | 'inactive'>('all');
   const [tab, setTab] = useState<'general' | 'rights' | 'portal' | 'account'>('general');
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -136,9 +138,10 @@ export default function UsersManager({
         || user.email.toLowerCase().includes(needle)
         || (user.fullName ?? '').toLowerCase().includes(needle)
         || user.role.toLowerCase().includes(needle);
-      return matchesStatus && matchesQuery;
+      const matchesRole = roleFilter === 'all' || (roleFilter === 'crew' ? Boolean(user.crewMember) : user.role === roleFilter);
+      return matchesStatus && matchesQuery && matchesRole;
     });
-  }, [query, statusFilter, users]);
+  }, [query, roleFilter, statusFilter, users]);
 
   const selectedUser = users.find((user) => user.id === selectedUserId)
     ?? filteredUsers[0]
@@ -270,6 +273,7 @@ export default function UsersManager({
             ))}
           </div>
 
+          <div style={{padding:"8px 12px"}}><select className="select" aria-label="Filter op type account" value={roleFilter} onChange={event=>setRoleFilter(event.target.value as typeof roleFilter)} style={{width:"100%",fontSize:12}}><option value="all">Alle accounts</option><option value="crew">Crew</option><option value="warehouse">Magazijn</option><option value="customer">Klanten</option><option value="admin">Beheerders</option></select></div>
           <div className="usersDirectorySearch">
             <span>⌕</span>
             <input
@@ -299,6 +303,7 @@ export default function UsersManager({
                     <strong>{user.fullName?.replace(/@shakenstyle\.com$/i, '') || user.email.split('@')[0]}</strong>
                     <small>{user.email}</small>
                   </span>
+                  {user.crewMember && <span className="usersRoleBadge">Crew</span>}
                   <span className={`usersRoleBadge ${user.role}`}>
                     {user.role === 'admin' ? 'Admin' : user.role === 'warehouse' ? 'Magazijn' : 'Customer'}
                   </span>
@@ -394,6 +399,7 @@ export default function UsersManager({
                       ))}
                     </select>
                   </div>
+                  {selectedUser.crewMember && <p className="muted" style={{fontSize:12}}>Gekoppeld aan Crew. De crewtoegang en planning worden apart beveiligd. Wijzig de portaalrol alleen als dit echt nodig is.</p>}
                   <div className="usersPanelFooter">
                     <button className="button orange" type="submit">Profiel opslaan</button>
                   </div>
