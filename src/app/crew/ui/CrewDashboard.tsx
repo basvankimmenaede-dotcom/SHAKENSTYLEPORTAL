@@ -99,6 +99,9 @@ export default function CrewDashboard({memberName,assignments,adminPreview=false
   <div className="crew-briefing-facts">
    <div className="crew-detail-row"><CalendarDays size={19}/><div><small>Datum</small><strong>{new Date(detail.starts_at).toLocaleDateString('nl-NL',{timeZone:'Europe/Amsterdam',weekday:'long',day:'numeric',month:'long',year:'numeric'})}</strong></div></div>
    <div className="crew-detail-row"><Clock3 size={19}/><div><small>Werktijd</small><strong>{timeLabel(detail.starts_at)} – {timeLabel(detail.ends_at)}</strong><small>{hours(detail).toLocaleString('nl-NL')} uur gepland</small></div></div>
+   {detail.eventInfo?.number&&<div className="crew-detail-row"><ClipboardList size={19}/><div><small>Projectnummer</small><strong>{detail.eventInfo.number}</strong></div></div>}
+   {detail.eventInfo?.customer&&<div className="crew-detail-row"><House size={19}/><div><small>Klant</small><strong>{detail.eventInfo.customer}</strong></div></div>}
+   {detail.eventInfo?.contactName&&<div className="crew-detail-row"><UserRound size={19}/><div><small>Contactpersoon</small><strong>{detail.eventInfo.contactName}</strong></div></div>}
   </div>
  </div>
  <div className="crew-panel crew-briefing"><h2><MapPin size={21}/> Locatie</h2><strong>{detail.project_location||'Locatie volgt'}</strong>
