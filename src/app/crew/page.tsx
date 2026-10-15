@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import CrewLogin from './ui/CrewLogin';
 import CrewDashboard from './ui/CrewDashboard';
 import {synchronizeCrewAssignments} from '@/lib/crew/synchronize-assignments';
-import {getPlanningProjects} from '@/lib/rentman';
+import {getPlanningProjects,getPlanningProjectFunctionsForProject} from '@/lib/rentman';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,10 +34,22 @@ export default async function CrewPage() {
  }
  const rentmanProjects=await getPlanningProjects().catch(()=>null);
  const projectMap=new Map((rentmanProjects?.allProjects||[]).map(p=>[p.id,p]));
+ const projectIds=[...new Set((assignments||[]).map(a=>Number(a.rentman_project_id)).filter(Number.isSafeInteger))];
+ const projectFunctions=new Map(await Promise.all(projectIds.map(async id=>{
+   const functions=await getPlanningProjectFunctionsForProject(id).catch(()=>[]);
+   return [id,functions] as const;
+ })));
+ const customText=(custom:Record<string,unknown>|undefined,id:number)=>{
+   const value=custom?.['custom_'+id]??custom?.[String(id)];
+   if(value===null||value===undefined||value==='')return null;
+   if(typeof value!=='string'&&typeof value!=='number')return null;
+   const text=String(value).replace(/<br\s*\/?\s*>/gi,'\n').replace(/<\/(p|div|li)>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+   return text||null;
+ };
  const linkedAssignments=(assignments||[]).map(a=>{
   const project=projectMap.get(Number(a.rentman_project_id));
   const location=project?.location;
-  const contact=project?.loc_contact;
+  const contact=project?.cust_contact;
   return {...a,crew_shift_reports:byAssignment.get(a.id)||[],eventInfo:project?{
    number:project.number==null?null:String(project.number),
    customer:project.customer?.displayname||project.customer?.name||null,
@@ -45,8 +57,17 @@ export default async function CrewPage() {
    address:[location?.visit_street,location?.visit_number].filter(Boolean).join(' ')||null,
    postalCity:[location?.visit_postalcode,location?.visit_city].filter(Boolean).join(' ')||null,
    contactName:contact?.displayname||[contact?.firstname,contact?.middle_name,contact?.lastname].filter(Boolean).join(' ')||null,
-   contactPhone:contact?.mobilephone||contact?.phone||null
-  }:null};
+   eventDescription:customText(project?.custom,30),
+   cocktailCount:customText(project?.custom,40),
+   cocktails:customText(project?.custom,34),
+   bar:customText(project?.custom,38),
+   brand:customText(project?.custom,79),
+   contactName:contact?.displayname||[contact?.firstname,contact?.middle_name,contact?.lastname].filter(Boolean).join(' ')||null
+  }:null,
+  daySchedule:(projectFunctions.get(Number(a.rentman_project_id))||[]).filter(fn=>{
+   const start=fn.planperiod_start||fn.usageperiod_start;
+   return Boolean(start&&start.slice(0,10)===a.starts_at.slice(0,10)&&fn.type!=='remark');
+  }).map(fn=>({label:fn.displayname||fn.name||'Gepland onderdeel',start:fn.planperiod_start||fn.usageperiod_start||'',end:fn.planperiod_end||fn.usageperiod_end||''})).filter(fn=>fn.start&&fn.end).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,30)};
  });
  return <CrewDashboard memberName={member.full_name} assignments={linkedAssignments} reportsLoadError={Boolean(reportsError||assignmentsError)} />;
 }
