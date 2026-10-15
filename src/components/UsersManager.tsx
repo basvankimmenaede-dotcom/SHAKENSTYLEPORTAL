@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
   assignUserProfile,
+  setCrewAccess,
   deletePortalUser,
   inviteCustomer,
   resendUserInvite,
@@ -30,7 +31,7 @@ type UserItem = {
   role: 'admin' | 'warehouse' | 'customer';
   distributorId: number | null;
   distributorName: string | null;
-  crewMember: { id: string; active: boolean } | null;
+  crewMember: { id: string; active: boolean; rentmanCrewId: number | null } | null;
   assignedBrandIds: number[];
   availableBrandIds: number[];
   permissions: Record<PermissionKey, PermissionLevel>;
@@ -138,7 +139,7 @@ export default function UsersManager({
         || user.email.toLowerCase().includes(needle)
         || (user.fullName ?? '').toLowerCase().includes(needle)
         || user.role.toLowerCase().includes(needle);
-      const matchesRole = roleFilter === 'all' || (roleFilter === 'crew' ? Boolean(user.crewMember) : user.role === roleFilter);
+      const matchesRole = roleFilter === 'all' || (roleFilter === 'crew' ? Boolean(user.crewMember?.active) : user.role === roleFilter);
       return matchesStatus && matchesQuery && matchesRole;
     });
   }, [query, roleFilter, statusFilter, users]);
@@ -304,7 +305,7 @@ export default function UsersManager({
                     <small>{user.email}</small>
                   </span>
                   <span className="usersDirectoryMeta">
-                    {user.crewMember && <span className="usersRoleBadge">Crew</span>}
+                    {user.crewMember?.active && <span className="usersRoleBadge">Crew</span>}
                     <span className={`usersRoleBadge ${user.role}`}>
                       {user.role === 'admin' ? 'Admin' : user.role === 'warehouse' ? 'Magazijn' : 'Customer'}
                     </span>
@@ -407,6 +408,20 @@ export default function UsersManager({
                   </div>
                 </form>
 
+                <div className="usersAccountStatusCard usersInviteStatusCard">
+                  <span>Crew & Rentman</span>
+                  <h3>Toegang tot Crew</h3>
+                  <p className="muted" style={{fontSize:12}}>Crew staat los van de portalrol. Alleen gekoppelde Rentman-medewerkers kunnen Crewtoegang krijgen.</p>
+                  <form action={setCrewAccess} key={`crew-${selectedUser.id}`}>
+                    <input type="hidden" name="user_id" value={selectedUser.id} />
+                    <label style={{display:'flex',alignItems:'center',gap:10,margin:'12px 0'}}>
+                      <input type="checkbox" name="crew_enabled" defaultChecked={Boolean(selectedUser.crewMember?.active)} disabled={!selectedUser.crewMember?.rentmanCrewId} />
+                      <strong>Crewtoegang actief</strong>
+                    </label>
+                    <small className="muted">{selectedUser.crewMember?.rentmanCrewId ? `Rentman medewerker #${selectedUser.crewMember.rentmanCrewId}` : 'Geen Rentman-koppeling: Crewtoegang geblokkeerd.'}</small>
+                    <div style={{marginTop:12}}><button type="submit" className="button secondary" disabled={!selectedUser.crewMember?.rentmanCrewId}>Crewtoegang opslaan</button></div>
+                  </form>
+                </div>
                 <div className="usersAccountStatusCard usersInviteStatusCard">
                   <span>Account & uitnodiging</span>
                   <div className="usersInviteStatusHeadline">
