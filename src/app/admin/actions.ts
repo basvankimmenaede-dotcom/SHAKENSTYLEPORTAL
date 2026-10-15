@@ -275,26 +275,20 @@ export async function saveUserPermissions(formData: FormData) {
   revalidatePath('/planning');
 }
 
-export async function setUserPassword(formData: FormData) {
-  const session = await requireAdmin();
+export async function setUserPassword(formData: FormData): Promise<{ok:boolean;message:string}> {
+  await requireAdmin();
   const { createAdminClient } = await import('@/lib/supabase/admin');
-  const admin = createAdminClient();
-
   const userId = String(formData.get('user_id') ?? '').trim();
   const password = String(formData.get('password') ?? '');
-  const passwordConfirm = String(formData.get('password_confirm') ?? '');
-
-  if (!userId) throw new Error('Gebruiker ontbreekt.');
-  if (password.length < 8) throw new Error('Het wachtwoord moet minimaal 8 tekens bevatten.');
-  if (password !== passwordConfirm) throw new Error('De twee wachtwoorden zijn niet gelijk.');
-
-  const { error } = await admin.auth.admin.updateUserById(userId, { password });
-  if (error) throw new Error(error.message);
-
-  // If an admin changes their own password this remains a valid operation;
-  // existing sessions are intentionally not revoked here.
-  void session;
+  const confirmation = String(formData.get('password_confirm') ?? '');
+  if (!userId) return {ok:false,message:'Gebruiker ontbreekt.'};
+  if (password.length < 8) return {ok:false,message:'Het wachtwoord moet minimaal 8 tekens bevatten.'};
+  if (password !== confirmation) return {ok:false,message:'De twee wachtwoorden zijn niet gelijk.'};
+  const admin = createAdminClient();
+  const {error} = await admin.auth.admin.updateUserById(userId,{password});
+  if (error) return {ok:false,message:'Het wachtwoord kon niet worden opgeslagen. Probeer het opnieuw.'};
   revalidatePath('/admin/users');
+  return {ok:true,message:'Wachtwoord opgeslagen.'};
 }
 
 export async function deletePortalUser(formData: FormData) {
