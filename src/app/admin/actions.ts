@@ -406,3 +406,32 @@ export async function saveDistributorBrands(formData: FormData) {
   revalidatePath('/admin/users');
   revalidatePath('/portal');
 }
+
+/**
+ * Crew access is independent from portal roles. Never change profiles.role here:
+ * customers must retain their existing tenant and module restrictions.
+ */
+export async function setCrewAccess(formData: FormData) {
+  await requireAdmin();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const userId = String(formData.get('user_id') ?? '').trim();
+  const enabled = formData.get('crew_enabled') === 'on';
+  if (!userId) throw new Error('Gebruiker ontbreekt.');
+  const { data: auth, error: authError } = await admin.auth.admin.getUserById(userId);
+  if (authError || !auth.user?.email) throw new Error('Gebruiker niet gevonden.');
+  const email = auth.user.email.trim().toLowerCase();
+  const { data: members, error } = await admin.from('crew_portal_members')
+    .select('id,email,rentman_crew_id,active').ilike('email', email);
+  if (error) throw new Error(error.message);
+  if (!members || members.length !== 1 || String(members[0].email).trim().toLowerCase() !== email)
+    throw new Error('Geen unieke Rentman-crewkoppeling gevonden. Koppel deze medewerker eerst via Rentman.');
+  const member = members[0];
+  if (enabled && (!Number.isSafeInteger(Number(member.rentman_crew_id)) || Number(member.rentman_crew_id) <= 0))
+    throw new Error('Crewtoegang vereist een geldig Rentman-medewerkersnummer.');
+  const { error: updateError } = await admin.from('crew_portal_members')
+    .update({ active: enabled }).eq('id', member.id);
+  if (updateError) throw new Error(updateError.message);
+  revalidatePath('/admin/users');
+  revalidatePath('/crew');
+}
