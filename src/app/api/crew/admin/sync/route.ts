@@ -10,7 +10,9 @@ export async function POST(){
  const admin=createAdminClient();
  try {
   const crew=await getRentmanCrewIdentities();
-  let synced=0,missingEmail=0,skipped=0;
+  let synced=0,missingEmail=0,skipped=0,deactivated=0;
+  if(!Array.isArray(crew)||crew.length===0)throw new Error('Rentman returned no crew; refusing to deactivate users');
+  const rentmanIds=new Set(crew.map(p=>Number(p.id)));
   const existingAuthEmails=new Set<string>();
   for(let page=1;page<=20;page++){
    const {data,error}=await admin.auth.admin.listUsers({page,perPage:1000});
@@ -23,10 +25,11 @@ export async function POST(){
    if(!valid(email)){missingEmail++;continue}
    const name=[person.firstname,person.middle_name,person.lastname].filter(Boolean).join(' ').trim()||person.displayname||'Medewerker';
    const {data:existing,error:lookupError}=await admin.from('crew_portal_members')
-    .select('id,login_email_override').eq('rentman_crew_id',person.id).maybeSingle();
+    .select('id,login_email_override,manual_disabled,portal_deleted').eq('rentman_crew_id',person.id).maybeSingle();
    if(lookupError)throw lookupError;
+   if(existing?.portal_deleted)continue;
    const values={rentman_crew_id:person.id,full_name:name,email,
-    rentman_email:email,active:person.active!==false,last_synced_at:new Date().toISOString()};
+    rentman_email:email,active:person.active!==false&&!existing?.manual_disabled,last_synced_at:new Date().toISOString()};
    const {error:writeError}=existing
     ?await admin.from('crew_portal_members').update(values).eq('id',existing.id)
     :await admin.from('crew_portal_members').insert(values);
@@ -39,6 +42,9 @@ export async function POST(){
    }
    synced++;
   }
-  return NextResponse.json({synced,missingEmail,skipped,total:crew.length});
+  const {data:stored,error:storedError}=await admin.from('crew_portal_members').select('id,rentman_crew_id,active,portal_deleted');
+  if(storedError)throw storedError;
+  for(const m of stored||[]){if(!rentmanIds.has(Number(m.rentman_crew_id))&&m.active&&!m.portal_deleted){const {error}=await admin.from('crew_portal_members').update({active:false}).eq('id',m.id);if(error)throw error;deactivated++;}}
+  return NextResponse.json({synced,missingEmail,skipped,deactivated,total:crew.length});
  }catch{return NextResponse.json({error:'Synchronisatie mislukt. Controleer de Rentman-verbinding en database.'},{status:503})}
 }
