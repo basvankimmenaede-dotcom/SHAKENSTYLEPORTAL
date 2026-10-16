@@ -443,8 +443,7 @@ export async function saveUnifiedUser(formData: FormData) {
   const crewEnabled = formData.get('crew_enabled') === 'on';
   if (!userId || !['admin','warehouse','customer'].includes(role)) throw new Error('Ongeldige rol.');
   if (userId === session.user.id && role !== 'admin') throw new Error('Je kunt je eigen Adminrechten niet uitschakelen.');
-  if (role === 'customer' && (!Number.isSafeInteger(distributorId) || !distributorId || distributorId <= 0))
-    throw new Error('Kies een organisatie voor Customer.');
+
   const { data: auth, error: authError } = await admin.auth.admin.getUserById(userId);
   if (authError || !auth.user?.email) throw new Error('Account niet gevonden.');
   const email = auth.user.email.trim().toLowerCase();
@@ -454,6 +453,9 @@ export async function saveUnifiedUser(formData: FormData) {
   const member = matches?.length === 1 && String(matches[0].email).trim().toLowerCase() === email ? matches[0] : null;
   if (crewEnabled && (!member || !Number.isSafeInteger(Number(member.rentman_crew_id)) || Number(member.rentman_crew_id) <= 0))
     throw new Error('Crew vereist een unieke, geldige Rentman-medewerkerskoppeling.');
+  // Crew members may have the default customer role without belonging to a customer organisation.
+  if (role === 'customer' && !member && (!Number.isSafeInteger(distributorId) || !distributorId || distributorId <= 0))
+    throw new Error('Kies een organisatie voor Customer.');
   const { data: existing, error: existingError } = await admin.from('profiles').select('role').eq('id',userId).single();
   if (existingError || !existing) throw new Error('Profiel niet gevonden.');
   const { error: profileError } = await admin.from('profiles').update({
