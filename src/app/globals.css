@@ -6499,3 +6499,12 @@ table td{font-size:12px}
 .settingsFormRow>div:first-child strong{display:block;font-size:14px;line-height:1.35}
 .settingsFormRow>div:first-child span{display:block;font-size:12px;line-height:1.5}
 @media(max-width:760px){.settingsFormRow{grid-template-columns:minmax(0,1fr);gap:14px}.settingsFormRow>.planningSettingInline{justify-content:flex-start}}
+
+/* Crew administration: stable table columns and one-line action group. */
+.crew-admin-table th,.crew-admin-table td{vertical-align:middle;text-align:left;overflow-wrap:anywhere}
+.crew-admin-table td{padding:14px 12px}
+.crew-admin-table td:nth-child(4),.crew-admin-table th:nth-child(4){text-align:center}
+.crew-admin-table td:nth-child(3) .input{width:100%;min-width:0;box-sizing:border-box}
+.crew-admin-actions{display:flex;align-items:center;gap:7px;flex-wrap:nowrap;white-space:nowrap}
+.crew-admin-actions .button{font-size:11px;padding:9px 10px;flex-shrink:0}
+.crew-admin-actions .crew-admin-delete{color:#b42318}
