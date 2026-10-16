@@ -6493,3 +6493,9 @@ table td{font-size:12px}
 
 .usersAdminPage .usersUnifiedAdvanced{padding:12px 22px;border-top:0;border-bottom:1px solid #eee7df}
 .usersAdminPage .usersUnifiedAdvanced .usersDetailTabs{margin:0}
+
+/* Keep settings labels and descriptions visibly separated on all screen sizes. */
+.settingsFormRow>div:first-child{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.settingsFormRow>div:first-child strong{display:block;font-size:14px;line-height:1.35}
+.settingsFormRow>div:first-child span{display:block;font-size:12px;line-height:1.5}
+@media(max-width:760px){.settingsFormRow{grid-template-columns:minmax(0,1fr);gap:14px}.settingsFormRow>.planningSettingInline{justify-content:flex-start}}
