@@ -33,7 +33,7 @@ export default async function UsersPage() {
     admin.from('user_brand_access').select('user_id,brand_id'),
     admin.from('distributor_brands').select('distributor_id,brand_id'),
     admin.from('user_permissions').select('user_id,permission_key,access_level'),
-    admin.from('crew_portal_members').select('id,full_name,email,active,rentman_crew_id'),
+    admin.from('crew_portal_members').select('id,full_name,email,active,rentman_crew_id').eq('portal_deleted',false),
   ]);
 
   const crewByEmail = new Map((crewMembers ?? []).filter(member => member.email).map(member => [String(member.email).trim().toLowerCase(), member]));
