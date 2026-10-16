@@ -7,8 +7,7 @@ const items=[
   {key:'recurring',href:'/planning/instellingen#terugkerende-taken',label:'Terugkerende taken',icon:Repeat2},
   {key:'checklists',href:'/planning/templates',label:'Checklists',icon:ListChecks},
   {key:'closing',href:'/planning/afsluitlijst/beheer',label:'Afsluitlijst',icon:ClipboardCheck},
-  {key:'users',href:'/admin/users',label:'Gebruikers & rechten',icon:Users},
-  {key:'crew',href:'/planning/instellingen/crew',label:'Crew beheer',icon:Users},
+  {key:'users',href:'/planning/instellingen/gebruikers',label:'Gebruikersbeheer',icon:Users},
   {key:'tv',href:'/planning/tv',label:'TV-weergave',icon:Monitor},
 ] as const;
 
