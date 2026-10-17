@@ -13,6 +13,7 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
  const [tab,setTab]=useState<'home'|'calendar'|'shifts'|'profile'>('home'); const [calendarMode,setCalendarMode]=useState<'week'|'month'>('month'); const [calendarOffset,setCalendarOffset]=useState(0); const [detail,setDetail]=useState<Assignment|null>(null); const [shiftFilter,setShiftFilter]=useState<'upcoming'|'past'>('upcoming');
  const [knownReports,setKnownReports]=useState<Record<string,ShiftReport>>({});
  const [reportCheckPending,setReportCheckPending]=useState(false);
+ const [detailOpenShifts,setDetailOpenShifts]=useState<OpenShift[]>([]);
  const [submittedIds,setSubmittedIds]=useState<string[]>([]);
  const [saving,setSaving]=useState(false); const [missingYes,setMissingYes]=useState(false); const [message,setMessage]=useState('');
  const router=useRouter();
@@ -73,11 +74,19 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
  const calendarDays=calendarMode==='week'?Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(d.getDate()+i);return d}):Array.from({length:new Date(monthDate.getFullYear(),monthDate.getMonth()+1,0).getDate()},(_,i)=>new Date(monthDate.getFullYear(),monthDate.getMonth(),i+1));
  const calendarDateKey=(d:Date)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
  const calendarShifts=sorted.filter(a=>calendarDays.some(d=>dayKey(a.starts_at)===calendarDateKey(d)));
- const openShift=async(a:Assignment)=>{setReportCheckPending(true);setViewing(null);setSelected(null);
- const {data,error}=await createClient().from('crew_shift_reports').select('id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes').eq('assignment_id',a.id).maybeSingle();
- if(error){setMessage('Rapportstatus niet beschikbaar. Opnieuw indienen is uit voorzorg geblokkeerd.');setDetail(null);setReportCheckPending(false);return;}
- if(data){setKnownReports(prev=>({...prev,[a.id]:data}));setDetail({...a,crew_shift_reports:[data]});}
- else setDetail(a);
+ const openShift=async(a:Assignment)=>{setReportCheckPending(true);setViewing(null);setSelected(null);setDetailOpenShifts([]);setDetail(a);
+ const [reportResult,detailResult]=await Promise.allSettled([
+  createClient().from('crew_shift_reports').select('id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes').eq('assignment_id',a.id).maybeSingle(),
+  fetch('/api/crew/assignment-detail?assignmentId='+encodeURIComponent(a.id),{cache:'no-store'}).then(async response=>{if(!response.ok)throw Error('Projectinformatie niet beschikbaar');return response.json()})
+ ]);
+ const report=reportResult.status==='fulfilled'?reportResult.value:null;
+ if(!report||report.error){setMessage('Rapportstatus niet beschikbaar. Opnieuw indienen is uit voorzorg geblokkeerd.');setDetail(null);setReportCheckPending(false);return;}
+ if(report.data)setKnownReports(prev=>({...prev,[a.id]:report.data}));
+ if(detailResult.status==='fulfilled'){
+  const info=detailResult.value;
+  setDetail({...a,crew_shift_reports:report.data?[report.data]:[],eventInfo:info.eventInfo,daySchedule:info.daySchedule});
+  setDetailOpenShifts(info.openShifts||[]);
+ }else{setDetail({...a,crew_shift_reports:report.data?[report.data]:[]});setMessage('Aanvullende projectgegevens konden niet worden geladen.');}
  setReportCheckPending(false);
 };
  const openReport=async(a:Assignment)=>{if(knownReports[a.id])a={...a,crew_shift_reports:[knownReports[a.id]]};if(!a.crew_shift_reports?.[0]){const {data}=await createClient().from('crew_shift_reports').select('id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes').eq('assignment_id',a.id).maybeSingle();if(data)a={...a,crew_shift_reports:[data]};else{setMessage('Rapport nog niet beschikbaar. Vernieuw de pagina.');return;}}setViewing(a);setSelected(null);setDetail(null);};
@@ -124,8 +133,8 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
   </div>
  </div>
 
- {openShifts.some(s=>s.projectId===Number(detail.rentman_project_id))&&<div className="crew-panel crew-briefing"><h2><ClipboardList size={21}/> Openstaande shifts binnen dit project</h2>
-  <div className="crew-open-shifts">{openShifts.filter(s=>s.projectId===Number(detail.rentman_project_id)).map(s=><div className="crew-open-shift" key={s.id}><div><strong>{s.functionName}</strong><small>{dateLabel(s.start)} · {timeLabel(s.start)} – {timeLabel(s.end)}</small></div><span className="crew-open-count">{s.available} open</span></div>)}</div>
+ {detailOpenShifts.some(s=>s.projectId===Number(detail.rentman_project_id))&&<div className="crew-panel crew-briefing"><h2><ClipboardList size={21}/> Openstaande shifts binnen dit project</h2>
+  <div className="crew-open-shifts">{detailOpenShifts.filter(s=>s.projectId===Number(detail.rentman_project_id)).map(s=><div className="crew-open-shift" key={s.id}><div><strong>{s.functionName}</strong><small>{dateLabel(s.start)} · {timeLabel(s.start)} – {timeLabel(s.end)}</small></div><span className="crew-open-count">{s.available} open</span></div>)}</div>
  </div>}
 
  <div className="crew-panel crew-briefing">{hasReport(detail)?<button className="crew-btn" onClick={()=>openReport(detail)}>Rapport bekijken</button>:new Date(detail.ends_at).getTime()<=now?(!adminPreview&&!reportsLoadError&&!reportCheckPending?<button className="crew-btn" onClick={()=>beginReport(detail)}>Shiftrapport invullen</button>:<span className="crew-muted">Rapport nog niet ingediend</span>):<span className="crew-muted">Je kunt je rapport indienen nadat de dienst is afgelopen.</span>}</div>
