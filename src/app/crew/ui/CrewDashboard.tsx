@@ -81,7 +81,8 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
  ]);
  const report=reportResult.status==='fulfilled'?reportResult.value:null;
  if(!report||report.error){setMessage('Rapportstatus niet beschikbaar. Opnieuw indienen is uit voorzorg geblokkeerd.');setDetail(null);setReportCheckPending(false);return;}
- if(report.data)setKnownReports(prev=>({...prev,[a.id]:report.data}));
+ const existingReport=report.data;
+ if(existingReport)setKnownReports(prev=>({...prev,[a.id]:existingReport}));
  if(detailResult.status==='fulfilled'){
   const info=detailResult.value;
   setDetail({...a,crew_shift_reports:report.data?[report.data]:[],eventInfo:info.eventInfo,daySchedule:info.daySchedule});
