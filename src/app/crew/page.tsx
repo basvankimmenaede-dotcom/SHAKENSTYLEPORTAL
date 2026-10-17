@@ -1,3 +1,5 @@
+import {after} from 'next/server';
+import {synchronizeCrewAssignments} from '@/lib/crew/synchronize-assignments';
 import { createClient } from '@/lib/supabase/server';
 import CrewLogin from './ui/CrewLogin';
 import CrewDashboard from './ui/CrewDashboard';
@@ -10,6 +12,8 @@ export default async function CrewPage() {
  if (!user?.email) return <CrewLogin />;
  const { data: member } = await supabase.from('crew_portal_members').select('id,full_name,email,rentman_crew_id').eq('active', true).maybeSingle();
  if (!member || !Number.isSafeInteger(Number(member.rentman_crew_id)) || Number(member.rentman_crew_id) <= 0 || member.email?.trim().toLowerCase() !== user.email.trim().toLowerCase()) return <CrewLogin signedInButNotLinked />;
+ // Refresh after sending the page so Crew never waits for Rentman during login.
+ after(async()=>{try{await synchronizeCrewAssignments()}catch(error){console.error('Background Crew sync failed',error)}});
  const from = new Date(Date.now()-7*86400000).toISOString();
  const to = new Date(Date.now()+120*86400000).toISOString();
  const { data: assignments, error: assignmentsError } = await supabase.from('crew_portal_assignments')
