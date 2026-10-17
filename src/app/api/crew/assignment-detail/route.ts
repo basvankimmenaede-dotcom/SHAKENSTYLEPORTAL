@@ -8,7 +8,7 @@ const customText=(custom:Record<string,unknown>|undefined,id:number)=>{
  const value=custom?.['custom_'+id]??custom?.[String(id)];
  if(value==null||value==='')return null;
  if(typeof value!=='string'&&typeof value!=='number')return null;
- return String(value).replace(/<br\\s*\\/?\\s*>/gi,'\\n').replace(/<\\/(p|div|li)>/gi,'\\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').trim()||null;
+ return String(value).replace(/<br\s*\/?\s*>/gi,'\n').replace(/<\/(p|div|li)>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').trim()||null;
 };
 export async function GET(request:NextRequest){
  const supabase=await createClient();
