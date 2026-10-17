@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import BrandLogo from '@/components/BrandLogo';
@@ -15,12 +15,13 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
  const [reportCheckPending,setReportCheckPending]=useState(false);
  const [detailOpenShifts,setDetailOpenShifts]=useState<OpenShift[]>([]);
  const [submittedIds,setSubmittedIds]=useState<string[]>([]);
+ const submittingRef=useRef(false);
  const [saving,setSaving]=useState(false); const [missingYes,setMissingYes]=useState(false); const [message,setMessage]=useState('');
  const router=useRouter();
  useEffect(()=>{if(!message)return;const timeout=window.setTimeout(()=>setMessage(''),5000);return()=>window.clearTimeout(timeout)},[message]);
  const hasReport=(a:Assignment)=>Boolean(a.crew_shift_reports?.length)||Boolean(knownReports[a.id])||submittedIds.includes(a.id);
  async function sendConfirmation(assignmentId:string){try{const response=await fetch('/api/crew/report-confirmation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({assignmentId})});const result=await response.json();setMessage(response.ok&&result.sent?'Bevestigingsmail verzonden naar je inlogadres.':'Rapport opgeslagen, maar bevestigingsmail niet verzonden: '+(result.error||'onbekende fout'));router.refresh();}catch{setMessage('Rapport opgeslagen, maar de bevestigingsmail kon niet worden verstuurd.')}}
- async function submit(formData:FormData){if(!selected||saving)return;setSaving(true);setMessage('');
+ async function submit(formData:FormData){if(!selected||submittingRef.current)return;submittingRef.current=true;setSaving(true);setMessage('');try{
  if(reportsLoadError){setMessage('Rapportstatus niet beschikbaar. Probeer de pagina opnieuw te laden.');setSaving(false);return;}
  const {data:existing,error:checkError}=await createClient().from('crew_shift_reports').select('id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes').eq('assignment_id',selected.id).maybeSingle();
  if(checkError){setMessage('Rapportstatus kon niet worden gecontroleerd. Er is niets opnieuw ingediend.');setSaving(false);return;}
@@ -54,7 +55,8 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
  const {error}=await supabase.from('crew_shift_reports').insert({...data,crew_member_id:member.id,status:'submitted'});
  setSaving(false);
  if(error){setMessage(error.code==='23505'?'Voor deze dienst is al een shiftrapport ingediend. Open het bestaande rapport.':'Opslaan mislukt: '+error.message);router.refresh();return}
- setSubmittedIds(ids=>[...ids,selected.id]);setSelected(null);setDetail(null);router.refresh();setMessage('Shiftrapport ingediend. Bevestigingsmail wordt verstuurd…');await sendConfirmation(selected.id);}
+ setSubmittedIds(ids=>[...ids,selected.id]);setSelected(null);setDetail(null);router.refresh();setMessage('Shiftrapport ingediend. De bevestigingsmail wordt apart verzonden.');void sendConfirmation(selected.id);}
+ finally{submittingRef.current=false;setSaving(false);}}
 
 
  const now=Date.now();
@@ -74,22 +76,23 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
  const calendarDays=calendarMode==='week'?Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(d.getDate()+i);return d}):Array.from({length:new Date(monthDate.getFullYear(),monthDate.getMonth()+1,0).getDate()},(_,i)=>new Date(monthDate.getFullYear(),monthDate.getMonth(),i+1));
  const calendarDateKey=(d:Date)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
  const calendarShifts=sorted.filter(a=>calendarDays.some(d=>dayKey(a.starts_at)===calendarDateKey(d)));
- const openShift=async(a:Assignment)=>{setReportCheckPending(true);setViewing(null);setSelected(null);setDetailOpenShifts([]);setDetail(a);
- const [reportResult,detailResult]=await Promise.allSettled([
-  createClient().from('crew_shift_reports').select('id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes').eq('assignment_id',a.id).maybeSingle(),
-  fetch('/api/crew/assignment-detail?assignmentId='+encodeURIComponent(a.id),{cache:'no-store'}).then(async response=>{if(!response.ok)throw Error('Projectinformatie niet beschikbaar');return response.json()})
- ]);
- const report=reportResult.status==='fulfilled'?reportResult.value:null;
- if(!report||report.error){setMessage('Rapportstatus niet beschikbaar. Opnieuw indienen is uit voorzorg geblokkeerd.');setDetail(null);setReportCheckPending(false);return;}
- const existingReport=report.data;
- if(existingReport)setKnownReports(prev=>({...prev,[a.id]:existingReport}));
- if(detailResult.status==='fulfilled'){
-  const info=detailResult.value;
-  setDetail({...a,crew_shift_reports:report.data?[report.data]:[],eventInfo:info.eventInfo,daySchedule:info.daySchedule});
+ const openShift=async(a:Assignment)=>{
+ setReportCheckPending(true);setViewing(null);setSelected(null);setDetailOpenShifts([]);setDetail(a);
+ // Do not block report access on slow Rentman project data.
+ const reportPromise=createClient().from('crew_shift_reports').select('id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes').eq('assignment_id',a.id).maybeSingle();
+ void fetch('/api/crew/assignment-detail?assignmentId='+encodeURIComponent(a.id),{cache:'no-store'}).then(async response=>{
+  if(!response.ok)throw Error('Projectinformatie niet beschikbaar');
+  return response.json();
+ }).then(info=>{
+  setDetail(current=>current?.id===a.id?{...current,eventInfo:info.eventInfo,daySchedule:info.daySchedule}:current);
   setDetailOpenShifts(info.openShifts||[]);
- }else{setDetail({...a,crew_shift_reports:report.data?[report.data]:[]});setMessage('Aanvullende projectgegevens konden niet worden geladen.');}
+ }).catch(()=>{setMessage('Aanvullende projectgegevens konden niet worden geladen.');});
+ const {data:existingReport,error}=await reportPromise;
+ if(error){setMessage('Rapportstatus niet beschikbaar. Opnieuw indienen is geblokkeerd.');setReportCheckPending(false);return;}
+ if(existingReport)setKnownReports(prev=>({...prev,[a.id]:existingReport}));
+ setDetail(current=>current?.id===a.id?{...current,crew_shift_reports:existingReport?[existingReport]:[]}:current);
  setReportCheckPending(false);
-};
+ };
  const openReport=async(a:Assignment)=>{if(knownReports[a.id])a={...a,crew_shift_reports:[knownReports[a.id]]};if(!a.crew_shift_reports?.[0]){const {data}=await createClient().from('crew_shift_reports').select('id,status,submitted_at,work_started_at,work_ended_at,break_minutes,travel_minutes,expenses_amount,expenses_description,breakage_over_ten,missing_materials,missing_materials_description,notes').eq('assignment_id',a.id).maybeSingle();if(data)a={...a,crew_shift_reports:[data]};else{setMessage('Rapport nog niet beschikbaar. Vernieuw de pagina.');return;}}setViewing(a);setSelected(null);setDetail(null);};
  const beginReport=(a:Assignment)=>{if(reportsLoadError||reportCheckPending){setMessage('Rapportstatus nog niet gecontroleerd. Opnieuw indienen is geblokkeerd.');return;}if(hasReport(a)){void openReport(a);return;}setSelected(a);setViewing(null);setDetail(null);setMessage('');};
  const shiftCard=(a:Assignment)=>{const report=hasReport(a);const ended=new Date(a.ends_at).getTime()<=now;return <button type="button" key={a.id} className="crew-shift-card" onClick={()=>openShift(a)}>
@@ -158,7 +161,7 @@ export default function CrewDashboard({memberName,assignments,openShifts=[],admi
  <label>Werkelijke begintijd <input name="start" type="time" required defaultValue={new Date(selected.starts_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} className="crew-field"/></label>
  <label>Werkelijke eindtijd <input name="end" type="time" required defaultValue={new Date(selected.ends_at).toLocaleTimeString('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hour12:false})} className="crew-field"/></label></div><div className="crew-grid">
  <label>Pauze (minuten) <input name="break" type="number" min="0" max="1440" placeholder="0" className="crew-field"/></label>
- <label>Totale reistijd, heen en terug (minuten) <input name="travel" type="number" min="0" max="1440" placeholder="0" required className="crew-field"/></label></div>
+ <label>Totale reistijd, heen en terug (minuten) <input name="travel" type="number" min="0" max="1440" defaultValue="0" required className="crew-field"/></label></div>
  <small style={{fontSize:11,color:'var(--muted)',lineHeight:1.5}}>Amsterdam: geen reistijdvergoeding. Buiten Amsterdam: eerste 30 minuten eigen tijd, daarna 75% van je afgesproken uurtarief. De definitieve berekening volgt na controle.</small><div style={{fontSize:12,fontWeight:700,color:'var(--muted)',marginTop:8}}>KOSTEN & BIJZONDERHEDEN</div>
  <label>Gemaakte kosten (€) <input name="expenses" type="number" min="0" step="0.01" placeholder="0" required className="crew-field"/></label>
  <label>Omschrijving onkosten <textarea name="expense_note" rows={2} className="crew-field"/></label>
