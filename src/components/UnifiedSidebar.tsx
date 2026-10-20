@@ -53,6 +53,7 @@ export default function UnifiedSidebar({
   const planningItems: NavItem[] = [
     ...(canViewPlanning || role === 'admin' ? [
       { href: '/planning', label: 'Planning', icon: CalendarDays, match: ['/planning'] },
+      { href: '/planning/personnel-timeline', label: 'Personeelstijdlijn', icon: CalendarClock, match: ['/planning/personnel-timeline'] },
       { href: '/planning/open-shifts', label: 'Open shifts', icon: CalendarClock, match: ['/planning/open-shifts'] },
       { href: '/planning/logistics', label: 'Logistiek', icon: Route, match: ['/planning/logistics'] },
     ] : []),
