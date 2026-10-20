@@ -33,7 +33,7 @@ export default async function PersonnelTimelinePage() {
     const address=location?[location.visit_street,location.visit_number,location.visit_postalcode,location.visit_city].filter(Boolean).join(' '):'';
     return [{id:a.id,personId:c.id,person:c.displayname || [c.firstname,c.middle_name,c.lastname].filter(Boolean).join(' ') || String(c.id),
       role:f?.group?.displayname || f?.group?.name || 'Medewerker',name:f?.displayname || f?.name || 'Dienst',
-      start,end,transport:transport||null,outbound,returnTrip,subprojectName:subproject?.name||null,projectId,projectName:project?.name||null,projectNumber:project?.number?String(project.number):null,customer:project?.customer?.displayname||project?.customer?.name||null,location:location?.displayname||location?.name||null,address:address||null}];
+      start,end,travelBeforeMinutes:outbound&&typeof f?.travel_time_before==='number'?f.travel_time_before:null,travelAfterMinutes:returnTrip&&typeof f?.travel_time_after==='number'?f.travel_time_after:null,transport:transport||null,outbound,returnTrip,subprojectName:subproject?.name||null,projectId,projectName:project?.name||null,projectNumber:project?.number?String(project.number):null,customer:project?.customer?.displayname||project?.customer?.name||null,location:location?.displayname||location?.name||null,address:address||null}];
   });
   return <PersonnelTimeline shifts={shifts} today={today} error={error}/>;
 }
