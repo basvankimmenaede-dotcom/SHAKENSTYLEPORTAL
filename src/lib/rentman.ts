@@ -514,6 +514,8 @@ export type RentmanPlanningCrewAssignment = {
   id: number;
   function?: {
     id: number;
+    travel_time_before?: number | null;
+    travel_time_after?: number | null;
     displayname?: string;
     name?: string;
     project?: string | null;
