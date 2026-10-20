@@ -35,18 +35,26 @@ export default function PersonnelTimeline({shifts,today,error}:{shifts:Shift[];t
  const roles=Array.from(new Set(shifts.map(s=>s.role))).sort();
  const people=useMemo(()=>{const map=new Map<number,{id:number;name:string;role:string}>();shifts.filter(s=>!hiddenFunctions.includes(s.name)).forEach(s=>{if(!map.has(s.personId))map.set(s.personId,{id:s.personId,name:s.person,role:s.role});});const priority=(id:number)=>Math.min(9999,...shifts.filter(s=>s.personId===id&&!hiddenFunctions.includes(s.name)).map(s=>{const i=orderedFunctions.indexOf(s.name);return i<0?9999:i;}));return [...map.values()].filter(p=>(role==='all'||p.role===role)&&p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>priority(a.id)-priority(b.id)||a.name.localeCompare(b.name,'nl'));},[shifts,role,search,hiddenFunctions,orderedFunctions]);
  const visible=shifts.filter(s=>!hiddenFunctions.includes(s.name)&&people.some(p=>p.id===s.personId)&&(travel||classify(s.name)!=='travel')&&new Date(s.start).getTime()<new Date(add(anchor,days)+'T00:00:00Z').getTime()&&new Date(s.end).getTime()>=new Date(anchor+'T00:00:00Z').getTime());
+ // Include travel in both collision detection and lane allocation.
+ const effectiveStart=(s:Shift)=>new Date(s.start).getTime()-(s.travelBeforeMinutes||0)*60000;
+ const effectiveEnd=(s:Shift)=>new Date(s.end).getTime()+(s.travelAfterMinutes||0)*60000;
  const conflicts=new Set<number>();
- for(const p of people){const list=visible.filter(s=>s.personId===p.id).sort((a,b)=>a.start.localeCompare(b.start));for(let i=1;i<list.length;i++)if(new Date(list[i].start)<new Date(list[i-1].end)){conflicts.add(list[i].id);conflicts.add(list[i-1].id);}}
+ for(const p of people){
+  const list=shifts.filter(s=>s.personId===p.id).sort((a,b)=>effectiveStart(a)-effectiveStart(b));
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length&&effectiveStart(list[j])<effectiveEnd(list[i]);j++){
+   if(effectiveEnd(list[j])>effectiveStart(list[i])){conflicts.add(list[i].id);conflicts.add(list[j].id);}
+  }
+ }
  const step=zoom>=4?1:zoom>=2?2:zoom>=1?4:6;
  const gridSize=dayWidth*step/24;
  const rowWidth=days*dayWidth;
  const laneMap=new Map<number,number>();
  const rowHeights=new Map<number,number>();
  for(const p of people){
-  const list=visible.filter(s=>s.personId===p.id).sort((a,b)=>new Date(a.start).getTime()-new Date(b.start).getTime()||a.id-b.id);
+  const list=visible.filter(s=>s.personId===p.id).sort((a,b)=>effectiveStart(a)-effectiveStart(b)||a.id-b.id);
   const laneEnds:number[]=[];
   for(const s of list){
-   const startMs=new Date(s.start).getTime(),endMs=new Date(s.end).getTime();
+   const startMs=effectiveStart(s),endMs=effectiveEnd(s);
    let lane=laneEnds.findIndex(lastEnd=>lastEnd<=startMs);
    if(lane<0){lane=laneEnds.length;laneEnds.push(endMs);}else laneEnds[lane]=endMs;
    laneMap.set(s.id,lane);
@@ -67,7 +75,7 @@ export default function PersonnelTimeline({shifts,today,error}:{shifts:Shift[];t
    const left=direction==='before'?x-pixels:right;
    const clippedLeft=Math.max(0,left),clippedRight=Math.min(rowWidth,left+pixels);
    if(clippedRight<=clippedLeft)return null;
-   return <button key={s.id+'-'+direction} type="button" onClick={()=>setSelected(s)} title={(direction==='before'?'Heenreis':'Terugreis')+' · '+minutes+' minuten · '+(s.projectName||s.name)} className={styles.block} style={{left:clippedLeft,width:clippedRight-clippedLeft,top:laneTop,backgroundColor:'#cbd5e1',border:'1px dashed #64748b',zIndex:1}}><span>{direction==='before'?'↗ Heen':'↙ Terug'}</span><small>{minutes} min</small></button>;
+   return <button key={s.id+'-'+direction} type="button" onClick={()=>setSelected(s)} title={(direction==='before'?'Heenreis':'Terugreis')+' · '+minutes+' minuten · '+(s.projectName||s.name)} className={styles.block+(conflicts.has(s.id)?' '+styles.conflict:'')} style={{left:clippedLeft,width:clippedRight-clippedLeft,top:laneTop,backgroundColor:'#cbd5e1',border:'1px dashed #64748b',zIndex:1}}><span>{conflicts.has(s.id)?'⚠ ':''}{direction==='before'?'↗ Heen':'↙ Terug'}</span><small>{minutes} min</small></button>;
   };
   return <div key={s.id}>{travelBlock('before',s.travelBeforeMinutes)}<button type="button" title={(s.projectName||s.name)+' · '+fmt(s.start)+' – '+fmt(s.end)} onClick={()=>setSelected(s)} className={styles.block+(conflicts.has(s.id)?' '+styles.conflict:'')} style={{left:x,width,top:laneTop,backgroundColor:colorFor(s.name),zIndex:2}}><span>{s.projectName||s.name}</span><small>{s.name} · {fmt(s.start).split(', ').pop()}</small></button>{travelBlock('after',s.travelAfterMinutes)}</div>;
  });
