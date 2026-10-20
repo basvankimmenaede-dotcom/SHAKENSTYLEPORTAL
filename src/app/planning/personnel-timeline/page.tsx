@@ -10,9 +10,11 @@ export default async function PersonnelTimelinePage() {
   const until = new Date(today+'T12:00:00Z'); until.setUTCDate(until.getUTCDate()+21);
   let assignments: Awaited<ReturnType<typeof getPlanningCrewAssignmentsForRange>> = [];
   let error = '';
-  let projects: Awaited<ReturnType<typeof getPlanningProjects>> = [];
-  try { [assignments, projects] = await Promise.all([getPlanningCrewAssignmentsForRange(dateKey(from),dateKey(until)), getPlanningProjects()]); }
+  let projects: Awaited<ReturnType<typeof getPlanningProjects>>['allProjects'] = [];
+  try { assignments = await getPlanningCrewAssignmentsForRange(dateKey(from),dateKey(until)); }
   catch { error = 'De Rentman-planning kon niet worden geladen. Probeer het later opnieuw.'; }
+  try { projects = (await getPlanningProjects()).allProjects; }
+  catch { /* Show shifts even when project metadata is unavailable. */ }
   const projectMap = new Map(projects.map(p => [p.id,p]));
   const shifts = assignments.flatMap(a => {
     const f=a.function, c=a.crewmember;
