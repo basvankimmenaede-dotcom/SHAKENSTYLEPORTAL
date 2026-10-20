@@ -6,3 +6,7 @@
 .functionControls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.functionControls button,.functionRow button{border:1px solid #dfe5ec;background:white;border-radius:7px;padding:6px 10px;cursor:pointer;color:#264967}.functionRow button:disabled{opacity:.3;cursor:default}.functionList{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:8px}.functionRow{display:flex;align-items:center;justify-content:space-between;border:1px solid #e4e8ef;border-radius:9px;padding:9px 12px;gap:12px}.functionRow label{display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer}.functionRow>div{display:flex;gap:5px}.functionDot{width:15px;height:15px;border-radius:4px;flex:none}
 
 .block small{font-weight:600}
+
+/* Tijdlijnen op dezelfde posities als de uurmarkeringen; volgen de zoomschaal. */
+.track{background-image:linear-gradient(to right,#cbd5e1 1px,transparent 1px);background-position:0 0;background-repeat:repeat;background-color:#fff}
+.day{padding:8px 0}.day>strong{display:block;padding-left:10px}.hours{margin-top:10px;justify-content:initial}.hours span{flex:1;padding-left:4px;border-left:1px solid #cbd5e1;white-space:nowrap}
