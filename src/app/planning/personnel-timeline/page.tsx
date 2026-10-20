@@ -20,7 +20,7 @@ export default async function PersonnelTimelinePage() {
   const subprojectMap = new Map(subprojects.map(s => [s.id,s]));
   const shifts = assignments.flatMap(a => {
     const f=a.function, c=a.crewmember;
-    const start=f?.planperiod_start || f?.usageperiod_start, end=f?.planperiod_end || f?.usageperiod_end;
+    const start=f?.usageperiod_start || f?.planperiod_start, end=f?.usageperiod_end || f?.planperiod_end;
     if(!c?.id || !start || !end) return [];
     const projectId=Number(String(f?.project||'').split('/').pop())||null;
     const project=projectId?projectMap.get(projectId):undefined;
@@ -30,10 +30,14 @@ export default async function PersonnelTimelinePage() {
     const transport=(a.transport||'').toLowerCase().trim().replaceAll(' ','_');
     const outbound=transport==='round_trip'||transport==='only_way_there'||transport==='only_there'||transport==='outbound_only';
     const returnTrip=transport==='round_trip'||transport==='only_way_back'||transport==='only_back'||transport==='return_only';
+    const minutesBetween=(earlier?:string|null,later?:string|null)=>{if(!earlier||!later)return null;const value=(new Date(later).getTime()-new Date(earlier).getTime())/60000;return Number.isFinite(value)&&value>0&&value<=720?Math.round(value):null;};
+    // Rentman usage period is the actual function; the wider planning period can include travel.
+    const inferredBefore=outbound?minutesBetween(f?.planperiod_start,f?.usageperiod_start):null;
+    const inferredAfter=returnTrip?minutesBetween(f?.usageperiod_end,f?.planperiod_end):null;
     const address=location?[location.visit_street,location.visit_number,location.visit_postalcode,location.visit_city].filter(Boolean).join(' '):'';
     return [{id:a.id,personId:c.id,person:c.displayname || [c.firstname,c.middle_name,c.lastname].filter(Boolean).join(' ') || String(c.id),
       role:f?.group?.displayname || f?.group?.name || 'Medewerker',name:f?.displayname || f?.name || 'Dienst',
-      start,end,travelBeforeMinutes:outbound&&typeof f?.travel_time_before==='number'?f.travel_time_before:null,travelAfterMinutes:returnTrip&&typeof f?.travel_time_after==='number'?f.travel_time_after:null,transport:transport||null,outbound,returnTrip,subprojectName:subproject?.name||null,projectId,projectName:project?.name||null,projectNumber:project?.number?String(project.number):null,customer:project?.customer?.displayname||project?.customer?.name||null,location:location?.displayname||location?.name||null,address:address||null}];
+      start,end,travelBeforeMinutes:inferredBefore??(outbound&&typeof f?.travel_time_before==='number'?f.travel_time_before:null),travelAfterMinutes:inferredAfter??(returnTrip&&typeof f?.travel_time_after==='number'?f.travel_time_after:null),transport:transport||null,outbound,returnTrip,subprojectName:subproject?.name||null,projectId,projectName:project?.name||null,projectNumber:project?.number?String(project.number):null,customer:project?.customer?.displayname||project?.customer?.name||null,location:location?.displayname||location?.name||null,address:address||null}];
   });
   return <PersonnelTimeline shifts={shifts} today={today} error={error}/>;
 }
