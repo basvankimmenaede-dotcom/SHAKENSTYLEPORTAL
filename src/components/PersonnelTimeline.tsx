@@ -3,7 +3,7 @@ import { useEffect,useMemo,useRef,useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft,ArrowRight,RotateCcw,Search,Clock,MapPin,ExternalLink,AlertTriangle } from 'lucide-react';
 import styles from './PersonnelTimeline.module.css';
-type Shift={id:number;personId:number;person:string;role:string;name:string;start:string;end:string;projectId:number|null;projectName:string|null;projectNumber:string|null;customer:string|null;location:string|null;address:string|null;transport:string|null;outbound:boolean;returnTrip:boolean;subprojectName:string|null};
+type Shift={id:number;personId:number;person:string;role:string;name:string;start:string;end:string;projectId:number|null;projectName:string|null;projectNumber:string|null;customer:string|null;location:string|null;address:string|null;transport:string|null;outbound:boolean;returnTrip:boolean;subprojectName:string|null;travelBeforeMinutes:number|null;travelAfterMinutes:number|null};
 type View='day'|'three'|'week';
 const DAY=86400000;
 const palette=['#b9d7fa','#ffd6a7','#d9c8ff','#a9e5d0','#ffc4d3','#b9e6e8','#f8e29e','#d2d8e3','#c6e1b0','#f6c8a6'];
@@ -59,7 +59,16 @@ export default function PersonnelTimeline({shifts,today,error}:{shifts:Shift[];t
   const right=endIndex<0?(finish<anchor?0:rowWidth):endIndex*dayWidth+mins(s.end)/1440*dayWidth;
   const width=Math.max(4,Math.min(rowWidth-x,right-x));
   if(x>=rowWidth||right<=0)return null;
-  return <button key={s.id} type="button" title={s.name+' · '+fmt(s.start)+' – '+fmt(s.end)} onClick={()=>setSelected(s)} className={styles.block+(conflicts.has(s.id)?' '+styles.conflict:'')} style={{left:x,width,top:8+(laneMap.get(s.id)||0)*54,backgroundColor:colorFor(s.name)}}><span>{s.name}</span><small>{s.outbound?'↗ Heen · ':''}{s.returnTrip?'↙ Terug · ':''}{fmt(s.start).split(', ').pop()}</small></button>;
+  const laneTop=8+(laneMap.get(s.id)||0)*54;
+  const travelBlock=(direction:'before'|'after',minutes:number|null)=>{
+   if(!travel||!minutes||minutes<=0||minutes>720)return null;
+   const pixels=minutes/1440*dayWidth;
+   const left=direction==='before'?x-pixels:right;
+   const clippedLeft=Math.max(0,left),clippedRight=Math.min(rowWidth,left+pixels);
+   if(clippedRight<=clippedLeft)return null;
+   return <button key={s.id+'-'+direction} type="button" onClick={()=>setSelected(s)} title={(direction==='before'?'Heenreis':'Terugreis')+' · '+minutes+' minuten · '+(s.projectName||s.name)} className={styles.block} style={{left:clippedLeft,width:clippedRight-clippedLeft,top:laneTop,backgroundColor:'#cbd5e1',border:'1px dashed #64748b',zIndex:1}}><span>{direction==='before'?'↗ Heen':'↙ Terug'}</span><small>{minutes} min</small></button>;
+  };
+  return <div key={s.id}>{travelBlock('before',s.travelBeforeMinutes)}<button type="button" title={(s.projectName||s.name)+' · '+fmt(s.start)+' – '+fmt(s.end)} onClick={()=>setSelected(s)} className={styles.block+(conflicts.has(s.id)?' '+styles.conflict:'')} style={{left:x,width,top:laneTop,backgroundColor:colorFor(s.name),zIndex:2}}><span>{s.projectName||s.name}</span><small>{s.name} · {fmt(s.start).split(', ').pop()}</small></button>{travelBlock('after',s.travelAfterMinutes)}</div>;
  });
  return <main className={styles.page}>
   <header className={styles.header}><div><h1>Personeelstijdlijn</h1><p>Medewerkers en diensten · Rentman-planning</p></div><div className={styles.actions}><button onClick={()=>setAnchor(add(anchor,-days))} aria-label="Vorige periode"><ArrowLeft size={16}/></button><button onClick={()=>setAnchor(today)}>Vandaag</button><button onClick={()=>setAnchor(add(anchor,days))} aria-label="Volgende periode"><ArrowRight size={16}/></button><select value={view} onChange={e=>setView(e.target.value as View)}><option value="day">Dag</option><option value="three">3 dagen</option><option value="week">Week</option></select><button onClick={()=>setRotated(!rotated)}><RotateCcw size={15}/> Draai weergave</button><button onClick={()=>{zoomRef.current=Math.max(.5,zoom-.25);setZoom(zoomRef.current);}} aria-label="Uitzoomen">−</button><span title="Houd Shift ingedrukt en scroll om de tijdlijn te zoomen">{Math.round(zoom*100)}% · Shift + scroll</span><button onClick={()=>{zoomRef.current=Math.min(8,zoom+.25);setZoom(zoomRef.current);}} aria-label="Inzoomen">+</button></div></header>
