@@ -1,11 +1,13 @@
 'use client';
-import { useMemo,useState } from 'react';
+import { useEffect,useMemo,useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft,ArrowRight,RotateCcw,Search,Clock,MapPin,ExternalLink,AlertTriangle } from 'lucide-react';
 import styles from './PersonnelTimeline.module.css';
 type Shift={id:number;personId:number;person:string;role:string;name:string;start:string;end:string;projectId:number|null;projectName:string|null;projectNumber:string|null;customer:string|null;location:string|null;address:string|null};
 type View='day'|'three'|'week';
 const DAY=86400000;
+const palette=['#b9d7fa','#ffd6a7','#d9c8ff','#a9e5d0','#ffc4d3','#b9e6e8','#f8e29e','#d2d8e3','#c6e1b0','#f6c8a6'];
+const colorKey='sns-personnel-function-colors-v1';
 function add(date:string,n:number){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
 function localDate(iso:string){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso));}
 function mins(iso:string){const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(iso)).split(':').map(Number);return p[0]*60+p[1];}
@@ -13,7 +15,11 @@ function fmt(iso:string){return new Intl.DateTimeFormat('nl-NL',{timeZone:'Europ
 function dayLabel(date:string){return new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',timeZone:'Europe/Amsterdam'}).format(new Date(date+'T12:00:00Z'));}
 function classify(name:string){return /heen|terug|reis|transport|rit/i.test(name)?'travel':/magazijn|warehouse/i.test(name)?'warehouse':'work';}
 export default function PersonnelTimeline({shifts,today,error}:{shifts:Shift[];today:string;error:string}){
- const [anchor,setAnchor]=useState(today),[view,setView]=useState<View>('three'),[rotated,setRotated]=useState(false),[search,setSearch]=useState(''),[role,setRole]=useState('all'),[selected,setSelected]=useState<Shift|null>(null),[travel,setTravel]=useState(true);
+ const [colors,setColors]=useState<Record<string,string>>({}),[editLegend,setEditLegend]=useState(false),[anchor,setAnchor]=useState(today),[view,setView]=useState<View>('three'),[rotated,setRotated]=useState(false),[search,setSearch]=useState(''),[role,setRole]=useState('all'),[selected,setSelected]=useState<Shift|null>(null),[travel,setTravel]=useState(true);
+ useEffect(()=>{try{const stored=window.localStorage.getItem(colorKey);if(stored){const parsed=JSON.parse(stored) as Record<string,string>;if(parsed&&typeof parsed==='object')setColors(parsed);}}catch{}},[]);
+ const functionNames=useMemo(()=>Array.from(new Set(shifts.map(s=>s.name))).sort((a,b)=>a.localeCompare(b,'nl')),[shifts]);
+ const colorFor=(name:string)=>colors[name]||palette[Math.max(0,functionNames.indexOf(name))%palette.length];
+ const setFunctionColor=(name:string,value:string)=>setColors(previous=>{const next={...previous,[name]:value};try{window.localStorage.setItem(colorKey,JSON.stringify(next));}catch{}return next;});
  const days=view==='day'?1:view==='three'?3:7;
  const dates=Array.from({length:days},(_,i)=>add(anchor,i));
  const roles=Array.from(new Set(shifts.map(s=>s.role))).sort();
@@ -23,25 +29,38 @@ export default function PersonnelTimeline({shifts,today,error}:{shifts:Shift[];t
  for(const p of people){const list=visible.filter(s=>s.personId===p.id).sort((a,b)=>a.start.localeCompare(b.start));for(let i=1;i<list.length;i++)if(new Date(list[i].start)<new Date(list[i-1].end)){conflicts.add(list[i].id);conflicts.add(list[i-1].id);}}
  const step=days===1?2:4;
  const rowWidth=days*360;
+ const laneMap=new Map<number,number>();
+ const rowHeights=new Map<number,number>();
+ for(const p of people){
+  const list=visible.filter(s=>s.personId===p.id).sort((a,b)=>new Date(a.start).getTime()-new Date(b.start).getTime()||a.id-b.id);
+  const laneEnds:number[]=[];
+  for(const s of list){
+   const startMs=new Date(s.start).getTime(),endMs=new Date(s.end).getTime();
+   let lane=laneEnds.findIndex(lastEnd=>lastEnd<=startMs);
+   if(lane<0){lane=laneEnds.length;laneEnds.push(endMs);}else laneEnds[lane]=endMs;
+   laneMap.set(s.id,lane);
+  }
+  rowHeights.set(p.id,Math.max(72,16+laneEnds.length*54));
+ }
  const blocks=(p:number)=>visible.filter(s=>s.personId===p).map(s=>{
   const begin=localDate(s.start),finish=localDate(s.end);
-  let a=dates.indexOf(begin),b=dates.indexOf(finish);
-  if(a<0)a=begin<anchor?0:days;
-  if(b<0)b=finish<anchor?0:days-1;
-  const x=a*360+Math.max(0,mins(s.start)/1440*360);
-  const endX=b*360+mins(s.end)/1440*360;
-  const width=Math.max(12,Math.min(rowWidth-x,endX-x));
-  return <button key={s.id} type="button" title={s.name+' · '+fmt(s.start)+' – '+fmt(s.end)} onClick={()=>setSelected(s)} className={styles.block+' '+styles[classify(s.name)]+(conflicts.has(s.id)?' '+styles.conflict:'')} style={{left:x,width}}><span>{s.name}</span><small>{fmt(s.start).split(', ').pop()}</small></button>;
+  const startIndex=dates.indexOf(begin),endIndex=dates.indexOf(finish);
+  const x=startIndex<0?(begin<anchor?0:rowWidth):startIndex*360+mins(s.start)/1440*360;
+  const right=endIndex<0?(finish<anchor?0:rowWidth):endIndex*360+mins(s.end)/1440*360;
+  const width=Math.max(4,Math.min(rowWidth-x,right-x));
+  if(x>=rowWidth||right<=0)return null;
+  return <button key={s.id} type="button" title={s.name+' · '+fmt(s.start)+' – '+fmt(s.end)} onClick={()=>setSelected(s)} className={styles.block+(conflicts.has(s.id)?' '+styles.conflict:'')} style={{left:x,width,top:8+(laneMap.get(s.id)||0)*54,backgroundColor:colorFor(s.name)}}><span>{s.name}</span><small>{fmt(s.start).split(', ').pop()}</small></button>;
  });
  return <main className={styles.page}>
   <header className={styles.header}><div><h1>Personeelstijdlijn</h1><p>Medewerkers en diensten · Rentman-planning</p></div><div className={styles.actions}><button onClick={()=>setAnchor(add(anchor,-days))} aria-label="Vorige periode"><ArrowLeft size={16}/></button><button onClick={()=>setAnchor(today)}>Vandaag</button><button onClick={()=>setAnchor(add(anchor,days))} aria-label="Volgende periode"><ArrowRight size={16}/></button><select value={view} onChange={e=>setView(e.target.value as View)}><option value="day">Dag</option><option value="three">3 dagen</option><option value="week">Week</option></select><button onClick={()=>setRotated(!rotated)}><RotateCcw size={15}/> Draai weergave</button></div></header>
-  <div className={styles.filters}><label><Search size={16}/><input placeholder="Zoek medewerker..." value={search} onChange={e=>setSearch(e.target.value)}/></label><select value={role} onChange={e=>setRole(e.target.value)}><option value="all">Alle functies</option>{roles.map(r=><option key={r}>{r}</option>)}</select><label className={styles.check}><input type="checkbox" checked={travel} onChange={e=>setTravel(e.target.checked)}/> Reistijd tonen</label><span className={styles.legend}>● Werk &nbsp; <span>● Reis</span> &nbsp; <b>● Conflict</b></span></div>
+  <div className={styles.filters}><label><Search size={16}/><input placeholder="Zoek medewerker..." value={search} onChange={e=>setSearch(e.target.value)}/></label><select value={role} onChange={e=>setRole(e.target.value)}><option value="all">Alle functies</option>{roles.map(r=><option key={r}>{r}</option>)}</select><label className={styles.check}><input type="checkbox" checked={travel} onChange={e=>setTravel(e.target.checked)}/> Reistijd tonen</label><button className={styles.legendButton} onClick={()=>setEditLegend(!editLegend)}>{editLegend?'Legenda sluiten':'Legenda aanpassen'}</button><span className={styles.legend}><b>● Conflict</b></span></div>
+  {editLegend&&<section className={styles.legendEditor}><div className={styles.legendIntro}><strong>Functiekleuren</strong><span>Kies per Rentman-functie een kleur. Je keuze wordt in deze browser bewaard.</span></div><div className={styles.legendItems}>{functionNames.map(name=><label key={name} className={styles.legendItem}><input type="color" value={colorFor(name)} onChange={e=>setFunctionColor(name,e.target.value)} aria-label={'Kleur voor '+name}/><span>{name}</span></label>)}</div><button className={styles.legendReset} onClick={()=>{setColors({});try{window.localStorage.removeItem(colorKey);}catch{}}}>Standaardkleuren herstellen</button></section>}
   {error&&<p role="alert" className={styles.error}>{error}</p>}
   <div className={styles.content}><div className={styles.timeline}>
   {!rotated?<div className={styles.scroll}><div className={styles.grid} style={{width:220+rowWidth}}>
    <div className={styles.stickyHead}><div className={styles.corner}>Medewerker</div><div className={styles.days} style={{width:rowWidth}}>{dates.map(d=><div key={d} className={styles.day} style={{width:360}}><strong>{dayLabel(d)}</strong><div className={styles.hours}>{Array.from({length:24/step},(_,i)=><span key={i}>{String(i*step).padStart(2,'0')}:00</span>)}</div></div>)}</div></div>
-   {people.map(p=><div className={styles.line} key={p.id}><div className={styles.person}><strong>{p.name}</strong><small>{p.role}</small></div><div className={styles.track} style={{width:rowWidth,backgroundSize:'60px 100%'}}>{blocks(p.id)}</div></div>)}
-  </div></div>:<div className={styles.scroll}><div className={styles.rotated} style={{minWidth:Math.max(660,100+people.length*160)}}><div className={styles.rotateHead}><span>Tijd</span>{people.map(p=><strong key={p.id}>{p.name}</strong>)}</div>{dates.map(date=><section key={date}><h3>{dayLabel(date)}</h3><div className={styles.rotateRows}><div className={styles.timeAxis}>{Array.from({length:13},(_,i)=><span key={i}>{String(i*2).padStart(2,'0')}:00</span>)}</div>{people.map(p=><div className={styles.verticalTrack} key={p.id}>{visible.filter(s=>s.personId===p.id&&localDate(s.start)===date).map(s=><button key={s.id} onClick={()=>setSelected(s)} className={styles.verticalBlock+' '+styles[classify(s.name)]} style={{top:mins(s.start)/1440*576,height:Math.max(20,(new Date(s.end).getTime()-new Date(s.start).getTime())/DAY*576)}}>{s.name}</button>)}</div>)}</div></section>)}</div></div>}
+   {people.map(p=><div className={styles.line} key={p.id} style={{height:rowHeights.get(p.id)||72}}><div className={styles.person}><strong>{p.name}</strong><small>{p.role}</small></div><div className={styles.track} style={{width:rowWidth,backgroundSize:'60px 100%'}}>{blocks(p.id)}</div></div>)}
+  </div></div>:<div className={styles.scroll}><div className={styles.rotated} style={{minWidth:Math.max(660,100+people.length*160)}}><div className={styles.rotateHead}><span>Tijd</span>{people.map(p=><strong key={p.id}>{p.name}</strong>)}</div>{dates.map(date=><section key={date}><h3>{dayLabel(date)}</h3><div className={styles.rotateRows}><div className={styles.timeAxis}>{Array.from({length:13},(_,i)=><span key={i}>{String(i*2).padStart(2,'0')}:00</span>)}</div>{people.map(p=><div className={styles.verticalTrack} key={p.id}>{visible.filter(s=>s.personId===p.id&&localDate(s.start)===date).map(s=><button key={s.id} onClick={()=>setSelected(s)} className={styles.verticalBlock} style={{top:mins(s.start)/1440*576,height:Math.max(20,(new Date(s.end).getTime()-new Date(s.start).getTime())/DAY*576),backgroundColor:colorFor(s.name)}}>{s.name}</button>)}</div>)}</div></section>)}</div></div>}
   {people.length===0&&<p className={styles.empty}>Geen medewerkers gevonden voor deze selectie.</p>}</div>
   <aside className={styles.side}>{selected?<><div className={styles.sideTitle}><div><span className={styles.eyebrow}>DIENSTDETAILS</span><h2>{selected.name}</h2></div><button onClick={()=>setSelected(null)}>Sluiten</button></div>
   <div className={styles.detailHero}><strong>{selected.projectName||'Projectgegevens niet beschikbaar'}</strong><span>{selected.projectNumber?'Project #'+selected.projectNumber:selected.projectId?'Rentman ID '+selected.projectId:'Geen project gekoppeld'}</span></div>
