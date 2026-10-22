@@ -32,15 +32,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Ongeldige factuurregels.' }, { status: 400 });
   }
   const lines: Line[] = [];
-  for (const raw of body.lines) {
+  for (const [index, raw] of body.lines.entries()) {
     const description = String(raw?.description ?? '').trim();
     const quantity = Number(raw?.quantity);
     const unitPrice = Number(raw?.unitPrice);
     const vatRate = Number(raw?.vatRate);
-    if (!description || description.length > 500 || !Number.isFinite(quantity) || quantity < 0 || quantity > 1000000 ||
-      !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 100000000 || ![0, 9, 21].includes(vatRate)) {
-      return NextResponse.json({ error: 'Controleer de omschrijving, aantallen, prijzen en btw van iedere regel.' }, { status: 400 });
-    }
+    // An untouched blank line is a UI placeholder, not an invoice line.
+    if (!description && quantity === 1 && unitPrice === 0 && vatRate === 21) continue;
+    const issue = !description ? 'omschrijving ontbreekt' : description.length > 500 ? 'omschrijving is langer dan 500 tekens' :
+      !Number.isFinite(quantity) || quantity < 0 || quantity > 1000000 ? 'aantal moet tussen 0 en 1.000.000 liggen' :
+      !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 100000000 ? 'prijs moet tussen 0 en 100.000.000 liggen' :
+      ![0, 9, 21].includes(vatRate) ? 'btw moet 0%, 9% of 21% zijn' : null;
+    if (issue) return NextResponse.json({ error: 'Regel '+(index+1)+': '+issue+'.' }, { status: 400 });
     lines.push({ description, quantity, unitPrice, vatRate });
   }
   const field = (key: string, max = 1000) => String(body[key] ?? '').trim().slice(0, max);
@@ -57,6 +60,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     updated_by: user.id,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'billing_item_id' });
-  if (error) return NextResponse.json({ error: 'Concept kon niet worden opgeslagen.' }, { status: 500 });
+  if (error) {
+    console.error('Billing draft save failed', { billingItemId: id, code: error.code, message: error.message, details: error.details });
+    return NextResponse.json({ error: 'Databasefout bij opslaan: '+error.message+(error.code?' (code '+error.code+')':'') }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
