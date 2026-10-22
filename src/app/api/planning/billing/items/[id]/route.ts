@@ -15,7 +15,7 @@ export async function PATCH(
   }
 
   const completedAt = status === 'open' ? null : new Date().toISOString();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('billing_items')
     .update({
       status,
@@ -23,11 +23,17 @@ export async function PATCH(
       completed_by: status === 'open' ? null : user.id,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id,status,completed_at')
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, status, completedAt });
+  if (!updated || updated.status !== status) {
+    return NextResponse.json({ ok: false, error: 'De status is niet opgeslagen. Controleer de databaserechten en probeer opnieuw.' }, { status: 409 });
+  }
+
+  return NextResponse.json({ ok: true, status: updated.status, completedAt: updated.completed_at });
 }
