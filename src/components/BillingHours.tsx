@@ -94,7 +94,6 @@ export default function BillingHours({id,lines,canManage,onChange}:{id:string;li
       <p style={{fontSize:11,color:'var(--muted)',marginTop:10}}>* Voorlopig verschil: alleen ingediende registraties vergeleken met de geplande uren voor die medewerkers.</p>
       {!personnel.length && !status && <p style={{fontSize:13,color:'var(--muted)'}}>Geen personeelsfuncties gepland in Rentman.</p>}
       {unlinked.length>0 && <div style={{fontSize:12,color:'var(--muted)'}}><p>{unlinked.length} niet-gekoppelde registraties:</p>{unlinked.map(sheet=><p key={sheet.id}>{sheet.crewMemberName} · werk {sheet.hours===null?'—':fmt(sheet.hours)} · reis {Math.max(0,Number(sheet.travelMinutes)||0)} min</p>)}</div>}
-      {false && unlinked.length>0 && <p style={{fontSize:12,color:'var(--muted)'}}>{unlinked.length} sheets niet aan een personeelsfunctie gekoppeld; deze tellen wel mee in geregistreerde uren.</p>}
     </div>}
   </section>;
 }
