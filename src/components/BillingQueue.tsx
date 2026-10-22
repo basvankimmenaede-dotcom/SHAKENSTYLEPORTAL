@@ -71,6 +71,7 @@ export default function BillingQueue({
         }
       : row));
 
+    try {
     const response = await fetch(`/api/planning/billing/items/${encodeURIComponent(item.id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -83,11 +84,19 @@ export default function BillingQueue({
       setError(result.error || 'Facturatiestatus kon niet worden opgeslagen.');
     } else {
       const result = await response.json().catch(() => ({}));
-      if (result.completedAt) {
+      if (result.ok !== true || result.status !== status) {
+        setItems((current) => current.map((row) => row.id === item.id ? previous : row));
+        setError('De facturatiestatus is niet bevestigd door de database.');
+      } else if (result.completedAt) {
         setItems((current) => current.map((row) => row.id === item.id
           ? { ...row, completed_at: result.completedAt }
           : row));
       }
+    }
+
+    } catch {
+      setItems((current) => current.map((row) => row.id === item.id ? previous : row));
+      setError('Opslaan mislukt door een verbindingsfout. Probeer opnieuw.');
     }
 
     setPending((current) => {
