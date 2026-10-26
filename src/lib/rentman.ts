@@ -39,10 +39,14 @@ async function rentmanPlanningFetch<T>(pathOrUrl: string): Promise<T> {
       Authorization: `Bearer ${token()}`,
       Accept: 'application/json',
     },
-    next: { revalidate: 30 },
+    // Avoid a cache miss storm across concurrent planning requests.
+    next: { revalidate: 300 },
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('Rentman API-limiet bereikt (429). Probeer het later opnieuw.');
+    }
     throw new Error(`Beheerverbinding mislukt (${response.status}).`);
   }
 
@@ -429,7 +433,7 @@ export async function getPlanningProjects() {
       project?: string | null;
       status?: string | null;
     }>(
-      '/subprojects?fields=id,project,status&limit=1500',
+      '/subprojects?fields=id,project,status&limit=200',
     ),
   ]);
 
@@ -544,24 +548,8 @@ export type RentmanPlanningCrewAssignment = {
 
 export async function getPlanningCrewAssignments() {
   const today = amsterdamDateKey();
-  const windowStart = addDays(today, -1);
-  const windowEnd = addDays(today, 8);
-  const params = new URLSearchParams({
-    fields: 'id,function,crewmember,transport',
-    expand: 'function,function.group,crewmember',
-    sort: '-id',
-    limit: '1500',
-  });
-  params.set('planperiod_start[lte]', planningDateTime(windowEnd, true));
-  params.set('planperiod_end[gte]', planningDateTime(windowStart));
-
-  const result = await rentmanPlanningFetch<RentmanListResponse<RentmanPlanningCrewAssignment>>(
-    `/projectcrew?${params.toString()}`,
-  );
-
-  return result.data ?? [];
+  return getPlanningCrewAssignmentsForRange(addDays(today, -1), addDays(today, 8));
 }
-
 
 export type RentmanPlanningEquipmentGroup = {
   id: number;
@@ -723,7 +711,7 @@ export async function getPlanningCrewAssignmentsForRange(startDate: string, endD
     fields: 'id,function,crewmember,transport',
     expand: 'function,crewmember',
     sort: '-id',
-    limit: '1500',
+    limit: '200',
   });
   const assignments = await rentmanPlanningFetchAll<RentmanPlanningCrewAssignment>(
     `/projectcrew?${params.toString()}`,

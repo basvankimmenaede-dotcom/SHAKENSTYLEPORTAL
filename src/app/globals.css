@@ -6508,3 +6508,41 @@ table td{font-size:12px}
 .crew-admin-actions{display:flex;align-items:center;gap:7px;flex-wrap:nowrap;white-space:nowrap}
 .crew-admin-actions .button{font-size:11px;padding:9px 10px;flex-shrink:0}
 .crew-admin-actions .crew-admin-delete{color:#b42318}
+
+
+/* Checklist settings: keep form controls and actions inside the panel. */
+.checklistItemsPanel { container-type: inline-size; }
+.checklistItemsPanel .checklistAddItemCard {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.15fr) minmax(0, 1.15fr) auto minmax(110px, auto);
+  min-width: 0;
+}
+.checklistItemsPanel .checklistAddItemCard > *,
+.checklistItemsPanel .checklistItemEditorForm > * { min-width: 0; max-width: 100%; }
+.checklistItemsPanel .checklistAddItemCard .button { width: 100%; white-space: normal; }
+.checklistItemsPanel .checklistItemTableHeader,
+.checklistItemsPanel .checklistItemEditorForm {
+  grid-template-columns: minmax(60px, .65fr) minmax(0, 2fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(72px, .8fr) minmax(84px, .85fr);
+}
+.checklistItemsPanel .checklistItemEditorForm .button { width: 100%; }
+.checklistItemsPanel .checklistItemEditorRow { padding-bottom: 42px; }
+.checklistItemsPanel .checklistItemMeta { margin: 10px 105px 0 0; flex-wrap: wrap; }
+@container (max-width: 940px) {
+  .checklistItemsPanel .checklistAddItemCard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .checklistItemsPanel .checklistAddLabel { grid-column: 1 / -1; }
+  .checklistItemsPanel .checklistAddItemCard .button { grid-column: 2; }
+  .checklistItemsPanel .checklistItemTableHeader { display: none; }
+  .checklistItemsPanel .checklistItemEditorForm { grid-template-columns: minmax(75px, .5fr) minmax(0, 2fr) minmax(0, 1fr); }
+  .checklistItemsPanel .checklistItemEditorForm > *:nth-child(4),
+  .checklistItemsPanel .checklistItemEditorForm > *:nth-child(5),
+  .checklistItemsPanel .checklistItemEditorForm > *:nth-child(6) { margin-top: 0; }
+}
+@container (max-width: 540px) {
+  .checklistItemsPanel .checklistAddItemCard,
+  .checklistItemsPanel .checklistItemEditorForm { grid-template-columns: minmax(0, 1fr); }
+  .checklistItemsPanel .checklistAddLabel,
+  .checklistItemsPanel .checklistAddItemCard .button { grid-column: auto; }
+  .checklistItemsPanel .checklistRequiredControl.compact { justify-content: flex-start; }
+  .checklistItemsPanel .checklistItemMeta { margin-right: 0; padding-right: 0; }
+  .checklistItemsPanel .checklistDeleteForm { position: static; margin-top: 12px; text-align: right; }
+  .checklistItemsPanel .checklistItemEditorRow { padding-bottom: 12px; }
+}
