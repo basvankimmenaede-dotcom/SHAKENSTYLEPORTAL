@@ -418,18 +418,18 @@ export async function getPlanningProjects() {
     fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,loc_contact,customer,cust_contact,project_type,custom',
     expand: 'location,loc_contact,customer,cust_contact,project_type',
     sort: '-id',
-    limit: '500',
+    limit: '100',
   });
 
   const [result, subprojects] = await Promise.all([
-    rentmanPlanningFetch<RentmanListResponse<RentmanPlanningProject>>(
+    rentmanPlanningFetchAll<RentmanPlanningProject>(
       `/projects?${params.toString()}`,
     ),
     rentmanPlanningFetchAll<{
       project?: string | null;
       status?: string | null;
     }>(
-      '/subprojects?fields=id,project,status&limit=1500',
+      '/subprojects?fields=id,project,status&limit=200',
     ),
   ]);
 
@@ -449,7 +449,7 @@ export async function getPlanningProjects() {
       .filter(Number.isFinite),
   );
 
-  const projects = (result.data ?? []).map((project) => {
+  const projects = result.map((project) => {
     const projectSubprojects = (subprojectsByProjectId.get(project.id) ?? [])
       .filter((subproject) => subproject.status !== '/statuses/2');
     const returnComplete = projectSubprojects.length
@@ -544,24 +544,8 @@ export type RentmanPlanningCrewAssignment = {
 
 export async function getPlanningCrewAssignments() {
   const today = amsterdamDateKey();
-  const windowStart = addDays(today, -1);
-  const windowEnd = addDays(today, 8);
-  const params = new URLSearchParams({
-    fields: 'id,function,crewmember,transport',
-    expand: 'function,function.group,crewmember',
-    sort: '-id',
-    limit: '1500',
-  });
-  params.set('planperiod_start[lte]', planningDateTime(windowEnd, true));
-  params.set('planperiod_end[gte]', planningDateTime(windowStart));
-
-  const result = await rentmanPlanningFetch<RentmanListResponse<RentmanPlanningCrewAssignment>>(
-    `/projectcrew?${params.toString()}`,
-  );
-
-  return result.data ?? [];
+  return getPlanningCrewAssignmentsForRange(addDays(today, -1), addDays(today, 8));
 }
-
 
 export type RentmanPlanningEquipmentGroup = {
   id: number;
@@ -723,7 +707,7 @@ export async function getPlanningCrewAssignmentsForRange(startDate: string, endD
     fields: 'id,function,crewmember,transport',
     expand: 'function,crewmember',
     sort: '-id',
-    limit: '1500',
+    limit: '200',
   });
   const assignments = await rentmanPlanningFetchAll<RentmanPlanningCrewAssignment>(
     `/projectcrew?${params.toString()}`,
