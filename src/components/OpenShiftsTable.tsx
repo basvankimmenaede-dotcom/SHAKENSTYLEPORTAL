@@ -16,11 +16,12 @@ export type OpenShiftTableRow = {
   needed: number;
   planned: number;
   open: number;
-  status: 'open' | 'critical' | 'filled';
+  status: 'open' | 'attention' | 'critical' | 'filled';
 };
 
 function statusLabel(status: OpenShiftTableRow['status']) {
   if (status === 'critical') return 'Kritiek';
+  if (status === 'attention') return 'Aandacht nodig';
   if (status === 'filled') return 'Gevuld';
   return 'Open';
 }
