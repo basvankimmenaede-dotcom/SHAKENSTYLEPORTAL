@@ -422,11 +422,11 @@ export async function getPlanningProjects() {
     fields: 'id,name,number,usageperiod_start,usageperiod_end,planperiod_start,planperiod_end,location,loc_contact,customer,cust_contact,project_type,custom',
     expand: 'location,loc_contact,customer,cust_contact,project_type',
     sort: '-id',
-    limit: '100',
+    limit: '500',
   });
 
   const [result, subprojects] = await Promise.all([
-    rentmanPlanningFetchAll<RentmanPlanningProject>(
+    rentmanPlanningFetch<RentmanListResponse<RentmanPlanningProject>>(
       `/projects?${params.toString()}`,
     ),
     rentmanPlanningFetchAll<{
@@ -453,12 +453,12 @@ export async function getPlanningProjects() {
       .filter(Number.isFinite),
   );
 
-  const projects = result.map((project) => {
+  const projects = (result.data ?? []).map((project) => {
     const projectSubprojects = (subprojectsByProjectId.get(project.id) ?? [])
       .filter((subproject) => subproject.status !== '/statuses/2');
-    // Rentman warehouse statuses moved to packing lists (2026-10-26).
-    // A subproject's management status is not evidence of an outstanding return.
-    const returnComplete = null;
+    const returnComplete = projectSubprojects.length
+      ? projectSubprojects.every((subproject) => subproject.status === '/statuses/6')
+      : null;
 
     return {
       ...project,
@@ -499,7 +499,7 @@ export function getPlanningReturnState(project: RentmanPlanningProject) {
 
 export function getOverdueReturnProjects(projects: RentmanPlanningProject[], today: string) {
   return {
-    configured: projects.some((project) => project.return_complete !== null && project.return_complete !== undefined),
+    configured: true,
     projects: projects
       .filter((project) => {
         const range = projectDateRange(project);
