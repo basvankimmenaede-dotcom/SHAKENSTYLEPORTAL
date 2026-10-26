@@ -456,9 +456,9 @@ export async function getPlanningProjects() {
   const projects = result.map((project) => {
     const projectSubprojects = (subprojectsByProjectId.get(project.id) ?? [])
       .filter((subproject) => subproject.status !== '/statuses/2');
-    const returnComplete = projectSubprojects.length
-      ? projectSubprojects.every((subproject) => subproject.status === '/statuses/6')
-      : null;
+    // Rentman warehouse statuses moved to packing lists (2026-10-26).
+    // A subproject's management status is not evidence of an outstanding return.
+    const returnComplete = null;
 
     return {
       ...project,
@@ -499,7 +499,7 @@ export function getPlanningReturnState(project: RentmanPlanningProject) {
 
 export function getOverdueReturnProjects(projects: RentmanPlanningProject[], today: string) {
   return {
-    configured: true,
+    configured: projects.some((project) => project.return_complete !== null && project.return_complete !== undefined),
     projects: projects
       .filter((project) => {
         const range = projectDateRange(project);
