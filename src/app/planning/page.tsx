@@ -662,7 +662,7 @@ export default async function PlanningPage() {
         </a>
         <div className="planningMetricCard">
           <span className="planningMetricIcon returns">↩</span>
-          <div><small>Niet retour</small><strong>{overdueReturnProjects.length}</strong><em>{overdueReturnProjects.length ? 'openstaand' : 'alles retour'}</em></div>
+          <div><small>Niet retour</small><strong>{rentmanReturnResult.configured ? overdueReturnProjects.length : '—'}</strong><em>{rentmanReturnResult.configured ? (overdueReturnProjects.length ? 'openstaand' : 'alles retour') : 'Retourstatus niet beschikbaar'}</em></div>
         </div>
         {canSeeBilling ? (
           <Link className="planningMetricCard" href="/planning/billing">
@@ -1086,7 +1086,7 @@ export default async function PlanningPage() {
                     : 'Retourstatus in Rentman is nog niet gekoppeld.'}
                 </small>
               </div>
-              <strong>{overdueReturnProjects.length}</strong>
+              <strong>{rentmanReturnResult.configured ? overdueReturnProjects.length : '—'}</strong>
             </div>
 
             {overdueReturnProjects.length ? (
