@@ -11,7 +11,7 @@ import {
 import styles from './page.module.css';
 
 type SearchParams = Record<string, string | string[] | undefined>;
-type ShiftStatus = 'open' | 'critical' | 'filled';
+type ShiftStatus = 'open' | 'attention' | 'critical' | 'filled';
 
 function valueOf(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -89,6 +89,7 @@ function projectCity(project?: RentmanPlanningProject) {
 
 function statusLabel(status: ShiftStatus) {
   if (status === 'critical') return 'Kritiek';
+  if (status === 'attention') return 'Aandacht nodig';
   if (status === 'filled') return 'Gevuld';
   return 'Open';
 }
@@ -107,8 +108,8 @@ export default async function OpenShiftsPage({
   const selectedProject = valueOf(params.project) ?? 'all';
   const requestedStatuses = valuesOf(params.status);
   const selectedStatuses = new Set<ShiftStatus>(
-    (requestedStatuses.length ? requestedStatuses : ['open', 'critical'])
-      .filter((status): status is ShiftStatus => ['open','critical','filled'].includes(status)),
+    (requestedStatuses.length ? requestedStatuses : ['open', 'attention', 'critical'])
+      .filter((status): status is ShiftStatus => ['open','attention','critical','filled'].includes(status)),
   );
 
   const [planning, functions, assignments] = await Promise.all([
@@ -135,7 +136,13 @@ export default async function OpenShiftsPage({
       const needed = Math.max(0, Number(item.amount ?? 0));
       const planned = assignmentsByFunction.get(item.id) ?? 0;
       const open = Math.max(0, needed - planned);
-      const status: ShiftStatus = open === 0 ? 'filled' : planned === 0 ? 'critical' : 'open';
+      // Urgency is based on the shift date, not whether any crew is assigned.
+      // 0-3 days: critical; 4-7 days: attention; >7 days: open.
+      const shiftDay = start ? dateKey(new Date(start)) : null;
+      const daysUntil = shiftDay
+        ? Math.round((Date.parse(shiftDay + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000)
+        : Infinity;
+      const status: ShiftStatus = open === 0 ? 'filled' : daysUntil <= 3 ? 'critical' : daysUntil <= 7 ? 'attention' : 'open';
       return {
         id: item.id,
         name: item.displayname || item.name || 'Shift',
@@ -206,7 +213,7 @@ export default async function OpenShiftsPage({
 
         <fieldset className={styles.statuses}>
           <legend>Status</legend>
-          {(['open','critical','filled'] as ShiftStatus[]).map((status) => (
+          {(['open','attention','critical','filled'] as ShiftStatus[]).map((status) => (
             <label key={status}>
               <input
                 type="checkbox"
