@@ -39,10 +39,14 @@ async function rentmanPlanningFetch<T>(pathOrUrl: string): Promise<T> {
       Authorization: `Bearer ${token()}`,
       Accept: 'application/json',
     },
-    next: { revalidate: 30 },
+    // Avoid a cache miss storm across concurrent planning requests.
+    next: { revalidate: 300 },
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('Rentman API-limiet bereikt (429). Probeer het later opnieuw.');
+    }
     throw new Error(`Beheerverbinding mislukt (${response.status}).`);
   }
 
