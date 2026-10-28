@@ -14,6 +14,7 @@ type RecurringTaskSetting = {
 type RecurringTaskSettings = {
   closing?: RecurringTaskSetting;
   billing?: RecurringTaskSetting;
+  custom?: Array<{id:string;title:string;active:boolean;task_area:'office'|'warehouse'|'both';frequency:'daily'|'weekdays'|'weekly'|'monthly'|'selected';weekday:number;weekdays:number[];dayOfMonth:number;todoist_task_id?:string|null}>;
 };
 
 export default async function PlanningSettingsPage(){
@@ -27,7 +28,7 @@ export default async function PlanningSettingsPage(){
         <form action={updateFuelCardDistanceSetting} className="settingsFormRow"><div><strong>Brandstofpas</strong><span>Toon de pasmarkering wanneer magazijn → project → magazijn boven deze afstand komt.</span></div><div className="planningSettingInline"><input className="input" type="number" min="1" name="fuel_card_distance_km" defaultValue={fuelCardDistanceKm} required/><span>km retour</span></div><button className="button orange" type="submit">Opslaan</button></form>
       </section>
       <section className="settingsPanel" id="terugkerende-taken"><header className="settingsPanelHeader"><div><span>Automatisering</span><h2>Terugkerende taken</h2><p>Pas vaste taken aan zonder de dagelijkse planning handmatig te corrigeren.</p></div></header>
-        <RecurringTasksSettings closing={recurring.closing??{title:'Afsluitlijst afronden',active:true,task_area:'both'}} billing={recurring.billing??{title:'Facturatie',active:true,task_area:'office',weekday:3}}/><p className="settingsHelpText">De afsluitlijsttaak wordt op werkdagen automatisch als losse Todoist-taak aangemaakt. Wijzigingen hier gelden voor nieuwe taken; bestaande taken in de To Do-lijst veranderen niet automatisch.</p>
+        <RecurringTasksSettings closing={recurring.closing??{title:'Afsluitlijst afronden',active:true,task_area:'both'}} billing={recurring.billing??{title:'Facturatie',active:true,task_area:'office',weekday:3}} custom={recurring.custom??[]}/><p className="settingsHelpText">De afsluitlijsttaak wordt op werkdagen automatisch als losse Todoist-taak aangemaakt. Wijzigingen hier gelden voor nieuwe taken; bestaande taken in de To Do-lijst veranderen niet automatisch.</p>
       </section>
       <section className="settingsPanel"><header className="settingsPanelHeader"><div><span>Weergave</span><h2>Schermen</h2><p>Gespecialiseerde weergaven vanuit dezelfde instellingenomgeving.</p></div></header><div className="settingsInlineLinks"><Link href="/planning/tv"><strong>TV-weergave</strong><span>Open de read-only planning voor een extern scherm.</span><b>Openen →</b></Link></div></section>
     </div></section>
