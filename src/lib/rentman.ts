@@ -425,16 +425,14 @@ export async function getPlanningProjects() {
     limit: '500',
   });
 
-  const [result, subprojects] = await Promise.all([
-    rentmanPlanningFetch<RentmanListResponse<RentmanPlanningProject>>(
-      `/projects?${params.toString()}`,
-    ),
+  // Read the same complete project population as the status lookup. A single
+  // 500-row page gives an arbitrary partial picture and inflates stale counts.
+  const [projectsResult, subprojects] = await Promise.all([
+    rentmanPlanningFetchAll<RentmanPlanningProject>(`/projects?${params.toString()}`),
     rentmanPlanningFetchAll<{
       project?: string | null;
       status?: string | null;
-    }>(
-      '/subprojects?fields=id,project,status&limit=200',
-    ),
+    }>('/subprojects?fields=id,project,status&limit=200'),
   ]);
 
   const subprojectsByProjectId = new Map<number, Array<{ status?: string | null }>>();
@@ -453,12 +451,13 @@ export async function getPlanningProjects() {
       .filter(Number.isFinite),
   );
 
-  const projects = (result.data ?? []).map((project) => {
+  const projects = projectsResult.map((project) => {
     const projectSubprojects = (subprojectsByProjectId.get(project.id) ?? [])
       .filter((subproject) => subproject.status !== '/statuses/2');
-    const returnComplete = projectSubprojects.length
-      ? projectSubprojects.every((subproject) => subproject.status === '/statuses/6')
-      : null;
+    // A subproject status is a workflow state, not proof that equipment was returned.
+    // Until Rentman's actual return/warehouse data is connected, do not flag
+    // a project as having outstanding returns based on its workflow status.
+    const returnComplete = null;
 
     return {
       ...project,
