@@ -298,3 +298,36 @@ export async function reschedulePlanningTodoistTask({
   revalidateTag('todoist-planning');
   return task;
 }
+
+/** Manage native Todoist recurring tasks. Todoist advances the due date when completed. */
+export async function saveRecurringTodoistTask(args: {
+  taskId?: string; title: string; schedule: string; description?: string;
+}) {
+  const projectId = process.env.TODOIST_PLANNING_PROJECT_ID || DEFAULT_PLANNING_PROJECT_ID;
+  const response = await fetch(`${TODOIST_API_BASE}/tasks${args.taskId ? '/' + encodeURIComponent(args.taskId) : ''}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${todoistToken()}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      content: args.title,
+      description: args.description ?? 'Terugkerende SHAKENSTYLE-taak',
+      ...(!args.taskId ? { project_id: projectId } : {}),
+      due_string: args.schedule,
+      due_lang: 'en',
+    }),
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Todoist kon de terugkerende taak niet opslaan (${response.status}).`);
+  const task = await response.json() as TodoistTask;
+  revalidateTag('todoist-planning');
+  return task;
+}
+
+export async function deleteRecurringTodoistTask(taskId: string) {
+  const response = await fetch(`${TODOIST_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${todoistToken()}` },
+    cache: 'no-store',
+  });
+  if (!response.ok && response.status !== 404) throw new Error(`Todoist kon de taak niet verwijderen (${response.status}).`);
+  revalidateTag('todoist-planning');
+}
