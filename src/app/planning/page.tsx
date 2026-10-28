@@ -311,43 +311,59 @@ export default async function PlanningPage() {
     try {
       const marker = `SHAKENSTYLE afsluitlijst · ${closingTodayDate}`;
       const linkedTaskId = closingToday.todoist_task_id ? String(closingToday.todoist_task_id) : null;
-      let closingTask = linkedTaskId
+      let closingTask = linkedTaskId && !linkedTaskId.startsWith('pending:')
         ? allTodoistTasks.find((task) => String(task.id) === linkedTaskId) ?? null
         : null;
+      if (!closingTask) closingTask = allTodoistTasks.find((task) => String(task.description ?? '').includes(marker)) ?? null;
 
-      if (!closingTask) {
-        closingTask = allTodoistTasks.find((task) => String(task.description ?? '').includes(marker)) ?? null;
-      }
-
-      if (!closingTask) {
-        closingTask = await createPlanningTodoistTask({
-          content: String(closingRecurring.title || 'Afsluitlijst afronden'),
-          dueDate: closingTodayDate,
-          description: marker,
-        });
-        allTodoistTasks.push(closingTask);
-      }
-
-      ensuredClosingTaskId = String(closingTask.id);
-
-      if (linkedTaskId !== ensuredClosingTaskId) {
-        await supabase
+      if (!closingTask && !linkedTaskId) {
+        // Atomically claim the checklist row before making an external Todoist request.
+        // Concurrent page loads cannot both claim the same checklist.
+        const claim = `pending:${Date.now()}:${crypto.randomUUID()}`;
+        const { data: claimed, error: claimError } = await supabase
           .from('closing_checklists')
-          .update({ todoist_task_id: ensuredClosingTaskId })
-          .eq('id', closingToday.id);
+          .update({ todoist_task_id: claim })
+          .eq('id', closingToday.id)
+          .is('todoist_task_id', null)
+          .select('id')
+          .maybeSingle();
+        if (claimError) throw claimError;
+        if (claimed) {
+          try {
+            closingTask = await createPlanningTodoistTask({
+              content: String(closingRecurring.title || 'Afsluitlijst afronden'),
+              dueDate: closingTodayDate,
+              description: marker,
+            });
+            allTodoistTasks.push(closingTask);
+            await supabase.from('closing_checklists')
+              .update({ todoist_task_id: String(closingTask.id) })
+              .eq('id', closingToday.id).eq('todoist_task_id', claim);
+          } catch (error) {
+            await supabase.from('closing_checklists')
+              .update({ todoist_task_id: null })
+              .eq('id', closingToday.id).eq('todoist_task_id', claim);
+            throw error;
+          }
+        }
       }
 
-      await supabase
-        .from('planning_task_assignments')
-        .upsert({
+      if (closingTask) {
+        ensuredClosingTaskId = String(closingTask.id);
+        if (linkedTaskId !== ensuredClosingTaskId) {
+          await supabase.from('closing_checklists')
+            .update({ todoist_task_id: ensuredClosingTaskId })
+            .eq('id', closingToday.id);
+        }
+        await supabase.from('planning_task_assignments').upsert({
           todoist_task_id: ensuredClosingTaskId,
           assignee_profile_id: null,
           assigned_by: user.id,
           task_area: ['office', 'warehouse', 'both'].includes(String(closingRecurring.task_area))
-            ? String(closingRecurring.task_area)
-            : 'both',
+            ? String(closingRecurring.task_area) : 'both',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'todoist_task_id' });
+      }
     } catch {
       // Planning blijft bruikbaar als Todoist tijdelijk niet bereikbaar is.
     }
