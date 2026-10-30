@@ -454,10 +454,14 @@ export async function getPlanningProjects() {
   const projects = projectsResult.map((project) => {
     const projectSubprojects = (subprojectsByProjectId.get(project.id) ?? [])
       .filter((subproject) => subproject.status !== '/statuses/2');
-    // A subproject status is a workflow state, not proof that equipment was returned.
-    // Until Rentman's actual return/warehouse data is connected, do not flag
-    // a project as having outstanding returns based on its workflow status.
-    const returnComplete = null;
+    // Rentman project statuses: 1002 = In afhandeling, 1003 = Afgerond.
+    // These workflow states mean the project should no longer appear in the
+    // overdue-projects list. Only hide a multi-subproject project when ALL
+    // non-cancelled subprojects have reached one of these states.
+    const closedStatuses = new Set(['/statuses/1002', '/statuses/1003']);
+    const returnComplete = projectSubprojects.length
+      ? projectSubprojects.every((subproject) => closedStatuses.has(subproject.status ?? ''))
+      : null;
 
     return {
       ...project,
