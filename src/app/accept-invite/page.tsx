@@ -109,7 +109,7 @@ function AcceptInviteForm() {
   }, []);
 
   async function confirmInvitation() {
-    const tokenHash = searchParams.get('token_hash');
+    const tokenHash = new URLSearchParams(window.location.search).get('token_hash');
     if (!tokenHash || new URLSearchParams(window.location.search).get('type') !== 'invite') return;
     setCheckingLink(true);
     setError('');
