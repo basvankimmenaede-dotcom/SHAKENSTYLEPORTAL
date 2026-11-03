@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, Suspense, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import BrandLogo from '@/components/BrandLogo';
 
@@ -44,11 +44,20 @@ function AcceptInviteForm() {
   const invitedUserIdRef = useRef<string | null>(null);
   const inviteClientRef = useRef<SupabaseClient | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     async function prepareInviteSession() {
+      const tokenHash = searchParams.get('token_hash');
+      const inviteType = searchParams.get('type');
+      if (tokenHash && inviteType === 'invite') {
+        setAwaitingConfirmation(true);
+        setCheckingLink(false);
+        return;
+      }
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
@@ -98,7 +107,31 @@ function AcceptInviteForm() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [searchParams]);
+
+  async function confirmInvitation() {
+    const tokenHash = searchParams.get('token_hash');
+    if (!tokenHash || searchParams.get('type') !== 'invite') return;
+    setCheckingLink(true);
+    setError('');
+    try {
+      // The one-time token is redeemed ONLY after a deliberate user click.
+      // Corporate email security scanners can safely GET this page.
+      const inviteClient = createIsolatedInviteClient();
+      const { error: verifyError } = await inviteClient.auth.verifyOtp({ token_hash: tokenHash, type: 'invite' });
+      if (verifyError) throw verifyError;
+      const { data: { user }, error: userError } = await inviteClient.auth.getUser();
+      if (userError || !user) throw userError ?? new Error('Gebruiker ontbreekt');
+      inviteClientRef.current = inviteClient;
+      invitedUserIdRef.current = user.id;
+      window.history.replaceState({}, '', '/accept-invite');
+      setAwaitingConfirmation(false);
+    } catch {
+      setError('Deze uitnodiging is ongeldig of verlopen. Vraag SHAKENSTYLE om een nieuwe uitnodiging.');
+    } finally {
+      setCheckingLink(false);
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -153,7 +186,13 @@ function AcceptInviteForm() {
         {error ? <div className="error">{error}</div> : null}
         {checkingLink ? <p className="muted">Uitnodiging veilig controleren...</p> : null}
 
-        {!checkingLink && !error ? (
+        {!checkingLink && !error && awaitingConfirmation ? (
+          <button className="button orange" type="button" onClick={() => void confirmInvitation()}>
+            Bevestig je account
+          </button>
+        ) : null}
+
+        {!checkingLink && !error && !awaitingConfirmation ? (
           <form onSubmit={submit}>
             <div className="field">
               <label htmlFor="password">Wachtwoord</label>
