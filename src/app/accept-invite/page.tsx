@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, Suspense, useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import BrandLogo from '@/components/BrandLogo';
 
@@ -44,15 +44,14 @@ function AcceptInviteForm() {
   const invitedUserIdRef = useRef<string | null>(null);
   const inviteClientRef = useRef<SupabaseClient | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     async function prepareInviteSession() {
-      const tokenHash = searchParams.get('token_hash');
-      const inviteType = searchParams.get('type');
+      const tokenHash = new URLSearchParams(window.location.search).get('token_hash');
+      const inviteType = new URLSearchParams(window.location.search).get('type');
       if (tokenHash && inviteType === 'invite') {
         setAwaitingConfirmation(true);
         setCheckingLink(false);
@@ -107,11 +106,11 @@ function AcceptInviteForm() {
     return () => {
       active = false;
     };
-  }, [searchParams]);
+  }, []);
 
   async function confirmInvitation() {
     const tokenHash = searchParams.get('token_hash');
-    if (!tokenHash || searchParams.get('type') !== 'invite') return;
+    if (!tokenHash || new URLSearchParams(window.location.search).get('type') !== 'invite') return;
     setCheckingLink(true);
     setError('');
     try {
