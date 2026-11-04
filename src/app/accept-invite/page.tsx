@@ -44,11 +44,19 @@ function AcceptInviteForm() {
   const invitedUserIdRef = useRef<string | null>(null);
   const inviteClientRef = useRef<SupabaseClient | null>(null);
   const router = useRouter();
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     async function prepareInviteSession() {
+      const tokenHash = new URLSearchParams(window.location.search).get('token_hash');
+      const inviteType = new URLSearchParams(window.location.search).get('type');
+      if (tokenHash && inviteType === 'invite') {
+        setAwaitingConfirmation(true);
+        setCheckingLink(false);
+        return;
+      }
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
@@ -99,6 +107,30 @@ function AcceptInviteForm() {
       active = false;
     };
   }, []);
+
+  async function confirmInvitation() {
+    const tokenHash = new URLSearchParams(window.location.search).get('token_hash');
+    if (!tokenHash || new URLSearchParams(window.location.search).get('type') !== 'invite') return;
+    setCheckingLink(true);
+    setError('');
+    try {
+      // The one-time token is redeemed ONLY after a deliberate user click.
+      // Corporate email security scanners can safely GET this page.
+      const inviteClient = createIsolatedInviteClient();
+      const { error: verifyError } = await inviteClient.auth.verifyOtp({ token_hash: tokenHash, type: 'invite' });
+      if (verifyError) throw verifyError;
+      const { data: { user }, error: userError } = await inviteClient.auth.getUser();
+      if (userError || !user) throw userError ?? new Error('Gebruiker ontbreekt');
+      inviteClientRef.current = inviteClient;
+      invitedUserIdRef.current = user.id;
+      window.history.replaceState({}, '', '/accept-invite');
+      setAwaitingConfirmation(false);
+    } catch {
+      setError('Deze uitnodiging is ongeldig of verlopen. Vraag SHAKENSTYLE om een nieuwe uitnodiging.');
+    } finally {
+      setCheckingLink(false);
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -153,7 +185,13 @@ function AcceptInviteForm() {
         {error ? <div className="error">{error}</div> : null}
         {checkingLink ? <p className="muted">Uitnodiging veilig controleren...</p> : null}
 
-        {!checkingLink && !error ? (
+        {!checkingLink && !error && awaitingConfirmation ? (
+          <button className="button orange" type="button" onClick={() => void confirmInvitation()}>
+            Bevestig je account
+          </button>
+        ) : null}
+
+        {!checkingLink && !error && !awaitingConfirmation ? (
           <form onSubmit={submit}>
             <div className="field">
               <label htmlFor="password">Wachtwoord</label>
