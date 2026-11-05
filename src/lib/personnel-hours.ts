@@ -39,7 +39,7 @@ export type StaffHourRow = {
   leaveHours: number;
   previousWeekHours: number;
   contractDifference: number;
-  previousWeekDifference: number;
+  previousWeekDifference: number | null;
   cumulativeBalance: number | null;
   // A provisional week forecast, based only on logged working days.
   expectedWorkdays: number;
@@ -206,6 +206,8 @@ export async function buildStaffHourOverview(
     const crewId = Number(registration.crewmember?.split('/').pop());
     if (!trackedIds.has(crewId) || !registration.start) continue;
     const dateKey = registration.start.slice(0, 10);
+    // Future-dated registrations are not yet worked hours.
+    if (isCurrentWeek && dateKey > today) continue;
     const registrationWeek = mondayOf(dateKey);
     const kind = Number(registration.leavetype?.split('/').pop());
     const seconds = Number(registration.duration ?? 0);
@@ -275,6 +277,10 @@ export async function buildStaffHourOverview(
       availableDays: remainingWeekdays,
     });
 
+    const forecastWorkedHours = isCurrentWeek && estimate.forecastHours !== null
+      ? rounded(workedHours + (averageDailyHours ?? 0) * estimate.remainingDays)
+      : null;
+
     // A current week is incomplete: keep its provisional deficit out of the saved balance.
     const lastClosedWeek = isCurrentWeek ? previousWeek : week;
     let cumulativeBalance: number | null = trackingStarted
@@ -295,7 +301,9 @@ export async function buildStaffHourOverview(
       workedHours, creditedHours, leaveHours: hours(current.leave),
       previousWeekHours,
       contractDifference,
-      previousWeekDifference: rounded(workedHours - previousWeekHours),
+      previousWeekDifference: isCurrentWeek
+        ? forecastWorkedHours === null ? null : rounded(forecastWorkedHours - previousWeekHours)
+        : rounded(workedHours - previousWeekHours),
       cumulativeBalance,
       expectedWorkdays: contractedWorkdays(weeklyHours),
       averageDailyHours,
@@ -311,7 +319,7 @@ export async function buildStaffHourOverview(
     };
   }).sort((a, b) => b.contractDifference - a.contractDifference || a.name.localeCompare(b.name, 'nl'));
 
-  const sum = (field: 'workedHours' | 'creditedHours' | 'contractDifference' | 'previousWeekDifference') =>
+  const sum = (field: 'workedHours' | 'creditedHours' | 'contractDifference') =>
     rounded(rows.reduce((total, row) => total + row[field], 0));
   const forecastable = rows.filter((row) => row.forecastHours !== null);
   const forecastComplete = isCurrentWeek && forecastable.length === rows.length;
@@ -324,7 +332,9 @@ export async function buildStaffHourOverview(
       workedHours: sum('workedHours'),
       creditedHours: sum('creditedHours'),
       contractDifference: sum('contractDifference'),
-      previousWeekDifference: sum('previousWeekDifference'),
+      previousWeekDifference: !isCurrentWeek || rows.every((row) => row.previousWeekDifference !== null)
+        ? rounded(rows.reduce((total, row) => total + (row.previousWeekDifference ?? 0), 0))
+        : null,
       forecastHours: forecastComplete ? forecastSum('forecastHours') : null,
       forecastDifference: forecastComplete ? forecastSum('forecastDifference') : null,
       forecastCoveredCount: forecastable.length,
