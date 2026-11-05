@@ -14,8 +14,14 @@ type Row = {
   leaveHours: number;
   previousWeekHours: number;
   contractDifference: number;
-  previousWeekDifference: number;
+  previousWeekDifference: number | null;
   cumulativeBalance: number | null;
+  expectedWorkdays: number;
+  averageDailyHours: number | null;
+  sampleWorkdays: number;
+  remainingEstimatedDays: number;
+  forecastHours: number | null;
+  forecastDifference: number | null;
   overtimeWarning: boolean;
 };
 type Contract = {
@@ -36,7 +42,10 @@ type Data = {
     workedHours: number;
     creditedHours: number;
     contractDifference: number;
-    previousWeekDifference: number;
+    previousWeekDifference: number | null;
+    forecastHours: number | null;
+    forecastDifference: number | null;
+    forecastCoveredCount: number;
     warnings: number;
   };
 };
@@ -156,14 +165,20 @@ export default function PersonnelHoursCard() {
         <span className="planningMetricIcon crew"><Clock3 size={19} aria-hidden /></span>
         <div>
           <small>Personeelsuren</small>
-          <strong>{loading && !data ? '…' : hasContracts ? (numberLabel(summary?.workedHours ?? 0) + ' u') : 'Instellen'}</strong>
+          <strong className={data?.isCurrentWeek && summary?.forecastDifference != null ? hoursClass(summary.forecastDifference) : ''}>
+            {loading && !data ? '…' : !hasContracts ? 'Instellen' :
+              data?.isCurrentWeek
+                ? summary?.forecastDifference != null ? signed(summary.forecastDifference) : 'Prognose —'
+                : numberLabel(summary?.workedHours ?? 0) + ' u'}
+          </strong>
           <em>
             {error ? 'Kan niet laden' :
-              hasContracts ? (
-                <span className={hoursClass(summary?.contractDifference ?? 0)}>
-                  {signed(summary?.contractDifference ?? 0)} t.o.v. contract
-                </span>
-              ) : 'Contracturen koppelen'}
+              !hasContracts ? 'Contracturen koppelen' :
+              data?.isCurrentWeek
+                ? summary?.forecastDifference != null
+                  ? 'verwacht t.o.v. contract · ' + numberLabel(summary.workedHours) + ' u gewerkt'
+                  : numberLabel(summary?.workedHours ?? 0) + ' u gewerkt · prognose nog niet compleet'
+                : signed(summary?.contractDifference ?? 0) + ' t.o.v. contract'}
           </em>
         </div>
       </button>
@@ -177,7 +192,7 @@ export default function PersonnelHoursCard() {
               <div>
                 <span className="eyebrowLink">Personeel · Rentman</span>
                 <h2>Urenregistratie</h2>
-                <p>Gewerkte uren, contractverschil en ontwikkeling per week.</p>
+                <p>Werkelijke uren en een prognose op basis van het recente daggemiddelde.</p>
               </div>
               <button type="button" className="staffHoursIconButton" onClick={() => setOpen(false)} aria-label="Sluiten">
                 <X size={20} />
@@ -202,36 +217,75 @@ export default function PersonnelHoursCard() {
               <>
                 <div className="staffHoursSummary">
                   <div><small>Gewerkt</small><strong>{numberLabel(summary?.workedHours ?? 0)} u</strong></div>
-                  <div><small>T.o.v. contract</small><strong className={hoursClass(summary?.contractDifference ?? 0)}>{signed(summary?.contractDifference ?? 0)}</strong></div>
-                  <div><small>T.o.v. vorige week</small><strong>{signed(summary?.previousWeekDifference ?? 0)}</strong></div>
+                  {data.isCurrentWeek ? (
+                    <>
+                      <div><small>Prognose eind week</small><strong>{summary?.forecastHours == null ? '—' : numberLabel(summary.forecastHours) + ' u'}</strong></div>
+                      <div><small>Verwacht ± contract</small><strong className={hoursClass(summary?.forecastDifference ?? 0)}>{summary?.forecastDifference == null ? '—' : signed(summary.forecastDifference)}</strong></div>
+                    </>
+                  ) : (
+                    <div><small>Contractverschil</small><strong className={hoursClass(summary?.contractDifference ?? 0)}>{signed(summary?.contractDifference ?? 0)}</strong></div>
+                  )}
+                  <div><small>{data.isCurrentWeek ? 'Prognose vs. vorige week' : 'T.o.v. vorige week'}</small><strong>{summary?.previousWeekDifference == null ? '—' : signed(summary.previousWeekDifference)}</strong></div>
                 </div>
+                {data.isCurrentWeek && summary?.forecastCoveredCount !== data.rows.length ? (
+                  <p className="staffHoursPartial">
+                    Prognose nog niet volledig: {summary?.forecastCoveredCount ?? 0} van {data.rows.length} medewerkers hebben recente gewerkte dagen in Rentman.
+                  </p>
+                ) : null}
                 {summary && summary.warnings > 0 ? (
-                  <div className="staffHoursAlert"><AlertTriangle size={17}/> {summary.warnings} medewerker{summary.warnings === 1 ? '' : 's'} meer dan 5 uur boven contract deze week.</div>
+                  <div className="staffHoursAlert"><AlertTriangle size={17}/> {summary.warnings} medewerker{summary.warnings === 1 ? '' : 's'} {data.isCurrentWeek ? 'naar verwachting meer dan 5 uur boven contract' : 'meer dan 5 uur boven contract'} deze week.</div>
                 ) : null}
                 {!hasContracts ? <div className="staffHoursEmpty">Koppel eerst vaste medewerkers met hun contracturen via <strong>Contracturen beheren</strong>.</div> : null}
                 {hasContracts ? (
                   <div className="staffHoursTableScroll">
                     <table className="staffHoursTable">
                       <thead><tr>
-                        <th>Medewerker</th><th>Gewerkt</th><th>Contract ±</th><th>Vorige week ±</th><th>Saldo</th><th></th>
+                        <th>Medewerker</th><th>Gewerkt</th>
+                        {data.isCurrentWeek ? <><th>Gem./dag</th><th>Prognose</th></> : null}
+                        <th>{data.isCurrentWeek ? 'Verwacht ±' : 'Contract ±'}</th>
+                        <th>Vorige week ±</th><th>Saldo</th><th></th>
                       </tr></thead>
-                      <tbody>{data.rows.map((person) => (
+                      <tbody>{data.rows.map((person) => {
+                        const difference = data.isCurrentWeek ? person.forecastDifference : person.contractDifference;
+                        return (
                         <tr key={person.crewId}>
-                          <td><strong>{person.name}</strong>{person.leaveHours ? <small>{numberLabel(person.leaveHours)} u verlof/ziekte</small> : null}</td>
+                          <td>
+                            <strong>{person.name}</strong>
+                            {data.isCurrentWeek ? (
+                              <small>{person.sampleWorkdays} referentiedagen · nog {numberLabel(person.remainingEstimatedDays)} van {person.expectedWorkdays} werkdagen</small>
+                            ) : null}
+                            {person.leaveHours ? <small>{numberLabel(person.leaveHours)} u verlof/ziekte</small> : null}
+                          </td>
                           <td>{numberLabel(person.workedHours)} u</td>
-                          <td className={hoursClass(person.contractDifference)}>{person.trackingStartWeek <= week ? signed(person.contractDifference) : '—'}{person.overtimeWarning ? <AlertTriangle size={14} aria-label="Meer dan vijf overuren"/> : null}</td>
-                          <td>{signed(person.previousWeekDifference)}</td>
+                          {data.isCurrentWeek ? (
+                            <>
+                              <td>{person.averageDailyHours == null ? '—' : numberLabel(person.averageDailyHours) + ' u'}</td>
+                              <td>{person.forecastHours == null ? '—' : numberLabel(person.forecastHours) + ' u'}</td>
+                            </>
+                          ) : null}
+                          <td className={hoursClass(difference ?? 0)}>
+                            {person.trackingStartWeek <= week && difference !== null ? signed(difference) : '—'}
+                            {person.overtimeWarning ? <AlertTriangle size={14} aria-label="Meer dan vijf verwachte overuren"/> : null}
+                          </td>
+                          <td>{person.previousWeekDifference == null ? '—' : signed(person.previousWeekDifference)}</td>
                           <td className={hoursClass(person.cumulativeBalance ?? 0)}>{person.cumulativeBalance === null ? '—' : signed(person.cumulativeBalance)}</td>
                           <td><button className="staffHoursIconButton" type="button" title="Contracturen aanpassen" onClick={() => startEdit(data.contracts.find((c) => c.rentman_crew_id === person.crewId))}><Settings2 size={15}/></button></td>
                         </tr>
-                      ))}</tbody>
+                      );})}</tbody>
                     </table>
                   </div>
                 ) : null}
                 <p className="staffHoursNote">
-                  Contract ± = gewerkte uren plus geregistreerd verlof/ziekte en correcties, minus de weeknorm.
-                  Vorige week ± vergelijkt uitsluitend gewerkte uren.
-                  Saldo = beginsaldo plus afgeronde weken vanaf de ingestelde startweek{data.isCurrentWeek ? ' (lopende week telt nog niet mee)' : ''}.
+                  {data.isCurrentWeek ? (
+                    <>
+                      Prognose = geregistreerde uren (inclusief verlof/ziekte en correcties) + het gemiddelde van maximaal 10 recent afgeronde gewerkte dagen × resterende werkdagen.
+                      We gaan uit van 8 contracturen per werkdag (32 uur = 4 dagen, 40 uur = 5 dagen) en tellen niet meer werkdagen dan er vóór het weekend over zijn.
+                      Vorige week ± vergelijkt de prognose van gewerkte uren met de volledige vorige week. Zonder recente registraties tonen we geen schatting.
+                    </>
+                  ) : (
+                    <>Contract ± = geregistreerde uren inclusief verlof/ziekte en correcties minus de contractnorm. Vorige week ± vergelijkt gewerkte uren.</>
+                  )}
+                  {' '}Het cumulatieve saldo bevat alleen afgeronde weken vanaf de ingestelde startweek.
                 </p>
               </>
             ) : loading ? <div className="staffHoursEmpty">Rentman-uren laden…</div> : null}
