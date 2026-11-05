@@ -25,6 +25,7 @@ import ProjectChecklistProgress from '@/components/ProjectChecklistProgress';
 import TodoistTaskItem from '@/components/TodoistTaskItem';
 import PlanningAutoRefresh from '@/components/PlanningAutoRefresh';
 import CrewPlanningPopup from '@/components/CrewPlanningPopup';
+import PersonnelHoursCard from '@/components/PersonnelHoursCard';
 import PlanningTaskCreateButton from '@/components/PlanningTaskCreateButton';
 import PlanningTaskFilterControls from '@/components/PlanningTaskFilterControls';
 import PlanningTaskDragManager from '@/components/PlanningTaskDragManager';
@@ -664,6 +665,7 @@ export default async function PlanningPage() {
           <span className="planningMetricIcon returns">↩</span>
           <div><small>Niet retour</small><strong>{overdueReturnProjects.length}</strong><em>{overdueReturnProjects.length ? 'openstaand' : 'alles retour'}</em></div>
         </div>
+        {profile.role === 'admin' ? <PersonnelHoursCard /> : null}
         {canSeeBilling ? (
           <a className="planningMetricCard" href="/planning/billing">
             <span className="planningMetricIcon billing">€</span>
