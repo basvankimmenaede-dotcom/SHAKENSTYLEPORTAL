@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { authErrorMessage } from '@/lib/email-code';
 import BrandLogo from '@/components/BrandLogo';
 
 function LoginForm() {
@@ -21,13 +22,15 @@ function LoginForm() {
 
     try {
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
       if (signInError) {
-        setError('E-mailadres of wachtwoord klopt niet.');
+        setError(authErrorMessage(signInError, 'login'));
         return;
       }
       router.replace('/');
       router.refresh();
+    } catch {
+      setError('Inloggen lukt nu niet. Controleer je verbinding en probeer opnieuw.');
     } finally {
       setLoading(false);
     }
@@ -65,6 +68,7 @@ function LoginForm() {
             {loading ? 'Inloggen...' : 'Inloggen'}
           </button>
         </form>
+        <Link href="/activate" className="textButton">Account activeren</Link>
         <Link href="/forgot-password" className="textButton">Wachtwoord vergeten?</Link>
       </section>
     </main>
