@@ -205,7 +205,7 @@ export async function buildStaffHourOverview(
       contractDifference,
       previousWeekDifference: rounded(workedHours - previousWeekHours),
       cumulativeBalance,
-      overtimeWarning: trackingStarted && contractDifference > 5,
+      overtimeWarning: trackingStarted && rounded(workedHours - weeklyHours) > 5,
     };
   }).sort((a, b) => b.contractDifference - a.contractDifference || a.name.localeCompare(b.name, 'nl'));
 
