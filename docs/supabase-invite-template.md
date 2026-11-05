@@ -12,7 +12,7 @@ Subject: `Activeer je SHAKENSTYLE-account`
 <p>Je bent uitgenodigd voor het SHAKENSTYLE Portal.</p>
 <p>Open zelf https://portal.shakenstyle.com/accept-invite en vul je e-mailadres en deze eenmalige code in:</p>
 <p style="font-size:28px;letter-spacing:4px"><strong>{{ .Token }}</strong></p>
-<p>Daarna kies je je wachtwoord. De code is 10 minuten geldig. Deel deze code met niemand.</p>
+<p>Daarna kies je je wachtwoord. De code is 12 uur geldig. Deel deze code met niemand.</p>
 <p>Heb je dit niet verwacht? Dan kun je deze mail negeren.</p>
 ```
 
@@ -23,7 +23,7 @@ Subject: `Je SHAKENSTYLE-activatiecode`
 <h2>Je SHAKENSTYLE-code</h2>
 <p>Vul deze eenmalige code in op de pagina waar je de code hebt aangevraagd:</p>
 <p style="font-size:28px;letter-spacing:4px"><strong>{{ .Token }}</strong></p>
-<p>De code is 10 minuten geldig. Gebruik de nieuwste mail. Deel deze code met niemand.</p>
+<p>De code is 12 uur geldig. Gebruik de nieuwste mail. Deel deze code met niemand.</p>
 <p>Pagina gesloten? Open https://portal.shakenstyle.com/activate en vraag een nieuwe code aan.</p>
 <p>Heb je geen code aangevraagd? Dan kun je deze mail negeren.</p>
 ```
@@ -36,7 +36,7 @@ Subject: `Herstel je SHAKENSTYLE-wachtwoord`
 <p>Vul deze eenmalige code in op het portaal om een nieuw wachtwoord te kiezen:</p>
 <p style="font-size:28px;letter-spacing:4px"><strong>{{ .Token }}</strong></p>
 <p>Open zo nodig zelf https://portal.shakenstyle.com/reset-password en vul je e-mailadres en de code in.</p>
-<p>De code is 10 minuten geldig. Gebruik de nieuwste mail. Deel deze code met niemand.</p>
+<p>De code is 12 uur geldig. Gebruik de nieuwste mail. Deel deze code met niemand.</p>
 <p>Heb je dit niet aangevraagd? Dan kun je deze mail negeren. Je wachtwoord is niet gewijzigd.</p>
 ```
 
@@ -44,7 +44,7 @@ No template may contain `.ConfirmationURL`, `.TokenHash`, or a token in a URL. P
 
 ## Auth settings required before release
 
-- Email OTP Expiration: **600 seconds** (currently more than one hour; must be shortened).
+- Email OTP Expiration: **43200 seconds (12 hours)**, as requested by the owner.
 - Email OTP Length: **8 digits**, if supported by the hosted Auth configuration. UI accepts 6–10 digits.
 - Preserve server-enforced email-send and `/verify` rate limits; verify they are enabled. The 60-second resend countdown in the UI is only a convenience, never a security boundary.
 - Check the configured email provider can deliver to the test mailbox and Pernod Ricard.
