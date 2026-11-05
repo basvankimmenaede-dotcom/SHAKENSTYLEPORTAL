@@ -143,7 +143,12 @@ export default function PersonnelHoursCard() {
 
   const summary = data?.summary;
   const hasContracts = Boolean(data?.contracts.some((contract) => contract.is_active));
-  const weekIndex = week ? Math.ceil((new Date(week + 'T12:00:00Z').getTime() - new Date(new Date(week + 'T12:00:00Z').getUTCFullYear() + '-01-01T12:00:00Z').getTime()) / 604800000) : 0;
+  const weekIndex = week ? (() => {
+    const day = new Date(week + 'T12:00:00Z');
+    day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
+    const yearStart = Date.UTC(day.getUTCFullYear(), 0, 1);
+    return Math.ceil(((day.getTime() - yearStart) / 86400000 + 1) / 7);
+  })() : 0;
 
   return (
     <>
