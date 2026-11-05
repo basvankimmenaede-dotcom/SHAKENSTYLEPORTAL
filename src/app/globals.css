@@ -6450,3 +6450,67 @@ table td{font-size:12px}
     min-height: 32px;
   }
 }
+
+
+/* Personnel hours dashboard: compact card and admin-only modal */
+.staffHoursMetric { cursor: pointer; font: inherit; text-align: left; }
+.staffHoursMetric:focus-visible { outline: 2px solid #e98b30; outline-offset: 3px; }
+.staffHoursPositive { color: #c05c20 !important; }
+.staffHoursNegative { color: #64748b !important; }
+.staffHoursBackdrop {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(17, 24, 39, .55);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.staffHoursModal {
+  background: #fff; color: #202020; border-radius: 16px;
+  width: min(980px, 100%); max-height: calc(100vh - 48px);
+  overflow-y: auto; padding: 26px; box-shadow: 0 22px 65px rgba(0,0,0,.2);
+}
+.staffHoursModalHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.staffHoursModalHeader h2 { margin: 6px 0; font-size: 23px; }
+.staffHoursModalHeader p { margin: 0; color: #697386; font-size: 13px; }
+.staffHoursIconButton {
+  display: inline-flex; justify-content: center; align-items: center;
+  width: 32px; height: 32px; border: 1px solid #e3e5e9;
+  border-radius: 8px; background: #fff; cursor: pointer; color: #4b5563; flex-shrink: 0;
+}
+.staffHoursIconButton:disabled { opacity: .35; cursor: not-allowed; }
+.staffHoursIconButton:hover:not(:disabled) { background: #f4f5f7; }
+.staffHoursControls { margin: 24px 0 15px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.staffHoursWeek { display: flex; align-items: center; gap: 12px; }
+.staffHoursWeek > div { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 140px; }
+.staffHoursWeek strong { font-size: 14px; }
+.staffHoursWeek small { font-size: 11px; color: #788294; }
+.staffHoursActions .button { display: inline-flex; gap: 7px; align-items: center; font-size: 12px; }
+.staffHoursSummary { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 11px; margin: 14px 0; }
+.staffHoursSummary > div { background: #f6f7f9; border: 1px solid #edeff2; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.staffHoursSummary small { font-size: 12px; color: #697386; }
+.staffHoursSummary strong { font-size: 23px; font-weight: 700; letter-spacing: -.03em; }
+.staffHoursAlert { border: 1px solid #f4d3bd; border-radius: 9px; background: #fff8f4; color: #af541a; padding: 10px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 12px 0; }
+.staffHoursTableScroll { overflow-x: auto; }
+.staffHoursTable { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+.staffHoursTable th { color: #697386; font-size: 11px; font-weight: 600; text-align: right; border-bottom: 1px solid #e8e8eb; padding: 12px 9px; }
+.staffHoursTable th:first-child, .staffHoursTable td:first-child { text-align: left; }
+.staffHoursTable td { text-align: right; padding: 11px 9px; border-bottom: 1px solid #f0f0f1; }
+.staffHoursTable td:first-child strong { font-weight: 600; }
+.staffHoursTable td:first-child small { display: block; font-size: 11px; color: #7a8494; margin-top: 3px; }
+.staffHoursTable td svg { vertical-align: middle; margin-left: 4px; }
+.staffHoursTable td:last-child { width: 40px; }
+.staffHoursNote { color: #697386; font-size: 11px; line-height: 1.6; margin: 12px 0 0; }
+.staffHoursEmpty { border: 1px dashed #d8dce1; padding: 28px 15px; border-radius: 9px; margin: 12px 0; font-size: 13px; text-align: center; color: #697386; }
+.staffHoursEditor { margin-top: 18px; padding: 18px; border-radius: 10px; border: 1px solid #d9dce1; background: #fafafa; }
+.staffHoursEditorHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+.staffHoursEditorHeader h3 { margin: 0; font-size: 16px; }
+.staffHoursFields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.staffHoursFields label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; }
+.staffHoursFields input, .staffHoursFields select { width: 100%; min-width: 0; }
+.staffHoursEditorFooter { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
+@media (max-width: 660px) {
+  .staffHoursBackdrop { align-items: flex-start; padding: 10px; }
+  .staffHoursModal { padding: 17px; max-height: calc(100vh - 20px); }
+  .staffHoursModalHeader h2 { font-size: 20px; }
+  .staffHoursSummary strong { font-size: 18px; }
+  .staffHoursSummary > div { padding: 9px; }
+  .staffHoursFields { grid-template-columns: 1fr; }
+}
