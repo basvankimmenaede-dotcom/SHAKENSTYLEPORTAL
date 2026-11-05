@@ -41,6 +41,13 @@ export type StaffHourRow = {
   contractDifference: number;
   previousWeekDifference: number;
   cumulativeBalance: number | null;
+  // A provisional week forecast, based only on logged working days.
+  expectedWorkdays: number;
+  averageDailyHours: number | null;
+  sampleWorkdays: number;
+  remainingEstimatedDays: number;
+  forecastHours: number | null;
+  forecastDifference: number | null;
   overtimeWarning: boolean;
 };
 
@@ -130,12 +137,47 @@ function rounded(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+// Most team members work an eight-hour day: 32h = 4 days, 40h = 5 days.
+// We do not infer shifts from Rentman, as not every shift is planned there.
+export function contractedWorkdays(weeklyHours: number) {
+  return Math.min(5, Math.max(1, Math.ceil(weeklyHours / 8)));
+}
+
+export function forecastHoursFromAverage({
+  registeredHours,
+  weeklyHours,
+  averageDailyHours,
+  accountedDays,
+  availableDays,
+}: {
+  registeredHours: number;
+  weeklyHours: number;
+  averageDailyHours: number | null;
+  accountedDays: number;
+  availableDays: number;
+}) {
+  const remainingDays = Math.min(
+    Math.max(0, contractedWorkdays(weeklyHours) - accountedDays),
+    Math.max(0, availableDays),
+  );
+  if (averageDailyHours === null || !Number.isFinite(averageDailyHours)) {
+    return { remainingDays, forecastHours: null, forecastDifference: null };
+  }
+  const forecastHours = rounded(registeredHours + averageDailyHours * remainingDays);
+  return {
+    remainingDays,
+    forecastHours,
+    forecastDifference: rounded(forecastHours - weeklyHours),
+  };
+}
+
 export async function buildStaffHourOverview(
   week: string,
   contracts: StaffHourContract[],
 ) {
   const currentWeek = currentWeekMonday();
   const isCurrentWeek = week === currentWeek;
+  const today = amsterdamDateKey();
   const previousWeek = addDateDays(week, -7);
   const active = contracts.filter((c) => c.is_active);
   const crew = await getRentmanStaff();
@@ -144,16 +186,21 @@ export async function buildStaffHourOverview(
   if (!active.length) {
     return {
       week, currentWeek, isCurrentWeek, rows: [] as StaffHourRow[],
-      summary: { workedHours: 0, creditedHours: 0, contractDifference: 0, previousWeekDifference: 0, warnings: 0 },
+      summary: { workedHours: 0, creditedHours: 0, contractDifference: 0,
+        previousWeekDifference: 0, forecastHours: null as number | null,
+        forecastDifference: null as number | null, forecastCoveredCount: 0, warnings: 0 },
       crew: crew.filter((person) => person.active),
     };
   }
 
   const trackedIds = new Set(active.map((c) => Number(c.rentman_crew_id)));
-  const firstWeek = [previousWeek, ...active.map((c) => c.tracking_start_week)]
-    .sort()[0];
+  const firstWeek = [
+    previousWeek, ...active.map((c) => c.tracking_start_week),
+    ...(isCurrentWeek ? [addDateDays(week, -35)] : []),
+  ].sort()[0];
   const registrations = await getRentmanRegistrations(firstWeek, addDateDays(week, 7));
   const totals = new Map<string, { worked: number; credit: number; leave: number }>();
+  const daily = new Map<number, Map<string, { worked: number; leave: number }>>();
 
   for (const registration of registrations) {
     const crewId = Number(registration.crewmember?.split('/').pop());
@@ -170,6 +217,15 @@ export async function buildStaffHourOverview(
     value.credit += seconds;
     if (kind === 2 || kind === 4) value.leave += seconds;
     totals.set(key, value);
+
+    if (seconds > 0 && (kind === 1 || kind === 2 || kind === 4)) {
+      const days = daily.get(crewId) ?? new Map<string, { worked: number; leave: number }>();
+      const day = days.get(dateKey) ?? { worked: 0, leave: 0 };
+      if (kind === 1) day.worked += seconds;
+      if (kind === 2 || kind === 4) day.leave += seconds;
+      days.set(dateKey, day);
+      daily.set(crewId, days);
+    }
   }
 
   const rows: StaffHourRow[] = active.map((contract) => {
@@ -182,6 +238,42 @@ export async function buildStaffHourOverview(
     const previousWeekHours = hours(previous.worked);
     const trackingStarted = contract.tracking_start_week <= week;
     const contractDifference = trackingStarted ? rounded(creditedHours - weeklyHours) : 0;
+
+    // Use up to ten recently completed working days (max five weeks back).
+    // Today's hours are included in the actual total, but not in the average:
+    // the employee may still be in the middle of their shift.
+    const days = daily.get(crewId) ?? new Map<string, { worked: number; leave: number }>();
+    const sample = isCurrentWeek ? Array.from(days.entries())
+      .filter(([date, value]) => date < today
+        && date >= addDateDays(today, -35) && value.worked > 0)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 10) : [];
+    const averageDailyHours = sample.length
+      ? rounded(sample.reduce((total, [, day]) => total + day.worked, 0) / 3600 / sample.length)
+      : null;
+
+    const thisWeekDays = Array.from(days.entries())
+      .filter(([date]) => date >= week && date <= addDateDays(week, 6) && date <= today);
+    // Sick days / holiday days count towards the week. A partial leave day
+    // consumes only the applicable fraction of a standard eight-hour day.
+    const accountedDays = thisWeekDays.reduce((total, [, day]) => {
+      if (day.worked > 0) return total + 1;
+      return total + Math.min(1, day.leave / (8 * 3600));
+    }, 0);
+    let remainingWeekdays = 0;
+    if (isCurrentWeek) {
+      for (let date = today; date <= addDateDays(week, 6); date = addDateDays(date, 1)) {
+        const weekday = new Date(date + 'T12:00:00Z').getUTCDay();
+        if (weekday >= 1 && weekday <= 5 && !days.has(date)) remainingWeekdays++;
+      }
+    }
+    const estimate = forecastHoursFromAverage({
+      registeredHours: creditedHours,
+      weeklyHours,
+      averageDailyHours: isCurrentWeek && trackingStarted ? averageDailyHours : null,
+      accountedDays,
+      availableDays: remainingWeekdays,
+    });
 
     // A current week is incomplete: keep its provisional deficit out of the saved balance.
     const lastClosedWeek = isCurrentWeek ? previousWeek : week;
@@ -205,12 +297,26 @@ export async function buildStaffHourOverview(
       contractDifference,
       previousWeekDifference: rounded(workedHours - previousWeekHours),
       cumulativeBalance,
-      overtimeWarning: trackingStarted && rounded(workedHours - weeklyHours) > 5,
+      expectedWorkdays: contractedWorkdays(weeklyHours),
+      averageDailyHours,
+      sampleWorkdays: sample.length,
+      remainingEstimatedDays: estimate.remainingDays,
+      forecastHours: isCurrentWeek ? estimate.forecastHours : null,
+      forecastDifference: isCurrentWeek ? estimate.forecastDifference : null,
+      overtimeWarning: trackingStarted && (
+        isCurrentWeek && estimate.forecastDifference !== null
+          ? estimate.forecastDifference > 5
+          : rounded(workedHours - weeklyHours) > 5
+      ),
     };
   }).sort((a, b) => b.contractDifference - a.contractDifference || a.name.localeCompare(b.name, 'nl'));
 
   const sum = (field: 'workedHours' | 'creditedHours' | 'contractDifference' | 'previousWeekDifference') =>
     rounded(rows.reduce((total, row) => total + row[field], 0));
+  const forecastable = rows.filter((row) => row.forecastHours !== null);
+  const forecastComplete = isCurrentWeek && forecastable.length === rows.length;
+  const forecastSum = (field: 'forecastHours' | 'forecastDifference') =>
+    rounded(forecastable.reduce((total, row) => total + (row[field] ?? 0), 0));
 
   return {
     week, currentWeek, isCurrentWeek, rows,
@@ -219,6 +325,9 @@ export async function buildStaffHourOverview(
       creditedHours: sum('creditedHours'),
       contractDifference: sum('contractDifference'),
       previousWeekDifference: sum('previousWeekDifference'),
+      forecastHours: forecastComplete ? forecastSum('forecastHours') : null,
+      forecastDifference: forecastComplete ? forecastSum('forecastDifference') : null,
+      forecastCoveredCount: forecastable.length,
       warnings: rows.filter((row) => row.overtimeWarning).length,
     },
     crew: crew.filter((person) => person.active),
