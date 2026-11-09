@@ -371,6 +371,8 @@ export type RentmanPlanningProject = {
   custom?: Record<string, unknown>;
   is_cancelled?: boolean;
   return_complete?: boolean | null;
+  task_selectable?: boolean;
+  is_in_afhandeling?: boolean;
 };
 
 function amsterdamDateKey(date = new Date()) {
@@ -411,6 +413,10 @@ function overlapsDate(project: RentmanPlanningProject, dateKey: string) {
   if (!range.startDate || !range.endDate) return false;
   return range.startDate <= dateKey && range.endDate >= dateKey;
 }
+
+// Status IDs from Rentman /statuses: Optie (1), Aanvraag (7), Concept (8),
+// Retour (6), and In afhandeling (1002).
+const UNCONFIRMED_TASK_STATUSES = new Set(['/statuses/1', '/statuses/7', '/statuses/8']);
 
 export async function getPlanningProjects() {
   const params = new URLSearchParams({
@@ -454,11 +460,21 @@ export async function getPlanningProjects() {
     const returnComplete = projectSubprojects.length
       ? projectSubprojects.every((subproject) => subproject.status === '/statuses/6')
       : null;
+    // Keep mixed-status projects selectable when at least one subproject is confirmed.
+    const taskSelectable = !projectSubprojects.length
+      || projectSubprojects.some((subproject) => !UNCONFIRMED_TASK_STATUSES.has(subproject.status ?? ''));
+    // An expired project is no longer awaiting a return if all subprojects are
+    // already returned or in administrative handling.
+    const inAfhandeling = projectSubprojects.some((subproject) => subproject.status === '/statuses/1002')
+      && projectSubprojects.every((subproject) =>
+        subproject.status === '/statuses/1002' || subproject.status === '/statuses/6');
 
     return {
       ...project,
       is_cancelled: cancelledProjectIds.has(project.id),
       return_complete: returnComplete,
+      task_selectable: taskSelectable,
+      is_in_afhandeling: inAfhandeling,
     };
   });
   const activeProjects = projects.filter((project) => !project.is_cancelled);
@@ -499,7 +515,7 @@ export function getOverdueReturnProjects(projects: RentmanPlanningProject[], tod
       .filter((project) => {
         const range = projectDateRange(project);
         if (!range.endDate || range.endDate >= today) return false;
-        return project.return_complete === false;
+        return project.return_complete === false && !project.is_in_afhandeling;
       })
       .sort((a, b) => {
         const aEnd = projectDateRange(a).endDate ?? '';
