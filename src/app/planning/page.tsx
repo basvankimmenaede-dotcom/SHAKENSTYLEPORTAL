@@ -772,7 +772,7 @@ export default async function PlanningPage() {
                 assignees={assignees}
                 canChooseOffice={profile.role === 'admin'}
                 projects={planning.allProjects
-                  .filter((project) => project.number)
+                  .filter((project) => project.number && project.task_selectable !== false)
                   .sort((a, b) => {
                     const aDate = a.usageperiod_start ?? a.planperiod_start ?? '';
                     const bDate = b.usageperiod_start ?? b.planperiod_start ?? '';
