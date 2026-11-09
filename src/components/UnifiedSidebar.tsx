@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   BadgeEuro,
   Boxes,
+  ReceiptText,
   Building2,
   CalendarClock,
   CalendarDays,
@@ -58,6 +59,7 @@ export default function UnifiedSidebar({
     ] : []),
     ...(canViewBilling || role === 'admin' ? [
       { href: '/planning/billing', label: 'Facturatie', icon: BadgeEuro, match: ['/planning/billing'] },
+      { href: '/planning/crew-invoices', label: 'Inkomende facturen', icon: ReceiptText, match: ['/planning/crew-invoices'] },
     ] : []),
     ...(canViewChecklists || role === 'admin' ? [
       { href: '/planning/afsluitlijst', label: 'Afsluitlijst', icon: ClipboardCheck, match: ['/planning/afsluitlijst'] },
