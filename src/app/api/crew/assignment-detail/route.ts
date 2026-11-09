@@ -25,7 +25,7 @@ export async function GET(request:NextRequest){
  try{
   const [planning,functions]=await Promise.all([getPlanningProjects(),getPlanningProjectFunctionsForProject(projectId)]);
   const project=planning.allProjects.find(p=>p.id===projectId);
-  const location=project?.location,contact=project?.cust_contact;
+  const location=project?.location,contact=project?.loc_contact;
   const eventInfo=project?{
    number:project.number==null?null:String(project.number),
    customer:project.customer?.displayname||project.customer?.name||null,
