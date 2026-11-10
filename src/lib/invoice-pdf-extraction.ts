@@ -26,7 +26,8 @@ function dateValue(value:string){
 export function extractInvoiceFields(text:string){
  const lines=text.split(/[\r\n]+/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean).slice(0,300);
  const invoiceMatch=lines.map(line=>line.match(/\b(?:factuurnummer|factuur\s*(?:nr\.?|nummer|no\.?)|invoice\s*(?:number|no\.?|#)|invoice\s*#)\s*[:#-]?\s*([A-Z0-9][A-Z0-9_\/-]{3,32})\b/i)).find(Boolean);
- const number=invoiceMatch?.[1]?.replace(/[.,;:]$/,'')||null;
+ const fallbackNumber=lines.map(line=>line.match(/\b(?:factuur|invoice)\s*[:#-]?\s*(\d{5,32})\b/i)).find(Boolean);
+ const number=invoiceMatch?.[1]?.replace(/[.,;:]$/,'')||fallbackNumber?.[1]||null;
  const dateMatch=lines.map(line=>line.match(/\b(?:factuurdatum|invoice\s*date|datum|date)\s*[:#-]?\s*(\d{1,2}[-/.]\d{1,2}[-/.]20\d\d)\b/i)).find(Boolean);
  const date=dateMatch?dateValue(dateMatch[1]):null;
  const priority=lines.filter(line=>/(?:totaal\s*(?:te\s*betalen|incl\.?\s*btw|inclusief\s*btw|bedrag)|total\s*(?:due|incl|amount)|amount\s*due|te\s*betalen)/i.test(line));
