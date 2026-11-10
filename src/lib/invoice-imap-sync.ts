@@ -50,7 +50,7 @@ export async function synchronizeInvoiceInbox({manual=false}:{manual?:boolean}={
     let status:'received'|'no_pdf'|'too_large'|'processing_error'='received';
     let errorMessage:string|null=null;
     let originalPath:string|null=null;
-    let attachments:{filename:string;path:string;size:number}[]=[];
+    const attachments:{filename:string;path:string;size:number}[]=[];
     if(oversized){status='too_large';errorMessage='E-mail is groter dan de limiet van 18 MB.';}
     else if(!source){status='processing_error';errorMessage='De e-mail kon niet worden gedownload.';}
     else{
