@@ -6861,3 +6861,10 @@ table td{font-size:12px}
 .invoiceArchiveNote{font-size:11px;color:#827870;margin-top:10px}
 @media(max-width:830px){.invoiceComparisonMetrics{grid-template-columns:1fr 1fr}.invoiceArchiveEntry summary{grid-template-columns:minmax(150px,1fr) 85px 95px 14px}.invoiceArchiveEntry summary>span:nth-child(3){display:none}}
 @media(max-width:610px){.invoiceOfficeSearch{flex-wrap:wrap}.invoiceOfficeTab{padding:10px 10px;font-size:11px}.invoiceProjectHoursRow{grid-template-columns:1fr 1fr}.invoiceProjectHoursRow>strong{grid-column:1 / -1;padding:0}.invoiceComparisonMetrics{grid-template-columns:1fr 1fr}.invoiceArchiveEntry summary{grid-template-columns:minmax(150px,1fr) 90px 14px}.invoiceArchiveEntry summary>span:nth-child(4){display:none}.invoiceComparisonProjectHead{flex-wrap:wrap}.invoiceEmailArchiveAction{align-items:flex-start;flex-direction:column}}
+
+
+/* Invoice second-approver decisions */
+.invoiceDeclineActions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.invoiceApprovalCorrection>strong{font-size:13px}
+.invoiceApprovalCorrection>.muted{font-size:12px;margin:0}
+.invoiceReviewStatus.rejected{background:#fdebe8;color:#9f3329}
