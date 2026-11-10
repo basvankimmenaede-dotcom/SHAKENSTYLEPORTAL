@@ -110,7 +110,8 @@ export async function parseGoogleInvoicePdf(content:Buffer,settings=await getInv
  const invoiceDate=date(pick(document,'invoice_date'));
  const supplierName=value(pick(document,'supplier_name'))||null;
  const emailText=value(pick(document,'supplier_email'));
- const allEmails=[...new Set(([emailText,...(document.text||'').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)||[])]).map(e=>e.trim().toLowerCase()).filter(Boolean))].slice(0,30);
+ const detectedFromText=(document.text||'').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)||[];
+ const allEmails=[...new Set([emailText,...detectedFromText].map(e=>e.trim().toLowerCase()).filter(Boolean))].slice(0,30);
  const required=['invoice_id','invoice_date','total_amount'];
  const confidence=required.map(type=>pick(document,type)?.confidence).filter((v):v is number=>typeof v==='number');
  return {invoice_number:number,invoice_date:invoiceDate,total_amount:amount,supplier_name:supplierName,
