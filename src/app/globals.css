@@ -6558,3 +6558,34 @@ table td{font-size:12px}
 .invoiceMailSyncFooter>div{display:grid;gap:4px}
 .invoiceMailSyncFooter .button{display:inline-flex;align-items:center;gap:7px;min-height:42px}
 @media(max-width:750px){.invoiceMailPanelHead{padding:18px 18px;flex-wrap:wrap}.invoiceMailPanelHead h2{font-size:18px}.invoiceMailStatus{margin-left:0}.invoiceMailBody,.invoiceMailAddressForm{padding:18px}.invoiceMailFields{grid-template-columns:1fr}.invoiceMailAddressForm{flex-wrap:wrap}.invoiceMailAddressForm .invoiceMailField{width:100%}.invoiceMailAddressForm>.button{width:100%}.invoiceMailSyncFooter .button{width:100%;justify-content:center}}
+
+/* Incoming invoice PDF review */
+.invoiceReviewSection{padding:0!important;overflow:hidden}
+.invoiceReviewHeading{padding:21px 24px;border-bottom:1px solid #eae5df;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.invoiceReviewHeading h2{margin:0 0 7px;font-size:22px;letter-spacing:-.025em}
+.invoiceReviewHeading p{margin:0;color:#827a73;font-size:12px;line-height:1.5;max-width:730px}
+.invoiceReviewCounter{color:#796f68;font-size:12px;font-weight:750;white-space:nowrap;border:1px solid #eae5df;padding:7px 11px;border-radius:8px}
+.invoiceReviewMessage{margin:14px 24px;padding:10px 13px;border-radius:9px;font-size:12px}
+.invoiceReviewMessage.success{background:#ebf7ee;color:#2c7144}.invoiceReviewMessage.error{background:#fff0ea;color:#a44629}
+.invoiceReviewList{display:grid}.invoiceReviewItem+.invoiceReviewItem{border-top:1px solid #eee8e2}
+.invoiceReviewItemHeader{width:100%;border:0;background:white;display:grid;grid-template-columns:minmax(180px,2.2fr) 145px 70px 125px 20px;gap:12px;align-items:center;text-align:left;padding:17px 24px;cursor:pointer;color:#282521}
+.invoiceReviewItemHeader:hover{background:#fcfaf8}.invoiceReviewItemSubject{min-width:0;display:grid;gap:4px}
+.invoiceReviewItemSubject strong{font-size:13px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.invoiceReviewItemSubject small{font-size:11px;color:#827a73}
+.invoiceReviewItemMeta{font-size:11px;color:#6e665f}.invoiceReviewChevron{font-size:19px;color:#827a73;text-align:right}
+.invoiceReviewStatus{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;font-size:10px;font-weight:750;padding:6px 9px;border-radius:7px;background:#f2f0ed;color:#695e54}
+.invoiceReviewStatus.linked{background:#e7f4e9;color:#27713b}.invoiceReviewStatus.warning{background:#fff0e9;color:#a94a23}
+.invoiceReviewExpanded{padding:17px 24px 22px;background:#faf8f6;border-top:1px solid #eee7e0;display:grid;gap:13px}
+.invoiceReviewUnprocessed{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:#6f655e}
+.invoiceReviewPdf{padding:17px;background:#fff;border:1px solid #e9e3dd;border-radius:11px;display:grid;gap:14px}
+.invoiceReviewPdfTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.invoiceReviewPdfTop>div{display:flex;align-items:center;gap:9px;min-width:0}.invoiceReviewPdfTop strong{font-size:13px;overflow-wrap:anywhere}.invoiceReviewPdfTop svg{color:#e96f23}
+.invoiceReviewPdfTop .button{font-size:11px;min-height:34px}
+.invoiceReviewHint{display:flex;gap:8px;align-items:flex-start;margin:0;background:#fff7ec;color:#805223;padding:10px 12px;border-radius:9px;font-size:11px;line-height:1.5}
+.invoiceReviewHint svg{flex:0 0 auto}
+.invoiceReviewFields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.invoiceReviewFields label{display:grid;gap:7px;min-width:0}.invoiceReviewFields label span{font-size:11px;font-weight:750;color:#4e4640}
+.invoiceReviewFields .input,.invoiceReviewFields .select{width:100%;min-width:0;min-height:40px;font-size:12px}
+.invoiceReviewFooter{display:flex;justify-content:space-between;align-items:center;gap:13px;flex-wrap:wrap;border-top:1px solid #f0ebe6;padding-top:13px}
+.invoiceReviewFooter>span{font-size:11px;color:#8a8079;max-width:540px}.invoiceReviewFooter .button{display:inline-flex;gap:8px;align-items:center;font-size:12px}
+@media(max-width:1100px){.invoiceReviewFields{grid-template-columns:repeat(2,minmax(0,1fr))}.invoiceReviewItemHeader{grid-template-columns:minmax(160px,2fr) 110px 65px 95px 16px;gap:7px;padding:15px}}
+@media(max-width:720px){.invoiceReviewHeading{padding:18px}.invoiceReviewItemHeader{grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding:13px 17px}.invoiceReviewItemMeta{display:none}.invoiceReviewExpanded{padding:14px}.invoiceReviewFields{grid-template-columns:1fr}.invoiceReviewPdfTop>div{flex-wrap:wrap}}

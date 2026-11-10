@@ -23,7 +23,7 @@ export default function CrewInvoiceAdminList({invoices,canManage}:{invoices:Invo
     }catch(e){setError(e instanceof Error?e.message:'Verzenden mislukt');}
     finally{setSaving(false)}
   }
-  if(invoices.length===0)return <div className="notice">Nog geen inkomende crewfacturen verwerkt. Wanneer de e-mailontvangst is aangesloten, verschijnen de facturen hier.</div>;
+  if(invoices.length===0)return <div className="notice">Nog geen facturen aan een bartender gekoppeld. Controleer hierboven de ontvangen PDF’s en koppel ze na beoordeling.</div>;
   return <div className="stack">{invoices.map(inv=><section key={inv.id} className="card" style={{padding:20,marginBottom:12}}>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}>
       <div><strong>{inv.name}</strong><div className="muted">{inv.invoice_number} · {inv.total_amount===null?'Bedrag onbekend':'€ '+Number(inv.total_amount).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>

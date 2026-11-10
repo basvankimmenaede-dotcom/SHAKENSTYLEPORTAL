@@ -18,7 +18,8 @@
     "react-dom": "^19.1.1",
     "nodemailer": "10.0.14",
     "imapflow": "2.11.0",
-    "mailparser": "3.14.2"
+    "mailparser": "3.14.2",
+    "pdf-parse": "2.4.5"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

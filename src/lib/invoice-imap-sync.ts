@@ -2,6 +2,7 @@ import 'server-only';
 import {simpleParser} from 'mailparser';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {createImapClient,getImapRow} from '@/lib/invoice-imap';
+import {processPendingInvoicePdfs} from '@/lib/invoice-pdf-extraction';
 
 export const MAX_MESSAGE_BYTES=18*1024*1024;
 const MAX_MESSAGES_PER_RUN=20;
@@ -87,6 +88,7 @@ export async function synchronizeInvoiceInbox({manual=false}:{manual?:boolean}={
     if(cursorError)throw cursorError;
    }
   }
+  try{await processPendingInvoicePdfs(2)}catch(error){console.error('PDF extraction after IMAP sync failed',error instanceof Error?error.message:'unknown')}
   const resultText='Laatste controle voltooid: '+imported+' nieuwe e-mails met PDF, '+skipped+' zonder bruikbare PDF of al verwerkt.';
   const {error:updateError}=await admin.from('invoice_imap_settings').update({
    last_uid:cursor,last_uid_validity:uidValidity,
