@@ -161,16 +161,19 @@ export default function UsersManager({
           <h1>Gebruikers & rechten</h1>
           <p>Beheer gebruikers, rollen, moduletoegang en merktoegang vanuit één overzicht.</p>
         </div>
-        <button
-          className="button orange"
-          type="button"
-          onClick={() => {
-            setInviteRole('customer');
-            setInviteOpen(true);
-          }}
-        >
-          Nieuwe gebruiker
-        </button>
+        <div className="crewProfileHeaderActions">
+          <Link href="/admin/users/crew" className="button secondary">Crewprofielen</Link>
+          <button
+            className="button orange"
+            type="button"
+            onClick={() => {
+              setInviteRole('customer');
+              setInviteOpen(true);
+            }}
+          >
+            Nieuwe gebruiker
+          </button>
+        </div>
       </section>
 
       {inviteOpen ? (

@@ -2,6 +2,7 @@ import 'server-only';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {getInvoiceProcessingSettings} from '@/lib/invoice-processing-settings';
 import {documentAiConfigured,parseGoogleInvoicePdf} from '@/lib/google-document-ai';
+import {findCrewInvoiceMatch} from '@/lib/crew-invoice-matching';
 
 type Attachment={path:string;filename:string;size:number};
 export async function processInvoiceMessage(messageId:string){
@@ -14,7 +15,7 @@ export async function processInvoiceMessage(messageId:string){
  const attachments=(Array.isArray(message.attachments)?message.attachments:[]) as Attachment[];
  if(!attachments.length)return {processed:0,failed:0};
  const {data:members,error:membersError}=await admin.from('crew_portal_members')
-  .select('id,email,rentman_email,login_email_override').eq('active',true);
+  .select('id,full_name,email,rentman_email,login_email_override,invoice_email,company_name,company_alias').eq('active',true).eq('portal_deleted',false);
  if(membersError)throw new Error('Crewleden konden niet worden opgehaald.');
  let processed=0,failed=0;
  for(const [i,attachment] of attachments.slice(0,10).entries()){
@@ -32,24 +33,24 @@ export async function processInvoiceMessage(messageId:string){
    if(downloadError||!blob)throw new Error('De PDF kon niet worden geladen.');
    const content=Buffer.from(await blob.arrayBuffer());
    const fields=await parseGoogleInvoicePdf(content,settings);
-   const emailSet=new Set(fields.detected_emails);
-   const candidates=(members||[]).filter(m=>[m.email,m.rentman_email,m.login_email_override]
-    .some(email=>email&&emailSet.has(String(email).trim().toLowerCase())));
-   const proposed=candidates.length===1?candidates[0].id:null;
+   const match=findCrewInvoiceMatch({
+    supplierName:fields.supplier_name,supplierEmail:fields.supplier_email,
+    detectedEmails:fields.detected_emails
+   },members||[]);
    const notes=[
     !fields.invoice_number?'Geen betrouwbaar factuurnummer herkend.':null,
     !fields.invoice_date?'Controleer de factuurdatum.':null,
     fields.total_amount===null?'Geen betrouwbaar totaalbedrag herkend.':null,
     fields.ai_confidence!==null&&fields.ai_confidence<0.8?'Google AI geeft een lage herkenningszekerheid aan.':null,
-    candidates.length>1?'Meerdere crewaccounts gevonden: kies de juiste medewerker.':null,
-    !proposed?'Kies de bartender handmatig of laat de factuur als leverancier staan.':null
+    match.strength!=='strong'?match.reason:null
    ].filter(Boolean).join(' ');
    const {error}=await admin.from('invoice_pdf_extractions').upsert({
     ...base,invoice_number:fields.invoice_number,invoice_date:fields.invoice_date,
     total_amount:fields.total_amount,supplier_name:fields.supplier_name,
     detected_emails:fields.detected_emails,ai_fields:fields.ai_fields,
     ai_confidence:fields.ai_confidence,text_preview:fields.raw_text.slice(0,12000),
-    status:notes?'needs_review':'extracted',suggested_crew_member_id:proposed,extraction_notes:notes||null
+    status:notes?'needs_review':'extracted',suggested_crew_member_id:match.suggestedCrewMemberId,
+    match_strength:match.strength,match_reason:match.reason,extraction_notes:notes||null
    },{onConflict:'message_id,attachment_index'});
    if(error)throw new Error('Herkenningsresultaat kon niet worden opgeslagen.');
    processed++;

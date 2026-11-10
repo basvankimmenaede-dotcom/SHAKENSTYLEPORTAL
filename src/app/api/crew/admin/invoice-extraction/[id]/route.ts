@@ -24,6 +24,32 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  const body=await request.json().catch(()=>null);
  const action=body?.action;
  const admin=createAdminClient();
+ if(action==='prepare'){
+  const index=Number(body?.attachmentIndex);
+  if(!Number.isInteger(index)||index<0||index>9)
+   return NextResponse.json({error:'Ongeldige bijlage.'},{status:400});
+  const {data:message,error:messageError}=await admin.from('invoice_inbox_messages')
+   .select('attachments').eq('id',id).maybeSingle();
+  if(messageError||!message)return NextResponse.json({error:'E-mail niet gevonden.'},{status:404});
+  const attachments=Array.isArray(message.attachments)?message.attachments as {path?:string;filename?:string;size?:number}[]:[];
+  const attachment=attachments[index];
+  if(!attachment?.path?.startsWith('incoming/'+id+'/')||!attachment.path.endsWith('.pdf'))
+   return NextResponse.json({error:'PDF-bijlage niet gevonden.'},{status:404});
+  const {data:existing}=await admin.from('invoice_pdf_extractions')
+   .select('id,status').eq('message_id',id).eq('attachment_index',index).maybeSingle();
+  if(existing?.status==='linked')return NextResponse.json({error:'Deze factuur is al gekoppeld.'},{status:409});
+  if(existing&&existing.status!=='failed')
+   return NextResponse.json({ok:true,message:'Deze PDF kan al handmatig worden beoordeeld.'});
+  const payload={
+   message_id:id,attachment_index:index,filename:String(attachment.filename||'Factuur.pdf').slice(0,180),
+   storage_path:attachment.path,processing_provider:'manual',status:'needs_review',
+   extraction_notes:'Handmatig ingevoerd; vergelijk de gegevens met het originele PDF-bestand.',
+   match_strength:'none',match_reason:'Handmatige koppeling: selecteer een bartender.'
+  };
+  const {error}=await admin.from('invoice_pdf_extractions').upsert(payload,{onConflict:'message_id,attachment_index'});
+  if(error)return NextResponse.json({error:'Handmatig beoordelen kon niet worden gestart.'},{status:500});
+  return NextResponse.json({ok:true,message:'Handmatige controle geopend. Bekijk de PDF en vul de factuurgegevens in.'});
+ }
  if(action==='extract'){
   try{
    const result=await processInvoiceMessage(id);

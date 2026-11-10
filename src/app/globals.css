@@ -6640,3 +6640,43 @@ table td{font-size:12px}
 .invoicePdfDialogHeader>div{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .invoicePdfFrame{flex:1;width:100%;border:0;background:#ececec;min-height:250px}
 @media(max-width:800px){.invoiceProcessGrid{grid-template-columns:1fr}.invoiceProcessHeader{flex-wrap:wrap;padding:18px}.invoiceProcessBody{padding:18px}.invoiceProcessBottom{flex-wrap:wrap}.invoiceProcessBottom .button{width:100%}.invoicePdfDialogHeader{align-items:flex-start;flex-wrap:wrap}.invoicePdfOverlay{padding:8px}}
+
+
+/* Crew identity management - Rentman linked users */
+.crewProfileHeaderActions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.crewProfilesWorkspace{display:grid;grid-template-columns:minmax(270px,330px) minmax(0,1fr);gap:15px;align-items:start}
+.crewProfileList,.crewProfileContent{background:#fff;border:1px solid #e9e3dc;border-radius:16px;min-width:0;overflow:hidden}
+.crewProfileList{position:sticky;top:18px}
+.crewProfileList header{padding:19px;border-bottom:1px solid #eee9e3;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.crewProfileList header h2{font-size:18px;margin:0}.crewProfileList header span{font-size:11px;color:#8b827b}
+.crewProfileFilters{padding:14px;border-bottom:1px solid #eee9e3;display:grid;gap:10px}
+.crewProfileSearch{display:flex;align-items:center;gap:9px;background:#f7f5f2;border-radius:9px;padding:10px}
+.crewProfileSearch svg{flex:0 0 auto;color:#8b827b}
+.crewProfileSearch input{border:0;background:transparent;outline:0;min-width:0;width:100%;font-size:12px}
+.crewProfileToggle{display:flex;gap:7px}.crewProfileToggle button{border:0;border-radius:8px;background:#f3f1ee;color:#7c7269;padding:6px 12px;font-size:11px;font-weight:750;cursor:pointer}
+.crewProfileToggle button.active{background:#fff0e5;color:#cb5e16}
+.crewProfileRows{max-height:68vh;overflow:auto}
+.crewProfileRow{width:100%;display:flex;align-items:center;gap:11px;padding:12px 15px;text-align:left;background:#fff;border:0;border-bottom:1px solid #f2eeeb;cursor:pointer}
+.crewProfileRow.selected{background:#fff6ef}.crewProfileRow>span:nth-child(2){display:grid;gap:3px;flex:1;min-width:0}
+.crewProfileRow strong{font-size:12px}.crewProfileRow small{font-size:10px;color:#8b827b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crewProfileAvatar{width:44px;height:44px;flex:0 0 44px;border-radius:12px;background:#f7eee4;display:grid;place-items:center;color:#b45b24;font-size:19px;font-weight:800}
+.crewProfileAvatar.small{width:35px;height:35px;flex-basis:35px;font-size:14px;border-radius:10px}
+.crewProfileMissing{display:block;width:7px;height:7px;border-radius:50%;background:#efa358}
+.crewProfileEmpty{padding:14px;font-size:12px;color:#827a73}
+.crewProfileBanner{display:flex;gap:9px;align-items:center;padding:13px 18px;background:#fff9f2;color:#8a683e;font-size:11px;border-bottom:1px solid #f2e6d6}
+.crewProfileBanner svg{flex:0 0 auto}
+.crewProfileEditor{padding:23px;display:grid;gap:20px}
+.crewProfileIntro{display:flex;gap:13px;align-items:center}.crewProfileIntro h2{font-size:21px;margin:0 0 5px}.crewProfileIntro p{font-size:12px;color:#827a73;margin:0}
+.crewProfileFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.crewProfileFields label{display:grid;gap:8px;min-width:0}.crewProfileFields label span{font-size:12px;font-weight:750}
+.crewProfileFields .input{min-width:0;width:100%}.crewProfileReadOnly{padding:15px;background:#f8f6f3;border-radius:11px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.crewProfileReadOnly>div{display:grid;gap:4px;min-width:0}.crewProfileReadOnly span{color:#817871;font-size:11px}
+.crewProfileReadOnly strong{font-size:12px;overflow-wrap:anywhere}.crewProfileReadOnly small{grid-column:1/-1;color:#817871;line-height:1.45;font-size:11px}
+.crewProfileFooter{border-top:1px solid #eee9e4;padding-top:17px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.crewProfileFooter span{font-size:11px;line-height:1.5;color:#817871;max-width:380px}.crewProfileMessage{padding:12px;border-radius:9px;margin:0;font-size:12px}
+.crewProfileMessage.success{background:#eaf7ed;color:#236c36}.crewProfileMessage.error{background:#fff0ec;color:#a93725}
+.crewInvoiceMatchBanner{display:flex;gap:10px;align-items:start;padding:12px 13px;border-radius:9px;background:#f7f5f1;border:1px solid #eae4dd}
+.crewInvoiceMatchBanner.strong{background:#edf7ef;border-color:#d9ebdd}.crewInvoiceMatchBanner.ambiguous{background:#fff3e8;border-color:#f2dfc9}
+.crewInvoiceMatchBanner>div{display:grid;gap:5px}.crewInvoiceMatchBanner strong{font-size:12px}.crewInvoiceMatchBanner span,.crewInvoiceMatchBanner small{font-size:11px;color:#766e66;line-height:1.5}
+@media(max-width:930px){.crewProfilesWorkspace{grid-template-columns:1fr}.crewProfileList{position:static}.crewProfileRows{max-height:300px}}
+@media(max-width:640px){.crewProfileFields,.crewProfileReadOnly{grid-template-columns:1fr}.crewProfileEditor{padding:17px}.crewProfileFooter .button{width:100%}.crewProfileReadOnly small{grid-column:1}}

@@ -9,7 +9,7 @@ type Entity={type:string;mentionText?:string;confidence?:number;normalizedValue?
 type Document={text?:string;entities?:Entity[]};
 export type ParsedGoogleInvoice={
  invoice_number:string|null;invoice_date:string|null;total_amount:number|null;
- supplier_name:string|null;detected_emails:string[];raw_text:string;
+ supplier_name:string|null;supplier_email:string|null;detected_emails:string[];raw_text:string;
  ai_fields:Record<string,{value:string;confidence:number|null}>;
  ai_confidence:number|null;
 };
@@ -115,7 +115,7 @@ export async function parseGoogleInvoicePdf(content:Buffer,settingsInput?:Invoic
  const allEmails=[...new Set([emailText,...detectedFromText].map(e=>e.trim().toLowerCase()).filter(Boolean))].slice(0,30);
  const required=['invoice_id','invoice_date','total_amount'];
  const confidence=required.map(type=>pick(document,type)?.confidence).filter((v):v is number=>typeof v==='number');
- return {invoice_number:number,invoice_date:invoiceDate,total_amount:amount,supplier_name:supplierName,
+ return {invoice_number:number,invoice_date:invoiceDate,total_amount:amount,supplier_name:supplierName,supplier_email:emailText||null,
   detected_emails:allEmails,raw_text:(document.text||'').slice(0,20000),
   ai_fields:fields,ai_confidence:confidence.length?Math.min(...confidence):null};
 }
