@@ -77,7 +77,7 @@ export async function synchronizeInvoiceInbox({manual=false}:{manual?:boolean}={
     }
     const {error:saveError}=await admin.from('invoice_inbox_messages').insert({
      id:messageId,mailbox_key:mailboxKey,uid_validity:validity,imap_uid:uid,
-     sender,subject,received_at:item.internalDate?.toISOString()||null,
+     sender,subject,received_at:item.internalDate?(new Date(item.internalDate)).toISOString():null,
      status,attachments,original_path:originalPath,error_message:errorMessage
     });
     if(saveError)throw saveError;
