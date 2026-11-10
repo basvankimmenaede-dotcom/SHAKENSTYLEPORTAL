@@ -10,6 +10,7 @@ type Extraction={
  invoice_number:string|null;invoice_date:string|null;total_amount:number|null;supplier_name:string|null;
  suggested_crew_member_id:string|null;match_strength:string|null;match_reason:string|null;extraction_notes:string|null;linked_invoice_id:string|null;
  processing_provider:string|null;processed_at:string|null;
+ project_numbers:string[];project_lines:{project_number:string;work_hours:number|null;travel_hours:number|null;expenses_amount:number|null}[];
 };
 type Member={id:string;full_name:string;company_name:string|null;company_alias:string|null;invoice_email:string|null;email:string|null;rentman_email:string|null;login_email_override:string|null};
 function displayDate(date:string|null){return date?new Date(date).toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'}):'Onbekend';}
@@ -21,6 +22,18 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
  const [invoiceNumber,setInvoiceNumber]=useState(item.invoice_number||'');
  const [invoiceDate,setInvoiceDate]=useState(item.invoice_date||'');
  const [totalAmount,setTotalAmount]=useState(item.total_amount===null?'':String(item.total_amount));
+ const [projectText,setProjectText]=useState((item.project_numbers||[]).join(', '));
+ const [projectLines,setProjectLines]=useState<Record<string,{work_hours:string;travel_hours:string;expenses_amount:string}>>(
+  Object.fromEntries((item.project_lines||[]).map(line=>[line.project_number,{
+   work_hours:line.work_hours===null?'':String(line.work_hours),
+   travel_hours:line.travel_hours===null?'':String(line.travel_hours),
+   expenses_amount:line.expenses_amount===null?'':String(line.expenses_amount)
+  }]))
+ );
+ const projectNumbers=[...new Set(projectText.split(/[;,\s]+/).map(n=>n.trim()).filter(Boolean))].slice(0,15);
+ const projectFormatValid=projectNumbers.every(n=>/^\d{4,8}$/.test(n));
+ const changeProjectLine=(number:string,key:'work_hours'|'travel_hours'|'expenses_amount',value:string)=>
+  setProjectLines(previous=>({...previous,[number]:{work_hours:'',travel_hours:'',expenses_amount:'',...(previous[number]||{}),[key]:value}}));
  const linked=item.status==='linked';
  return <div className="invoiceReviewPdf">
   <div className="invoiceReviewPdfTop">
@@ -54,6 +67,28 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
      <option value="">Niet gekoppeld / leverancier</option>{members.map(m=><option key={m.id} value={m.id}>{m.full_name}{m.company_name?' · '+m.company_name:''}</option>)}
     </select></label>
    </div>
+   <div className="invoiceProjectEntry">
+     <label><span>Projectnummer(s) op de PDF</span><input className="input" value={projectText}
+       placeholder="Bijv. 11057, 11059" onChange={e=>setProjectText(e.target.value)} disabled={linked||!canManage}/></label>
+     <small>Vul meerdere nummers gescheiden door een komma in. Dit zijn Rentman-projectnummers, geen interne ID’s.</small>
+     {projectNumbers.length>0&&projectFormatValid&&<div className="invoiceProjectHours">
+       {projectNumbers.map(number=><div className="invoiceProjectHoursRow" key={number}>
+        <strong>#{number}</strong>
+        {([
+          ['work_hours','Gewerkte uren'],
+          ['travel_hours','Reisuren'],
+          ['expenses_amount','Onkosten (€)']
+         ] as const).map(([key,label])=><label key={key}><span>{label}</span>
+         <input className="input" type="number" step="0.01" min="0" placeholder="Niet herkend"
+          disabled={linked||!canManage}
+          value={projectLines[number]?.[key]||''}
+          onChange={e=>changeProjectLine(number,key,e.target.value)}
+         /></label>)}
+       </div>)}
+       <p className="invoiceProjectHoursHint">Laat ontbrekende uren leeg; ga niet uit van de geplande tijden. De portal vergelijkt alleen ingevulde gegevens met ingediende shiftrapporten.</p>
+      </div>}
+     {!projectFormatValid&&<p className="invoiceProjectHoursHint">Gebruik alleen geldige projectnummers van 4 tot 8 cijfers.</p>}
+    </div>
    <div className="invoiceReviewFooter">
     <span>{linked?'Deze factuur is gekoppeld en zichtbaar in de crewomgeving.':'Controleer de herkende gegevens met de PDF. Je moet de koppeling altijd zelf bevestigen.'}</span>
     {!linked&&canManage&&<button className="button secondary" type="button" disabled={busy} onClick={()=>{
@@ -61,8 +96,13 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
        void run(item.message_id,{action:'extract'});
     }}>Opnieuw herkennen</button>}
     {!linked&&canManage&&<button className="button orange" type="button"
-      disabled={busy||!memberId||!invoiceNumber.trim()||totalAmount.trim()===''||!Number.isFinite(Number(totalAmount))}
-      onClick={()=>run(item.message_id,{action:'link',extractionId:item.id,memberId,invoiceNumber:invoiceNumber.trim(),invoiceDate,totalAmount:Number(totalAmount)})}>
+      disabled={busy||!memberId||!projectFormatValid||!invoiceNumber.trim()||totalAmount.trim()===''||!Number.isFinite(Number(totalAmount))}
+      onClick={()=>run(item.message_id,{action:'link',extractionId:item.id,memberId,invoiceNumber:invoiceNumber.trim(),invoiceDate,totalAmount:Number(totalAmount),
+       projectNumbers,projectLines:projectNumbers.map(project_number=>({
+        project_number,work_hours:projectLines[project_number]?.work_hours||null,
+        travel_hours:projectLines[project_number]?.travel_hours||null,
+        expenses_amount:projectLines[project_number]?.expenses_amount||null
+       }))})}>
       <Link2 size={15}/> Koppelen aan bartender</button>}
    </div>
   </>}
@@ -121,6 +161,11 @@ export default function InvoiceInboxReview({emails,extractions,members,canManage
         {documents.map(item=><ExtractedInvoice key={item.id+':'+(item.processed_at||'')} item={item} members={members} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
         {canManage&&documents.length>0&&documents.every(x=>x.status==='failed')&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> Opnieuw automatisch herkennen</button>}
        </>}
+       {canManage&&<div className="invoiceEmailArchiveAction"><button type="button" className="button secondary"
+        disabled={Boolean(busy)} onClick={()=>{
+          const reason=window.prompt('Waarom moet deze e-mail naar het archief?');
+          if(reason?.trim()&&reason.trim().length>=5)void run(mail.id,{action:'archive',reason:reason.trim()});
+        }}>E-mail archiveren</button><small>Voor dubbele of niet-relevante e-mails. De originele PDF blijft bewaard.</small></div>}
       </div>}
     </article>;
    })}</div>}
