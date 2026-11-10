@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {CheckCircle2,Clock3,MailCheck,AlertTriangle} from 'lucide-react';
+import {CheckCircle2,Clock3,MailCheck,AlertTriangle,ChevronDown} from 'lucide-react';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
 import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
 import {canDeclineInvoice} from '@/lib/invoice-decision';
@@ -19,6 +19,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
  invoices:Invoice[];canManage:boolean;currentUserId:string;approvers:Approver[];
  configuredOne:string;configuredTwo:string;configuredForwardTo:string;comparisons:Record<string,InvoiceCheck>;
 }){
+ const [expanded,setExpanded]=useState<string|null>(null);
  const [selected,setSelected]=useState<string|null>(null);
  const [decision,setDecision]=useState<'reject'|'correct'>('correct');
  const [reason,setReason]=useState('');
@@ -43,6 +44,10 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
   }])));
  };
  const router=useRouter();
+ const toggleInvoice=(id:string)=>{
+  setExpanded(current=>current===id?null:id);
+  setSelected(null);setEditId(null);setReason('');
+ };
  const labels:Record<string,string>={
   received:'Ontvangen',in_review:'In behandeling',correction_sending:'Correctiemail controleren',
   correction_needed:'Correctie nodig',rejected:'Afgekeurd',approved:'Goedgekeurd'
@@ -58,7 +63,9 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const contentType=response.headers.get('content-type')||'';
    const result=contentType.includes('application/json')?await response.json():{error:'Er is een serverfout opgetreden. Vernieuw het overzicht.'};
    if(!response.ok)throw Error(result.error||'Verzenden mislukt.');
-   setSelected(null);setReason('');setDecision('correct');setNotice(result.message||'Verwerkt.');router.refresh();
+   setSelected(null);setReason('');setDecision('correct');
+   if(!url.endsWith('/project-review'))setExpanded(null);
+   setNotice(result.message||'Verwerkt.');router.refresh();
   }catch(e){setError(e instanceof Error?e.message:'Actie mislukt.');}
   finally{setSaving(null);}
  }
@@ -76,13 +83,25 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const approved=inv.status==='approved'&&Boolean(inv.forwarded_at);
    const review=comparisons[inv.id]||{status:'unverified' as const,projects:[]};
    const canEdit=canManage&&['received','in_review'].includes(inv.status)&&!first&&!second&&!inv.forward_attempted_at;
-   return <section key={inv.id} className="card invoiceApprovalCard">
-    <div className="invoiceApprovalTop">
-     <div><strong>{inv.name}</strong>
-      <span>{inv.invoice_number} · {inv.total_amount===null?'Bedrag onbekend':Number(inv.total_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}</span>
-      <span className="invoiceNumberList">{(inv.project_numbers||[]).length?(inv.project_numbers||[]).map(n=>'#'+n).join(' · '):'Nog geen projectnummer'}</span>
-     </div><span className={'invoiceReviewStatus '+(approved?'linked':inv.status==='rejected'?'rejected':forwarding?'warning':'')}>{forwarding?'Doorsturen controleren':labels[inv.status]||'In behandeling'}</span>
-    </div>
+   const needsAttention=['difference','missing_report'].includes(review.status);
+   const comparisonLabel=review.status==='difference'?'Afwijking':review.status==='missing_report'?'Rapport ontbreekt':review.status==='match'?'Uren kloppen':'Controle nodig';
+   const expandedNow=expanded===inv.id;
+   return <section key={inv.id} className="card invoiceApprovalCard invoiceApprovalCompact">
+    <button className="invoiceCompactToggle" type="button" aria-expanded={expandedNow}
+     aria-controls={'invoice-details-'+inv.id} onClick={()=>toggleInvoice(inv.id)}>
+     <span className="invoiceCompactIdentity"><strong>{inv.name}</strong>
+      <span>{inv.invoice_number} · {(inv.project_numbers||[]).length?(inv.project_numbers||[]).map(n=>'#'+n).join(' · '):'Geen projectnummer'}</span>
+     </span>
+     <span className="invoiceCompactAmount">{inv.total_amount===null?'Bedrag onbekend':Number(inv.total_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}</span>
+     <span className="invoiceCompactFlags">
+      <span className={'invoiceCompactComparison '+(needsAttention?'attention':review.status==='match'?'match':'')}>{comparisonLabel}</span>
+      <span className="invoiceCompactProgress">{first?'1/2 akkoord':'0/2 akkoord'}</span>
+      {(forwarding||inv.status==='correction_sending'||inv.status==='correction_needed')&&
+       <span className="invoiceCompactState">{forwarding?'Verzending controleren':labels[inv.status]}</span>}
+     </span>
+     <ChevronDown className={'invoiceCompactChevron '+(expandedNow?'open':'')} size={18}/>
+    </button>
+    {expandedNow&&<div id={'invoice-details-'+inv.id} className="invoiceCompactDetails">
     {inv.correction_reason&&<p className="muted">Correctiereden: {inv.correction_reason}</p>}
     <InvoiceShiftComparison comparison={review}/>
     {canEdit&&(editId===inv.id?<div className="invoiceProjectEditor">
@@ -153,6 +172,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
         onClick={()=>{setSelected(inv.id);setDecision('correct');setReason('');setError('')}}>Correctie aanvragen</button>
       </div>)}
     </div>
+    </div>}
    </section>;
   })}
   {preview&&<div className="invoicePdfOverlay" role="dialog" aria-modal="true" aria-label={'Factuur: '+preview.number}>
