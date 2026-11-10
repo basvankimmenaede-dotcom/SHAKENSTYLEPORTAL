@@ -15,7 +15,7 @@ function displayDate(date:string|null){return date?new Date(date).toLocaleString
 function statusLabel(status:string){
  return status==='linked'?'Gekoppeld':status==='extracted'?'Uitgelezen':status==='needs_review'?'Controle nodig':status==='failed'?'Uitlezen mislukt':status==='no_pdf'?'Geen PDF':status==='too_large'?'Te groot':'Ontvangen';
 }
-function ExtractedInvoice({item,members,canManage,run,busy}:{item:Extraction;members:Member[];canManage:boolean;run:(id:string,payload:Record<string,unknown>)=>Promise<void>;busy:boolean}){
+function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extraction;members:Member[];canManage:boolean;run:(id:string,payload:Record<string,unknown>)=>Promise<void>;busy:boolean;openPdf:(messageId:string,index:number,filename:string)=>void}){
  const [memberId,setMemberId]=useState(item.suggested_crew_member_id||'');
  const [invoiceNumber,setInvoiceNumber]=useState(item.invoice_number||'');
  const [invoiceDate,setInvoiceDate]=useState(item.invoice_date||'');
@@ -24,7 +24,7 @@ function ExtractedInvoice({item,members,canManage,run,busy}:{item:Extraction;mem
  return <div className="invoiceReviewPdf">
   <div className="invoiceReviewPdfTop">
    <div><FileText size={18}/><strong>{item.filename}</strong><span className={'invoiceReviewStatus '+(linked?'linked':item.status==='failed'?'warning':'')}>{statusLabel(item.status)}</span></div>
-   <a className="button secondary" href={'/api/crew/admin/invoice-extraction/'+item.id+'/pdf'} target="_blank" rel="noopener noreferrer">PDF bekijken</a>
+   <button type="button" className="button secondary" onClick={()=>openPdf(item.message_id,item.attachment_index,item.filename)}>PDF bekijken</button>
   </div>
   {item.status==='failed'?<p className="invoiceReviewHint"><AlertCircle size={16}/> Automatisch uitlezen is niet gelukt. Open het origineel en probeer opnieuw.</p>:<>
    {item.extraction_notes&&<p className="invoiceReviewHint"><AlertCircle size={16}/>{item.extraction_notes}</p>}
@@ -51,6 +51,8 @@ export default function InvoiceInboxReview({emails,extractions,members,canManage
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
  const [expanded,setExpanded]=useState<string|null>(emails.length===1?emails[0].id:null);
+ const [preview,setPreview]=useState<{id:string;index:number;filename:string}|null>(null);
+ const openPdf=(id:string,index:number,filename:string)=>setPreview({id,index,filename});
  const router=useRouter();
  async function run(id:string,payload:Record<string,unknown>){
   if(busy)return;
@@ -59,7 +61,8 @@ export default function InvoiceInboxReview({emails,extractions,members,canManage
    const response=await fetch('/api/crew/admin/invoice-extraction/'+encodeURIComponent(id),{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
    });
-   const data=await response.json();
+   const contentType=response.headers.get('content-type')||'';
+   const data=contentType.includes('application/json')?await response.json():{error:'De server gaf geen geldig antwoord. Controleer je sessie of probeer opnieuw.'};
    if(!response.ok)throw new Error(data.error||'Verwerken is mislukt.');
    setNotice(data.message||'Verwerkt.');router.refresh();
   }catch(e){setError(e instanceof Error?e.message:'Verwerking mislukt.');}
@@ -88,14 +91,28 @@ export default function InvoiceInboxReview({emails,extractions,members,canManage
        {mail.error_message&&<p className="invoiceReviewHint">{mail.error_message}</p>}
        {!hasPdf?<p className="muted">Geen bruikbare PDF-bijlage gevonden.</p>:<>
         {!documents.length&&<div className="invoiceReviewUnprocessed">
-         <span>Deze PDF is ontvangen, maar nog niet inhoudelijk uitgelezen.</span>
-         {canManage&&<button className="button orange" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> {busy===mail.id?'Verwerken…':'PDF uitlezen'}</button>}
+         <span>Deze PDF is ontvangen, maar nog niet uitgelezen met Google Document AI.</span>
+         <div className="invoicePdfUnprocessedActions">{mail.attachments.map((file,i)=><button type="button" className="button secondary" key={i} onClick={()=>openPdf(mail.id,i,file.filename)}>PDF bekijken</button>)}
+         {canManage&&<button className="button orange" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> {busy===mail.id?'Verwerken…':'Google AI uitlezen'}</button>}</div>
         </div>}
-        {documents.map(item=><ExtractedInvoice key={item.id} item={item} members={members} canManage={canManage} run={run} busy={Boolean(busy)}/>)}
-        {canManage&&documents.length>0&&documents.every(x=>x.status==='failed')&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> Opnieuw uitlezen</button>}
+        {documents.map(item=><ExtractedInvoice key={item.id} item={item} members={members} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
+        {canManage&&documents.length>0&&documents.every(x=>x.status==='failed')&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> Opnieuw met Google AI uitlezen</button>}
        </>}
       </div>}
     </article>;
    })}</div>}
+   {preview&&<div className="invoicePdfOverlay" role="dialog" aria-modal="true" aria-label={'Factuur bekijken: '+preview.filename}>
+     <div className="invoicePdfDialog">
+       <div className="invoicePdfDialogHeader">
+         <strong>{preview.filename}</strong>
+         <div><a href={'/api/crew/admin/invoice-messages/'+preview.id+'/pdf/'+preview.index}
+           target="_blank" rel="noopener noreferrer" className="button secondary">Open in nieuw tabblad</a>
+         <button className="button secondary" type="button" onClick={()=>setPreview(null)}>Sluiten</button></div>
+       </div>
+       <iframe title={'PDF: '+preview.filename}
+         src={'/api/crew/admin/invoice-messages/'+preview.id+'/pdf/'+preview.index}
+         className="invoicePdfFrame"/>
+     </div>
+   </div>}
  </section>;
 }
