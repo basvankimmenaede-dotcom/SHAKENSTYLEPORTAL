@@ -1,0 +1,2 @@
+-- Project refs and archive migration applied to production 2026-11-10.
+-- See Supabase migration crew_invoice_project_refs_comparison_archive_20261110.
