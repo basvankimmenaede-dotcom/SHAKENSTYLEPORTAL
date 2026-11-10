@@ -1,7 +1,8 @@
 import 'server-only';
 import {createAdminClient} from '@/lib/supabase/admin';
+import type {InvoiceProjectLine} from '@/lib/invoice-project-recognition';
 import {
- compareInvoiceToShiftReports,type InvoiceCheck,type InvoiceProjectLine,
+ compareInvoiceToShiftReports,type InvoiceCheck,
  type InvoiceProjectRef,type InvoiceAssignment,type InvoiceShiftReport,type InvoiceBillingItem
 } from '@/lib/invoice-shift-comparison';
 

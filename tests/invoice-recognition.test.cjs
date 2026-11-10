@@ -103,3 +103,71 @@ test('A VAT percentage next to a total label is not treated as an amount',()=>{
  const result=recognizeInvoiceText('Invoice 44\nTotaal inclusief btw 21%\nBTW 21%','Invoice 44.pdf');
  assert.equal(result.total_amount,null);
 });
+
+const {recognizeInvoiceProjects}=loadTypeScriptModule('src/lib/invoice-project-recognition.ts');
+const {compareInvoiceToShiftReports}=loadTypeScriptModule('src/lib/invoice-shift-comparison.ts');
+test('Invoice 99 contains project 11057, not invoice number as project',()=>{
+ const parsed=recognizeInvoiceProjects('Invoice 99\nFactuurdatum 26-10-2026\nTotaal € 1560,00',
+  'Invoice 99 11057 TML Rode Hoed.pdf',['11057','11077']);
+ assert.equal(parsed.numbers.join(','),'11057');
+ assert.equal(parsed.lines[0].work_hours,null);
+});
+test('Explicit project number and worked hours are recognized',()=>{
+ const parsed=recognizeInvoiceProjects('Projectnummer: 11057\nTotaal gewerkte uren: 35,5 uur\nReistijd 2 uur\nOnkosten € 16,50',
+  'invoice.pdf',['11057']);
+ assert.equal(parsed.lines[0].work_hours,35.5);
+ assert.equal(parsed.lines[0].travel_hours,2);
+ assert.equal(parsed.lines[0].expenses_amount,16.5);
+});
+test('Random five-digit invoice numbers are not assumed to be projects',()=>{
+ const parsed=recognizeInvoiceProjects('Factuurnummer 12345\nFactuurdatum 21-10-2026','invoice.pdf',['11057']);
+ assert.equal(parsed.numbers.length,0);
+});
+test('Missing reports remain missing, even when planned hours equal invoice hours',()=>{
+ const result=compareInvoiceToShiftReports({
+  crewMemberId:'luca',projectNumbers:['11057'],
+  projectLines:[{project_number:'11057',work_hours:8,travel_hours:null,expenses_amount:null,source:'manual',evidence:null}],
+  catalog:[{rentman_project_id:3578,project_number:'11057',project_name:'TML ADE'}],
+  assignments:[{id:'a1',crew_member_id:'luca',rentman_project_id:3578,starts_at:'2026-10-21T08:00:00Z',ends_at:'2026-10-21T16:00:00Z'}],
+  reports:[],billing:[]
+ });
+ assert.equal(result.status,'missing_report');
+ assert.equal(result.projects[0].reportedHours,0);
+ assert.equal(result.projects[0].plannedHours,8);
+});
+test('A reported-hours difference is calculated per project',()=>{
+ const result=compareInvoiceToShiftReports({
+  crewMemberId:'luca',projectNumbers:['11057'],
+  projectLines:[{project_number:'11057',work_hours:8,travel_hours:null,expenses_amount:null,source:'manual',evidence:null}],
+  catalog:[{rentman_project_id:3578,project_number:'11057',project_name:'TML ADE'}],
+  assignments:[{id:'a1',crew_member_id:'luca',rentman_project_id:3578,starts_at:'2026-10-21T08:00:00Z',ends_at:'2026-10-21T16:00:00Z'}],
+  reports:[{assignment_id:'a1',work_started_at:'2026-10-21T08:00:00Z',work_ended_at:'2026-10-21T17:00:00Z',break_minutes:30,travel_minutes:0,expenses_amount:0,status:'submitted'}],
+  billing:[{rentman_project_id:3578,status:'open',id:'billing1'}]
+ });
+ assert.equal(result.status,'difference');
+ assert.equal(result.projects[0].reportedHours,8.5);
+ assert.equal(result.projects[0].differenceHours,-0.5);
+ assert.equal(result.projects[0].billingStatus,'open');
+});
+test('Actual work hours match but absent travel and expenses claims remain unverified',()=>{
+ const result=compareInvoiceToShiftReports({
+  crewMemberId:'luca',projectNumbers:['11057'],
+  projectLines:[{project_number:'11057',work_hours:8,travel_hours:null,expenses_amount:null,source:'manual',evidence:null}],
+  catalog:[{rentman_project_id:3578,project_number:'11057',project_name:'TML ADE'}],
+  assignments:[{id:'a1',crew_member_id:'luca',rentman_project_id:3578,starts_at:'2026-10-21T08:00:00Z',ends_at:'2026-10-21T16:00:00Z'}],
+  reports:[{assignment_id:'a1',work_started_at:'2026-10-21T08:00:00Z',work_ended_at:'2026-10-21T16:00:00Z',break_minutes:0,travel_minutes:0,expenses_amount:0,status:'submitted'}],
+  billing:[]
+ });
+ assert.equal(result.status,'unverified');
+});
+test('Full work, travel and expenses match is allowed only with submitted reports',()=>{
+ const result=compareInvoiceToShiftReports({
+  crewMemberId:'luca',projectNumbers:['11057'],
+  projectLines:[{project_number:'11057',work_hours:8,travel_hours:1,expenses_amount:3,source:'manual',evidence:null}],
+  catalog:[{rentman_project_id:3578,project_number:'11057',project_name:'TML ADE'}],
+  assignments:[{id:'a1',crew_member_id:'luca',rentman_project_id:3578,starts_at:'2026-10-21T08:00:00Z',ends_at:'2026-10-21T16:00:00Z'}],
+  reports:[{assignment_id:'a1',work_started_at:'2026-10-21T08:00:00Z',work_ended_at:'2026-10-21T16:00:00Z',break_minutes:0,travel_minutes:60,expenses_amount:3,status:'submitted'}],
+  billing:[]
+ });
+ assert.equal(result.status,'match');
+});
