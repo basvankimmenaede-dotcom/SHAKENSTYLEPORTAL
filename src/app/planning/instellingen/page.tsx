@@ -1,43 +1,24 @@
-import Link from 'next/link';
-import { requireAdmin } from '@/lib/auth';
-import { updateFuelCardDistanceSetting } from '../actions';
-import SettingsNav from '@/components/SettingsNav';
-import RecurringTasksSettings from '@/components/RecurringTasksSettings';
-import InvoiceEmailSettings from '@/components/InvoiceEmailSettings';
-import {createAdminClient} from '@/lib/supabase/admin';
-import {safeImapStatus} from '@/lib/invoice-imap';
-
-type RecurringTaskSetting = {
-  title?: string;
-  active?: boolean;
-  task_area?: 'office' | 'warehouse' | 'both';
-  weekday?: number;
-};
-
-type RecurringTaskSettings = {
-  closing?: RecurringTaskSetting;
-  billing?: RecurringTaskSetting;
-};
+import {requireAdmin} from '@/lib/auth';
+import {updateFuelCardDistanceSetting} from '../actions';
+import SettingsWorkspace from '@/components/SettingsWorkspace';
+import LegacySettingsRedirect from '@/components/LegacySettingsRedirect';
 
 export default async function PlanningSettingsPage(){
   const {supabase}=await requireAdmin();
-  const {data:settings}=await supabase.from('planning_settings').select('fuel_card_distance_km,recurring_tasks,incoming_invoice_email').eq('id',1).maybeSingle();
-  const {data:imapRow}=await createAdminClient().from('invoice_imap_settings').select('*').eq('id',1).maybeSingle();
-  const imap=safeImapStatus(imapRow||{host:'mail.antagonist.nl',port:993,username:'',password_encrypted:null,enabled:false,tested_at:null,last_sync_at:null,last_sync_result:null,last_error:null});
-  const fuelCardDistanceKm=Number(settings?.fuel_card_distance_km??150); const recurring=(settings?.recurring_tasks??{}) as RecurringTaskSettings;
-  return <main className="container settingsPage">
-    <section className="usersAdminHeader"><div><span className="usersAdminEyebrow">Beheer</span><h1>Instellingen</h1><p>Beheer vaste processen, checklists en weergave-instellingen vanuit één omgeving.</p></div><Link className="button secondary" href="/planning">Terug naar planning</Link></section>
-    <section className="settingsWorkspace"><SettingsNav active="general"/><div className="settingsEditorPane settingsMain">
-      <section className="settingsPanel"><header className="settingsPanelHeader"><div><span>Algemeen</span><h2>Planning</h2><p>Algemene instellingen die invloed hebben op de dagelijkse planning.</p></div></header>
-        <form action={updateFuelCardDistanceSetting} className="settingsFormRow"><div><strong>Brandstofpas</strong><span>Toon de pasmarkering wanneer magazijn → project → magazijn boven deze afstand komt.</span></div><div className="planningSettingInline"><input className="input" type="number" min="1" name="fuel_card_distance_km" defaultValue={fuelCardDistanceKm} required/><span>km retour</span></div><button className="button orange" type="submit">Opslaan</button></form>
-      </section>
-      <section className="settingsPanel" id="factuur-email"><header className="settingsPanelHeader"><div><span>Facturatie</span><h2>Factuur e-mailadres</h2><p>Beheer het e-mailadres waar bartenders en leveranciers hun facturen naartoe sturen.</p></div></header>
-        <InvoiceEmailSettings email={settings?.incoming_invoice_email??''} imap={imap}/>
-      </section>
-      <section className="settingsPanel" id="terugkerende-taken"><header className="settingsPanelHeader"><div><span>Automatisering</span><h2>Terugkerende taken</h2><p>Pas vaste taken aan zonder de dagelijkse planning handmatig te corrigeren.</p></div></header>
-        <RecurringTasksSettings closing={recurring.closing??{title:'Afsluitlijst afronden',active:true,task_area:'both'}} billing={recurring.billing??{title:'Facturatie',active:true,task_area:'office',weekday:3}}/>
-      </section>
-      <section className="settingsPanel"><header className="settingsPanelHeader"><div><span>Weergave</span><h2>Schermen</h2><p>Gespecialiseerde weergaven vanuit dezelfde instellingenomgeving.</p></div></header><div className="settingsInlineLinks"><Link href="/planning/tv"><strong>TV-weergave</strong><span>Open de read-only planning voor een extern scherm.</span><b>Openen →</b></Link></div></section>
-    </div></section>
-  </main>
+  const {data:settings}=await supabase.from('planning_settings')
+    .select('fuel_card_distance_km').eq('id',1).maybeSingle();
+  const distance=Number(settings?.fuel_card_distance_km??150);
+  return <SettingsWorkspace active="general" title="Algemene instellingen" description="Beheer de algemene instellingen van de planning. Andere onderdelen vind je in het menu links.">
+    <LegacySettingsRedirect/>
+    <section className="settingsPanel">
+      <header className="settingsPanelHeader">
+        <div><span>Algemeen</span><h2>Planning</h2><p>Instellingen die invloed hebben op de dagelijkse planning.</p></div>
+      </header>
+      <form action={updateFuelCardDistanceSetting} className="settingsFormRow">
+        <div><strong>Brandstofpas</strong><span>Markeer magazijn → project → magazijn wanneer de retourafstand boven deze waarde komt.</span></div>
+        <div className="planningSettingInline"><input className="input" type="number" min="1" name="fuel_card_distance_km" defaultValue={distance} required/><span>km retour</span></div>
+        <button className="button orange" type="submit">Opslaan</button>
+      </form>
+    </section>
+  </SettingsWorkspace>;
 }
