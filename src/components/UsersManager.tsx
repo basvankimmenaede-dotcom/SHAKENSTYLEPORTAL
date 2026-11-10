@@ -29,6 +29,7 @@ type UserItem = {
   email: string;
   fullName: string | null;
   role: 'admin' | 'warehouse' | 'customer';
+  category:'customer'|'crew'|'internal'|'unlinked';
   distributorId: number | null;
   distributorName: string | null;
   assignedBrandIds: number[];
@@ -112,13 +113,14 @@ export default function UsersManager({
   view?: AccountView;
 }) {
   const scopedUsers=useMemo(()=>{
-    if(view==='customers')return users.filter(user=>user.role==='customer');
-    if(view==='internal')return users.filter(user=>user.role==='admin'||user.role==='warehouse');
+    if(view==='customers')return users.filter(user=>user.category==='customer');
+    if(view==='internal')return users.filter(user=>user.category==='internal');
     if(view==='invites')return users.filter(user=>['invited','started'].includes(statusOf(user).key));
+    if(view==='rights')return users.filter(user=>user.category!=='crew');
     return users;
   },[users,view]);
   const context={
-    all:{title:'Alle accounts',description:'Alle portaalaccounts en toegangsrechten bij elkaar.'},
+    all:{title:'Alle accounts',description:'Klant-, crew- en interne accounts met een duidelijk accounttype.'},
     customers:{title:'Klantaccounts',description:'Klantgebruikers, organisaties, merktoegang en inloggen.'},
     internal:{title:'Interne accounts',description:'Accounts van kantoor en magazijn, met hun rechten en loginstatus.'},
     rights:{title:'Rollen & rechten',description:'Beheer de rechten per portaalmodule en account.'},
@@ -152,7 +154,8 @@ export default function UsersManager({
       const matchesQuery = !needle
         || user.email.toLowerCase().includes(needle)
         || (user.fullName ?? '').toLowerCase().includes(needle)
-        || user.role.toLowerCase().includes(needle);
+        || user.role.toLowerCase().includes(needle)
+        || user.category.toLowerCase().includes(needle);
       return matchesStatus && matchesQuery;
     });
   }, [query, statusFilter, scopedUsers]);
@@ -207,7 +210,7 @@ export default function UsersManager({
           <section className="planningTaskCreateModal" role="dialog" aria-modal="true" aria-labelledby="new-user-title">
             <button className="planningTaskCreateClose" type="button" onClick={() => setInviteOpen(false)}>×</button>
             <h2 id="new-user-title">Nieuwe gebruiker</h2>
-            <p className="muted">Vul de basisgegevens in. Kies Klant, Magazijn of Admin op basis van de benodigde toegang.</p>
+            <p className="muted">{view==='customers'?'Nieuwe klantaccounts worden aan een organisatie gekoppeld.':view==='internal'?'Interne accounts zijn voor kantoor en magazijn.':'Kies Klant, Magazijn of Admin op basis van de benodigde toegang.'}</p>
 
             <form action={inviteCustomer} className="usersInviteForm" onSubmit={() => setInviteOpen(false)}>
               <div className="field">
@@ -226,13 +229,15 @@ export default function UsersManager({
                   id="invite-role"
                   name="role"
                   className="select"
+                  disabled={view==='customers'}
                   value={inviteRole}
                   onChange={(event) => setInviteRole(event.target.value as 'customer' | 'warehouse' | 'admin')}
                 >
-                  <option value="customer">Customer</option>
+                  {view==='internal'?null:<option value="customer">Klant</option>}
                   <option value="warehouse">Magazijn</option>
                   <option value="admin">Admin</option>
                 </select>
+                {view==='customers'?<input type="hidden" name="role" value="customer"/>:null}
               </div>
 
               {inviteRole === 'customer' ? (
@@ -323,7 +328,8 @@ export default function UsersManager({
                     <small>{user.email}</small>
                   </span>
                   <span className={`usersRoleBadge ${user.role}`}>
-                    {user.role === 'admin' ? 'Admin' : user.role === 'warehouse' ? 'Magazijn' : 'Klant'}
+                    {user.category==='crew'?'Crew':user.category==='unlinked'?'Ongekoppeld':
+                      user.category==='customer'?'Klant':user.role==='admin'?'Admin':'Magazijn'}
                   </span>
                   <i className={`usersStatusDot ${userStatus.key}`} aria-label={userStatus.label} />
                 </button>
@@ -351,7 +357,9 @@ export default function UsersManager({
               </div>
             </div>
             <div className="usersDetailActions">
-              {selectedUser.role === 'customer' ? (
+              {selectedUser.category==='crew'?(
+                <Link className="button secondary" href="/admin/users/crew">Open crewprofielen</Link>
+              ):selectedUser.category==='customer'?(
                 <Link className="button secondary" href={`/portal?as=${encodeURIComponent(selectedUser.id)}`}>Bekijk als gebruiker</Link>
               ) : selectedUser.role === 'warehouse' ? (
                 <Link className="button secondary" href="/planning">Open planning</Link>
@@ -384,6 +392,13 @@ export default function UsersManager({
               </div>
 
               <div className="usersGeneralGrid">
+                {selectedUser.category==='crew'?(
+                  <div className="usersProfilePanel">
+                    <strong>Crewaccount · Rentman</strong>
+                    <p className="muted">Dit inlogaccount hoort bij een crewprofiel. De technische rol in Supabase kan nog Customer zijn; dit is geen klantaccount.</p>
+                    <Link className="button secondary" href="/admin/users/crew">Beheer bij personeel</Link>
+                  </div>
+                ):(
                 <form action={assignUserProfile} className="usersProfilePanel" key={`profile-${selectedUser.id}`}>
                   <input type="hidden" name="user_id" value={selectedUser.id} />
                   <div className="field">
@@ -420,7 +435,7 @@ export default function UsersManager({
                   <div className="usersPanelFooter">
                     <button className="button orange" type="submit">Profiel opslaan</button>
                   </div>
-                </form>
+                </form>)}
 
                 <div className="usersAccountStatusCard usersInviteStatusCard">
                   <span>Account & uitnodiging</span>
@@ -497,7 +512,7 @@ export default function UsersManager({
               <div className="usersDetailSectionHeader">
                 <div><h3>Rechten</h3><p>Bepaal per onderdeel wat deze gebruiker mag zien en beheren.</p></div>
               </div>
-
+              {selectedUser.category==='crew'?<div className="notice">Crewtoegang wordt beheerd via het Rentman-gekoppelde crewprofiel. Wijzig hier geen klant- of interne modulerechten.</div>:
               <form action={saveUserPermissions}>
                 <input type="hidden" name="user_id" value={selectedUser.id} />
                 <div className="usersPermissionsTable">
@@ -531,7 +546,7 @@ export default function UsersManager({
                     ? <span className="muted">Admins hebben automatisch volledige toegang.</span>
                     : <button className="button orange" type="submit">Rechten opslaan</button>}
                 </div>
-              </form>
+              </form>}
             </div>
           ) : null}
 
@@ -541,7 +556,9 @@ export default function UsersManager({
                 <div><h3>Klantenportaal</h3><p>Wijs de merken toe waarvan deze gebruiker materialen mag zien.</p></div>
               </div>
 
-              {selectedUser.role === 'admin' ? (
+              {selectedUser.category==='crew'?(
+                <div className="notice">Crewaccounts vallen onder Personeel en krijgen hier geen klantmerktoegang toegewezen.</div>
+              ):selectedUser.role === 'admin' ? (
                 <div className="notice">Admins hebben automatisch toegang tot alle actieve merken.</div>
               ) : selectedUser.permissions.portal === 'none' ? (
                 <div className="notice">Geef deze gebruiker eerst minimaal <strong>Klantenportaal · Bekijken</strong> onder Rechten.</div>
@@ -583,7 +600,7 @@ export default function UsersManager({
                   <button className="button orange" type="submit">Wachtwoord opslaan</button>
                 </form>
 
-                {selectedUser.id !== currentUserId ? (
+                {selectedUser.id !== currentUserId && selectedUser.category!=='crew' ? (
                   <form action={deletePortalUser} className="usersAccountPanel danger">
                     <input type="hidden" name="user_id" value={selectedUser.id} />
                     <input type="hidden" name="expected_email" value={selectedUser.email} />
@@ -593,8 +610,8 @@ export default function UsersManager({
                   </form>
                 ) : (
                   <div className="usersAccountPanel danger">
-                    <strong>Eigen adminaccount</strong>
-                    <p>Je eigen adminaccount kan hier niet worden verwijderd.</p>
+                    <strong>{selectedUser.category==='crew'?'Crewaccount':'Eigen adminaccount'}</strong>
+                    <p>{selectedUser.category==='crew'?'Deactiveer crewtoegang via het crewprofiel. Verwijder niet los het inlogaccount.':'Je eigen adminaccount kan hier niet worden verwijderd.'}</p>
                   </div>
                 )}
               </div>

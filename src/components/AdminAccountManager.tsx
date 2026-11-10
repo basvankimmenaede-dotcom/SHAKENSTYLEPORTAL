@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import UsersManager from '@/components/UsersManager';
+import {classifyAccount,crewIdentityEmails} from '@/lib/account-directory';
 
 const permissionKeys = ['portal', 'planning', 'tasks', 'billing', 'checklists', 'user_admin'] as const;
 type PermissionKey = typeof permissionKeys[number];
@@ -18,6 +19,7 @@ export default async function AdminAccountManager({view='all'}:{view?:'all'|'cus
     { data: accessRows },
     { data: distributorBrandRows },
     { data: permissionRows },
+    { data: crewMembers },
   ] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 200 }),
     admin.from('profiles').select('id,full_name,role,distributor_id'),
@@ -32,8 +34,10 @@ export default async function AdminAccountManager({view='all'}:{view?:'all'|'cus
     admin.from('user_brand_access').select('user_id,brand_id'),
     admin.from('distributor_brands').select('distributor_id,brand_id'),
     admin.from('user_permissions').select('user_id,permission_key,access_level'),
+    admin.from('crew_portal_members').select('email,rentman_email,login_email_override').eq('portal_deleted',false),
   ]);
 
+  const crewEmails=crewIdentityEmails(crewMembers||[]);
   const profileById = new Map((profiles ?? []).map((profile) => [String(profile.id), profile]));
   const distributorById = new Map((distributors ?? []).map((distributor) => [Number(distributor.id), String(distributor.name)]));
   const accessByUser = new Map<string, Set<number>>();
@@ -86,6 +90,8 @@ export default async function AdminAccountManager({view='all'}:{view?:'all'|'cus
     const assigned = Array.from(accessByUser.get(id) ?? []);
     const assignedSet = new Set(assigned);
     const distributorBrandIds = distributorId ? (brandsByDistributor.get(distributorId) ?? new Set<number>()) : new Set<number>();
+    const category=classifyAccount({role,email:authUser.email,distributorId,
+      hasBrandAccess:assigned.length>0,crewEmails});
     const availableBrandIds = role === 'customer'
       ? activeBrands
           .filter((brand) => distributorBrandIds.has(brand.id) || assignedSet.has(brand.id))
@@ -106,6 +112,7 @@ export default async function AdminAccountManager({view='all'}:{view?:'all'|'cus
       email: authUser.email ?? profile?.full_name ?? id,
       fullName: profile?.full_name ? String(profile.full_name) : null,
       role,
+      category,
       distributorId,
       distributorName: distributorId ? distributorById.get(distributorId) ?? null : null,
       assignedBrandIds: assigned,
