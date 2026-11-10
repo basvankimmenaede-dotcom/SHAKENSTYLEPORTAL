@@ -85,7 +85,8 @@ function date(entity?:Entity){
  if(parts){const [,d,m,y]=parts;const out=y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');if(!Number.isNaN(Date.parse(out)))return out;}
  return null;
 }
-export async function parseGoogleInvoicePdf(content:Buffer,settings=await getInvoiceProcessingSettings()):Promise<ParsedGoogleInvoice>{
+export async function parseGoogleInvoicePdf(content:Buffer,settingsInput?:InvoiceProcessingSettings):Promise<ParsedGoogleInvoice>{
+ const settings=settingsInput||await getInvoiceProcessingSettings();
  if(!documentAiConfigured(settings))throw new Error('Stel Google Document AI in en test de verbinding onder Instellingen → Factuurverwerking.');
  if(content.length>15*1024*1024||content.subarray(0,5).toString()!=='%PDF-')
   throw new Error('Deze bijlage is geen geldige PDF (maximaal 15 MB).');
