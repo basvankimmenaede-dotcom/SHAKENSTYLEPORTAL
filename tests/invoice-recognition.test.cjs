@@ -171,3 +171,51 @@ test('Full work, travel and expenses match is allowed only with submitted report
  });
  assert.equal(result.status,'match');
 });
+
+// Representative, synthetic version of an invoice with a separate date line and
+// a quantity/description table. No real customer or supplier personal data.
+const tableInvoice=[
+ 'Example Hospitality dienstverlening','Voorbeeldstraat 25','2041BS Voorbeeld',
+ 'Btw-nummer: NL001234567B01','KVK-nummer: 12345678',
+ "SHAKE 'N STYLE B.V.",'Factuurdatum:','09/11/2026','Vervaldatum: 23/11/2026',
+ 'Factuur: 2026110014','Aantal Beschrijving Bedrag excl. btw Bedrag incl. btw',
+ '4 11071 | 29.10 | Cocktail Catering | Tuschinski 16.00-20.00 € 120,00 € 145,20',
+ 'Stuksprijs: € 30,00',
+ '4.75 Theater 18.45-23.30 € 142,50 € 172,43',
+ 'Stuksprijs: € 30,00',
+ '10.25 11060 | 07.11 | Catering | King of Reach 16.30-02.45 € 307,50 € 372,08',
+ 'Stuksprijs: € 30,00',
+ 'Totaalbedrag excl. btw € 570,00','Btw hoog (21.0%) € 119,71',
+ 'Totaalbedrag incl. btw € 689,71'
+].join('\n');
+test('Invoice date on the following PDF line is recognized, not the payment due date',()=>{
+ const result=recognizeInvoiceText(tableInvoice,'invoice.pdf');
+ assert.equal(result.invoice_number,'2026110014');
+ assert.equal(result.invoice_date,'2026-11-09');
+ assert.equal(result.supplier_name,'Example Hospitality dienstverlening');
+ assert.equal(result.total_amount,689.71);
+});
+test('Verified quantity and clock ranges yield hours for each specific project',()=>{
+ const parsed=recognizeInvoiceProjects(tableInvoice,'invoice.pdf',['11071','11060']);
+ assert.equal(parsed.numbers.join(','),'11060,11071');
+ assert.equal(parsed.lines.find(x=>x.project_number==='11071').work_hours,4);
+ assert.equal(parsed.lines.find(x=>x.project_number==='11060').work_hours,10.25);
+ assert.match(parsed.notes.join(' '),/4,75 uur.*Theater.*handmatig/i);
+});
+test('Unassigned invoice rows must not be silently allocated to a single project',()=>{
+ const parsed=recognizeInvoiceProjects(tableInvoice.replace('10.25 11060 |','10.25 onbekend |'),'invoice.pdf',['11071']);
+ assert.equal(parsed.numbers.join(','),'11071');
+ assert.equal(parsed.lines[0].work_hours,4);
+ assert.match(parsed.notes.join(' '),/10,25 uur.*onbekend/i);
+});
+test('Item quantities without corroborating clock times are not treated as work hours',()=>{
+ const text='Aantal Beschrijving Bedrag\n4 11071 | Verhuur glazen € 20,00\nStuksprijs: € 5,00\nTotaalbedrag incl. btw € 24,20';
+ const parsed=recognizeInvoiceProjects(text,'invoice.pdf',['11071']);
+ assert.equal(parsed.lines[0].work_hours,null);
+});
+test('Duplicate confirmed project rows are summed but missing project rows stay separate',()=>{
+ const text=tableInvoice.replace('4.75 Theater','4.75 11071 | Theater');
+ const parsed=recognizeInvoiceProjects(text,'invoice.pdf',['11071','11060']);
+ assert.equal(parsed.lines.find(x=>x.project_number==='11071').work_hours,8.75);
+ assert.equal(parsed.notes.some(x=>/zonder bevestigd projectnummer/.test(x)),false);
+});
