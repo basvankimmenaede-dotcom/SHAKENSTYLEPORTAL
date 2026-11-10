@@ -113,7 +113,7 @@ function findInvoicedHourRows(lines:string[],confirmedProjects:string[]):Invoice
   if(!projectRow)continue;
   const context=[lines[i]];
   for(let j=i+1;j<Math.min(i+4,end);j++){
-   if(/^(?:\d{4,8}\s*\||subtotaal|subtotal|totaal|total)\b/i.test(lines[j]))break;
+   if(/^\d{4,8}\s*\|/.test(lines[j])||/^(?:subtotaal|subtotal|totaal|total)\b/i.test(lines[j]))break;
    context.push(lines[j]);
   }
   const fullRange=lines[i].match(timeRangePattern);
