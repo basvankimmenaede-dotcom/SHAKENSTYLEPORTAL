@@ -73,7 +73,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   if(invoiceDate&&(!/^20\d{2}-\d{2}-\d{2}$/.test(invoiceDate)||Number.isNaN(Date.parse(invoiceDate))))
    return NextResponse.json({error:'Controleer de factuurdatum.'},{status:400});
   const numberInput=Array.isArray(body.projectNumbers)?body.projectNumbers:[];
-  const selectedNumbers=[...new Set(numberInput.map((x:unknown)=>String(x||'').trim()))];
+  const selectedNumbers:string[]=[...new Set<string>((numberInput as unknown[]).map(x=>String(x||'').trim()))];
   if(selectedNumbers.length>15||selectedNumbers.some(n=>!/^[0-9]{4,8}$/.test(n)))
    return NextResponse.json({error:'Controleer de projectnummers. Gebruik maximaal 15 echte Rentman-projectnummers.'},{status:400});
   type ProjectLineInput={project_number?:unknown;work_hours?:unknown;travel_hours?:unknown;expenses_amount?:unknown};

@@ -24,7 +24,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  if(!UUID.test(id))return NextResponse.json({error:'Ongeldige factuur.'},{status:400});
  const body=await request.json().catch(()=>null);
  const raw=Array.isArray(body?.projectNumbers)?body.projectNumbers:[];
- const numbers=[...new Set(raw.map((v:unknown)=>String(v||'').trim()))];
+ const numbers:string[]=[...new Set<string>((raw as unknown[]).map(v=>String(v||'').trim()))];
  if(numbers.length>15||numbers.some(n=>!/^\d{4,8}$/.test(n)))
   return NextResponse.json({error:'Gebruik geldige Rentman-projectnummers (4-8 cijfers).'}, {status:400});
  const items=Array.isArray(body?.projectLines)?body.projectLines:[];
