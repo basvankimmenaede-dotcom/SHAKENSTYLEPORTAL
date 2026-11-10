@@ -49,18 +49,17 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  const names=new Map(members.map(m=>[m.id,m.full_name]));
  const matchingCrew=search?members.filter(m=>
   [m.full_name,m.company_name||'',m.company_alias||''].some(s=>s.toLowerCase().includes(search.toLowerCase()))).map(m=>m.id):[];
- const searchInvoice=<T extends {or:(value:string)=>T}>(queryBuilder:T):T=>{
-  if(!search)return queryBuilder;
-  const clauses=['invoice_number.ilike.%'+search+'%'];
-  if(matchingCrew.length)clauses.push('crew_member_id.in.('+matchingCrew.join(',')+')');
-  return queryBuilder.or(clauses.join(','));
- };
+ const searchClauses=['invoice_number.ilike.%'+search+'%'];
+ if(matchingCrew.length)searchClauses.push('crew_member_id.in.('+matchingCrew.join(',')+')');
+ const searchClause=searchClauses.join(',');
  let invoicesResult:{data:Record<string,unknown>[]|null;error:unknown;count:number|null};
  let inboxResult:{data:Record<string,unknown>[]|null;error:unknown;count:number|null}|null=null;
  let archivedEmailsResult:{data:Record<string,unknown>[]|null;error:unknown}|null=null;
  if(view==='archive'){
   const results=await Promise.all([
-   searchInvoice(db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
+   (search?db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
+    .eq('status','approved').not('forwarded_at','is',null).or(searchClause)
+    :db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
     .eq('status','approved').not('forwarded_at','is',null))
     .order('forwarded_at',{ascending:false}).range((page-1)*PAGE_SIZE,page*PAGE_SIZE-1),
    db.from('invoice_inbox_messages').select('id,subject,sender,received_at,archived_at,archive_reason')
@@ -71,13 +70,16 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
   archivedEmailsResult=results[1];
  }else if(view==='differences'){
   // Compute deviations from submitted reports. Never classify missing reports as actual time discrepancies.
-  invoicesResult=await searchInvoice(db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
-   .or('status.neq.approved,forwarded_at.is.null')).order('created_at',{ascending:false}).limit(300);
+  const q=db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
+   .or('status.neq.approved,forwarded_at.is.null');
+  invoicesResult=await (search?q.or(searchClause):q).order('created_at',{ascending:false}).limit(300);
  }else{
   const results=await Promise.all([
-   searchInvoice(db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
-    .or('status.neq.approved,forwarded_at.is.null')).order('created_at',{ascending:false})
-    .range((page-1)*PAGE_SIZE,page*PAGE_SIZE-1),
+   (search?db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
+     .or('status.neq.approved,forwarded_at.is.null').or(searchClause)
+    :db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
+     .or('status.neq.approved,forwarded_at.is.null')).order('created_at',{ascending:false})
+     .range((page-1)*PAGE_SIZE,page*PAGE_SIZE-1),
    db.from('invoice_inbox_messages').select('id,sender,subject,received_at,status,attachments,error_message')
     .is('archived_at',null).order('received_by_portal_at',{ascending:false})
     .range((inboxPage-1)*PAGE_SIZE,inboxPage*PAGE_SIZE-1)
