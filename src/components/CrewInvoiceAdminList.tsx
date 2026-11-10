@@ -88,14 +88,14 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const expandedNow=expanded===inv.id;
    return <section key={inv.id} className="card invoiceApprovalCard invoiceApprovalCompact">
     <button className="invoiceCompactToggle" type="button" aria-expanded={expandedNow}
-     aria-controls={'invoice-details-'+inv.id} onClick={()=>toggleInvoice(inv.id)}>
+     aria-controls={expandedNow?'invoice-details-'+inv.id:undefined} onClick={()=>toggleInvoice(inv.id)}>
      <span className="invoiceCompactIdentity"><strong>{inv.name}</strong>
       <span>{inv.invoice_number} · {(inv.project_numbers||[]).length?(inv.project_numbers||[]).map(n=>'#'+n).join(' · '):'Geen projectnummer'}</span>
      </span>
      <span className="invoiceCompactAmount">{inv.total_amount===null?'Bedrag onbekend':Number(inv.total_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}</span>
      <span className="invoiceCompactFlags">
       <span className={'invoiceCompactComparison '+(needsAttention?'attention':review.status==='match'?'match':'')}>{comparisonLabel}</span>
-      <span className="invoiceCompactProgress">{first?'1/2 akkoord':'0/2 akkoord'}</span>
+      <span className="invoiceCompactProgress">{second?'2/2 akkoord':first?'1/2 akkoord':'0/2 akkoord'}</span>
       {(forwarding||inv.status==='correction_sending'||inv.status==='correction_needed')&&
        <span className="invoiceCompactState">{forwarding?'Verzending controleren':labels[inv.status]}</span>}
      </span>
