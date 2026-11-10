@@ -1,5 +1,9 @@
 import 'server-only';
-import type {ParsedGoogleInvoice} from '@/lib/google-document-ai';
+export type ParsedInvoice={
+ invoice_number:string|null;invoice_date:string|null;total_amount:number|null;
+ supplier_name:string|null;supplier_email:string|null;detected_emails:string[];raw_text:string;
+ ai_fields:Record<string,{value:string;confidence:number|null}>;ai_confidence:number|null;
+};
 
 const emailPattern=/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const months:Record<string,number>={
@@ -47,7 +51,7 @@ function priceOnLine(line:string):number|null{
  return fragments.length?fragments[fragments.length-1].value:null;
 }
 type Field={value:string;confidence:number};
-export type LocalParsedInvoice=ParsedGoogleInvoice;
+export type LocalParsedInvoice=ParsedInvoice;
 const invoiceLabel=/\b(?:factuur(?:nummer|nr\.?|no\.?)?|invoice(?:\s*(?:number|no\.?|nr\.?|id))?|nota(?:nummer|nr\.?)?)\s*(?:nr\.?|no\.?|nummer|number)?\s*[#:.\-]?\s*([A-Za-z0-9][A-Za-z0-9_./-]{0,63})/i;
 function invoiceNo(lines:string[],filename:string):{value:string|null;confidence:number}{
  for(const line of lines){
@@ -139,7 +143,7 @@ export async function readInvoicePdfText(content:Buffer):Promise<string>{
   const response=await parser.getText();
   const text=String(response.text||'');
   if(text.trim().length<25)
-   throw new Error('Dit lijkt een gescande PDF zonder tekst. Gebruik Google Document AI of vul de factuur handmatig in.');
+   throw new Error('Dit lijkt een gescande PDF zonder tekst. Vul de gegevens handmatig in; beeldherkenning is nog niet beschikbaar.');
   return text;
  }finally{
   await parser.destroy().catch(()=>undefined);
