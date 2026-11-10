@@ -47,7 +47,7 @@ function priceOnLine(line:string):number|null{
 }
 type Field={value:string;confidence:number};
 export type LocalParsedInvoice=ParsedGoogleInvoice;
-const invoiceLabel=/(?:\b(?:factuurnummer|factuurnr\.?|factuurno\.?|factuur\s*nr\.?|factuur\s*no\.?|invoice\s*(?:number|no\.?|nr\.?|id|#)?|invoice[#:]|factuur[#:]|nota\s*nr\.?)\b)\s*(?:nr\.?|no\.?|#|:|-)?\s*([A-Za-z0-9][A-Za-z0-9_./-]{0,63})/i;
+const invoiceLabel=/\b(?:factuur(?:nummer|nr\.?|no\.?)?|invoice(?:\s*(?:number|no\.?|nr\.?|id))?|nota(?:nummer|nr\.?)?)\s*(?:nr\.?|no\.?|nummer|number)?\s*[#:.\-]?\s*([A-Za-z0-9][A-Za-z0-9_./-]{0,63})/i;
 function invoiceNo(lines:string[],filename:string):{value:string|null;confidence:number}{
  for(const line of lines){
   const match=line.match(invoiceLabel);
@@ -57,7 +57,7 @@ function invoiceNo(lines:string[],filename:string):{value:string|null;confidence
    return {value,confidence:0.9};
  }
  const fromFilename=filename.match(/(?:factuur|invoice|inv)[\s_-]*(?:nr\.?|no\.?|#)?\s*([A-Za-z0-9][A-Za-z0-9_./-]{0,63})/i);
- return {value:fromFilename?.[1]?.replace(/[.,;]$/,'')||null,confidence:fromFilename?0.54:0};
+ return {value:fromFilename?.[1]?.replace(/\.pdf$/i,'').replace(/[.,;]$/,'')||null,confidence:fromFilename?0.54:0};
 }
 function invoiceDate(lines:string[]):{value:string|null;confidence:number}{
  const labeled=lines.filter(line=>/(?:factuurdatum|invoice\s*date|datum\s*factuur|datum\s*uitgifte|issue\s*date)/i.test(line));
