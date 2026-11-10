@@ -208,7 +208,7 @@ const tableInvoice=[
  'Stuksprijs: € 30,00',
  'Totaalbedrag excl. btw € 570,00','Btw hoog (21.0%) € 119,71',
  'Totaalbedrag incl. btw € 689,71'
-].join('\\n');
+].join('\n');
 test('Invoice date on the following PDF line is recognized, not the payment due date',()=>{
  const result=recognizeInvoiceText(tableInvoice,'invoice.pdf');
  assert.equal(result.invoice_number,'2026110014');
@@ -230,7 +230,7 @@ test('Unassigned invoice rows must not be silently allocated to a single project
  assert.match(parsed.notes.join(' '),/10,25 uur.*onbekend/i);
 });
 test('Item quantities without corroborating clock times are not treated as work hours',()=>{
- const text='Aantal Beschrijving Bedrag\\n4 11071 | Verhuur glazen € 20,00\\nStuksprijs: € 5,00\\nTotaalbedrag incl. btw € 24,20';
+ const text='Aantal Beschrijving Bedrag\n4 11071 | Verhuur glazen € 20,00\nStuksprijs: € 5,00\nTotaalbedrag incl. btw € 24,20';
  const parsed=recognizeInvoiceProjects(text,'invoice.pdf',['11071']);
  assert.equal(parsed.lines[0].work_hours,null);
 });
