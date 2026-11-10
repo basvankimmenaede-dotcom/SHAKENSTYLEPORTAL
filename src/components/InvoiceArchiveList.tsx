@@ -6,6 +6,7 @@ import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
 type ArchivedInvoice={
  id:string;invoice_number:string;name:string;total_amount:number|null;
+ status:string;correction_reason:string|null;updated_at:string;
  forwarded_at:string|null;forward_to:string|null;extraction_id:string|null;
  project_numbers:string[];
 };
@@ -33,22 +34,24 @@ export default function InvoiceArchiveList({invoices,emails,comparisons,canManag
  return <div className="invoiceArchiveList">
   {error&&<p className="invoiceReviewMessage error" role="alert">{error}</p>}
   {!invoices.length&&!emails.length&&<div className="notice">Geen documenten in het archief voor deze selectie.</div>}
-  {invoices.map(inv=><details className="invoiceArchiveEntry" key={inv.id}>
+  {invoices.map(inv=>{const rejected=inv.status==='rejected';return <details className="invoiceArchiveEntry" key={inv.id}>
    <summary>
     <span className="invoiceArchiveFile"><FileText size={18}/><span><strong>{inv.name} · {inv.invoice_number}</strong>
      <small>{(inv.project_numbers||[]).map(n=>'#'+n).join(' · ')||'Projectnummer niet vastgelegd'}</small></span></span>
     <span>{inv.total_amount===null?'Bedrag onbekend':Number(inv.total_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}</span>
-    <span>{date(inv.forwarded_at)}</span>
-    <span className="invoiceReviewStatus linked">Afgehandeld</span>
+    <span>{date(rejected?inv.updated_at:inv.forwarded_at)}</span>
+    <span className={'invoiceReviewStatus '+(rejected?'rejected':'linked')}>{rejected?'Afgekeurd':'Afgehandeld'}</span>
     <span>⌄</span>
    </summary>
    <div className="invoiceArchiveEntryDetail">
-    <p>Goedgekeurd door twee accounts en verzonden via SMTP naar {inv.forward_to||'het boekhoudadres'} op {date(inv.forwarded_at)}. Ontvangst door de boekhouding is niet afzonderlijk bevestigd.</p>
+    {rejected?<><p>Factuur afgekeurd, niet doorgestuurd en eventueel eerste akkoord ingetrokken.</p>
+     <p><strong>Reden:</strong> {inv.correction_reason||'Geen reden geregistreerd.'}</p></>:
+     <p>Goedgekeurd door twee accounts en verzonden via SMTP naar {inv.forward_to||'het boekhoudadres'} op {date(inv.forwarded_at)}. Ontvangst door de boekhouding is niet afzonderlijk bevestigd.</p>}
     {inv.extraction_id&&<a className="button secondary" href={'/api/crew/admin/invoice-extraction/'+inv.extraction_id+'/pdf'}
       target="_blank" rel="noopener noreferrer">Originele PDF bekijken</a>}
     {comparisons[inv.id]&&comparisons[inv.id].projects.length>0&&<InvoiceShiftComparison comparison={comparisons[inv.id]}/>}
    </div>
-  </details>)}
+  </details>;})}
   {emails.length>0&&<section className="invoiceArchivedOther">
    <h3>Overige gearchiveerde e-mails</h3>
    {emails.map(mail=><div className="invoiceArchivedEmail" key={mail.id}>

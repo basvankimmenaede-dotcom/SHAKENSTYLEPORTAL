@@ -11,7 +11,7 @@ import {loadCrewInvoiceComparisons} from '@/lib/invoice-comparison-loader';
 
 export const dynamic='force-dynamic';
 const PAGE_SIZE=25;
-const INVOICE_FIELDS='id,crew_member_id,invoice_number,invoice_date,total_amount,status,correction_reason,created_at,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at,forward_error,project_numbers,project_lines';
+const INVOICE_FIELDS='id,crew_member_id,invoice_number,invoice_date,total_amount,status,correction_reason,created_at,updated_at,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at,forward_error,project_numbers,project_lines';
 const REVIEW_FIELDS='id,message_id,attachment_index,filename,storage_path,status,invoice_number,invoice_date,total_amount,supplier_name,ai_fields,detected_emails,text_preview,processing_provider,processed_at,suggested_crew_member_id,match_strength,match_reason,extraction_notes,linked_invoice_id,project_numbers,project_lines';
 type Query={view?:string;page?:string;inboxPage?:string;q?:string};
 function pager(view:string,page:number,count:number,other:string=''){
@@ -36,8 +36,8 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
   getInvoiceProcessingSettings(),listEligibleApprovers(),
   db.from('crew_portal_members').select('id,full_name,email,rentman_email,login_email_override,company_name,company_alias,invoice_email,portal_deleted'),
   db.from('invoice_imap_settings').select('username,enabled,tested_at').eq('id',1).maybeSingle(),
-  db.from('crew_invoices').select('id',{count:'exact',head:true}).or('status.neq.approved,forwarded_at.is.null'),
-  db.from('crew_invoices').select('id',{count:'exact',head:true}).eq('status','approved').not('forwarded_at','is',null),
+  db.from('crew_invoices').select('id',{count:'exact',head:true}).in('status',['received','in_review','correction_sending','correction_needed']),
+  db.from('crew_invoices').select('id',{count:'exact',head:true}).in('status',['approved','rejected']),
   db.from('invoice_inbox_messages').select('id',{count:'exact',head:true}).is('archived_at',null)
  ]);
  if(membersResult.error)throw new Error('Crewaccounts konden niet worden geladen.');
@@ -58,10 +58,10 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  if(view==='archive'){
   const results=await Promise.all([
    (search?db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
-    .eq('status','approved').not('forwarded_at','is',null).or(searchClause)
+    .in('status',['approved','rejected']).or(searchClause)
     :db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
-    .eq('status','approved').not('forwarded_at','is',null))
-    .order('forwarded_at',{ascending:false}).range((page-1)*PAGE_SIZE,page*PAGE_SIZE-1),
+    .in('status',['approved','rejected']))
+    .order('updated_at',{ascending:false}).range((page-1)*PAGE_SIZE,page*PAGE_SIZE-1),
    db.from('invoice_inbox_messages').select('id,subject,sender,received_at,archived_at,archive_reason')
     .not('archived_at','is',null).neq('archive_reason','linked')
     .order('archived_at',{ascending:false}).range(0,24)
@@ -71,14 +71,14 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  }else if(view==='differences'){
   // Compute deviations from submitted reports. Never classify missing reports as actual time discrepancies.
   const q=db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
-   .or('status.neq.approved,forwarded_at.is.null');
+   .in('status',['received','in_review','correction_sending','correction_needed']);
   invoicesResult=await (search?q.or(searchClause):q).order('created_at',{ascending:false}).limit(300);
  }else{
   const results=await Promise.all([
    (search?db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
-     .or('status.neq.approved,forwarded_at.is.null').or(searchClause)
+     .in('status',['received','in_review','correction_sending','correction_needed']).or(searchClause)
     :db.from('crew_invoices').select(INVOICE_FIELDS,{count:'exact'})
-     .or('status.neq.approved,forwarded_at.is.null')).order('created_at',{ascending:false})
+     .in('status',['received','in_review','correction_sending','correction_needed'])).order('created_at',{ascending:false})
      .range((page-1)*PAGE_SIZE,page*PAGE_SIZE-1),
    db.from('invoice_inbox_messages').select('id,sender,subject,received_at,status,attachments,error_message')
     .is('archived_at',null).order('received_by_portal_at',{ascending:false})
@@ -91,7 +91,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
   throw new Error('Het factuuroverzicht kon niet volledig worden geladen.');
  type RawInvoice={
   id:string;crew_member_id:string;invoice_number:string;total_amount:number|null;status:string;
-  correction_reason:string|null;created_at:string;approved_first_by:string|null;approved_second_by:string|null;
+  correction_reason:string|null;created_at:string;updated_at:string;approved_first_by:string|null;approved_second_by:string|null;
   approval_policy_one:string|null;approval_policy_two:string|null;forward_to:string|null;
   forward_attempted_at:string|null;forwarded_at:string|null;forward_error:string|null;
   project_numbers:string[];project_lines:unknown;
@@ -133,6 +133,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  });
  const archiveInvoices=allMapped.map(inv=>({
   id:inv.id,invoice_number:inv.invoice_number,name:inv.name,total_amount:inv.total_amount,
+  status:inv.status,correction_reason:inv.correction_reason,updated_at:inv.updated_at,
   forwarded_at:inv.forwarded_at,forward_to:inv.forward_to,extraction_id:inv.extraction_id,
   project_numbers:inv.project_numbers
  }));
@@ -155,7 +156,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
    {search&&<Link className="button secondary" href={'/planning/crew-invoices?view='+view}>Wissen</Link>}
   </form>
   {view==='archive'?<>
-   <div className="invoiceSectionHeader"><h2>Afgehandelde facturen</h2>
+   <div className="invoiceSectionHeader"><h2>Afgehandelde en afgekeurde facturen</h2>
     <span>{invoicesResult.count||0} facturen · 25 per pagina</span></div>
    <InvoiceArchiveList invoices={archiveInvoices}
     emails={(archivedEmailsResult?.data||[]) as {id:string;subject:string|null;sender:string|null;received_at:string|null;archive_reason:string|null;archived_at:string|null}[]}
