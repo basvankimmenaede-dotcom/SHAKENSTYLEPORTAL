@@ -1,46 +1,44 @@
 import Link from 'next/link';
+import {requireAdmin} from '@/lib/auth';
+import {createAdminClient} from '@/lib/supabase/admin';
 import SyncRentmanButton from '@/components/SyncRentmanButton';
-import { requireAdmin } from '@/lib/auth';
-
-export default async function AdminDashboard() {
-  const { supabase, profile } = await requireAdmin();
-
-  const [{ count: distributors }, { count: brands }, { count: activeBrands }] = await Promise.all([
-    supabase.from('distributors').select('*', { count: 'exact', head: true }),
-    supabase.from('brands').select('*', { count: 'exact', head: true }),
-    supabase.from('brands').select('*', { count: 'exact', head: true }).eq('portal_enabled', true).eq('is_brand', true),
-  ]);
-
-  return (
-    <main className="container">
-      <section className="hero">
-        <div>
-          <h1>Admin dashboard</h1>
-          <p>Welkom {profile.full_name ?? 'SHAKENSTYLE'}. Beheer distributeurs, mappen en klanttoegang.</p>
-        </div>
-        <SyncRentmanButton />
-      </section>
-
-      <section className="grid grid3">
-        <div className="card"><div className="metric">{distributors ?? 0}</div><div className="muted">Distributeurs</div></div>
-        <div className="card"><div className="metric">{brands ?? 0}</div><div className="muted">Mappen in beheer</div></div>
-        <div className="card"><div className="metric">{activeBrands ?? 0}</div><div className="muted">Actief in portaal</div></div>
-      </section>
-
-      <section className="grid grid3" style={{ marginTop: 18 }}>
-        <Link className="card" href="/admin/distributors">
-          <h2>Distributeurs</h2>
-          <p className="muted">Maak klanten aan en wijs zelf de merken toe die zij mogen zien.</p>
-        </Link>
-        <Link className="card" href="/admin/brands">
-          <h2>Merken in beheer</h2>
-          <p className="muted">Nieuwe Mappen in beheer verschijnen na synchronisatie en staan standaard uit.</p>
-        </Link>
-        <Link className="card" href="/admin/users">
-          <h2>Gebruikers</h2>
-          <p className="muted">Nodig klantgebruikers uit en koppel ze aan een distributeur.</p>
-        </Link>
-      </section>
-    </main>
-  );
+export default async function AdminDashboard(){
+ const {profile}=await requireAdmin();
+ const admin=createAdminClient();
+ const [crew,customers,internals]=await Promise.all([
+  admin.from('crew_portal_members').select('*',{count:'exact',head:true}).eq('portal_deleted',false),
+  admin.from('profiles').select('*',{count:'exact',head:true}).eq('role','customer'),
+  admin.from('profiles').select('*',{count:'exact',head:true}).in('role',['admin','warehouse'])
+ ]);
+ return <main className="container accessAreasPage">
+  <section className="usersAdminHeader">
+   <div><span className="usersAdminEyebrow">SHAKENSTYLE Portal</span>
+    <h1>Dashboard</h1><p>Welkom {profile.full_name||'SHAKENSTYLE'}. Personeel, klanten en interne accounts zijn apart georganiseerd.</p></div>
+   <SyncRentmanButton/>
+  </section>
+  <section className="accessAreaMetrics">
+   <div className="accessAreaMetric"><span>Crewprofielen</span><strong>{crew.count??'—'}</strong><small>Rentman-gekoppeld</small></div>
+   <div className="accessAreaMetric"><span>Klantaccounts</span><strong>{customers.count??'—'}</strong><small>Gekoppeld aan organisaties</small></div>
+   <div className="accessAreaMetric"><span>Interne accounts</span><strong>{internals.count??'—'}</strong><small>Kantoor & magazijn</small></div>
+  </section>
+  <section className="accessAreasGroups">
+   <Link className="accessAreaGroup personnel accessDashboardLink" href="/admin/personeel">
+    <div className="accessAreaGroupHead"><div><h2>Personeel</h2><p>Crewprofielen, diensten, uren, tarieven en facturen.</p></div></div>
+    <span>Open personeelsbeheer →</span>
+   </Link>
+   <Link className="accessAreaGroup customer accessDashboardLink" href="/admin/klanten">
+    <div className="accessAreaGroupHead"><div><h2>Klanten</h2><p>Klantaccounts, contactpersonen, organisaties en portaaltoegang.</p></div></div>
+    <span>Open klantenbeheer →</span>
+   </Link>
+   <Link className="accessAreaGroup internal accessDashboardLink" href="/admin/intern">
+    <div className="accessAreaGroupHead"><div><h2>Intern</h2><p>Kantoor-/magazijnaccounts, rollen, uitnodigingen en beveiliging.</p></div></div>
+    <span>Open intern beheer →</span>
+   </Link>
+  </section>
+  <section className="accessSettingsShortcut"><div><h2>Alle accounts & instellingen</h2>
+   <p>Start bij het overzicht voor alle accountgroepen en ga naar Portaalinstellingen voor de centrale configuratie.</p></div>
+   <Link className="button secondary" href="/admin/accounts">Accounts & toegang</Link>
+   <Link className="button orange" href="/planning/instellingen">Portaalinstellingen</Link>
+  </section>
+ </main>;
 }

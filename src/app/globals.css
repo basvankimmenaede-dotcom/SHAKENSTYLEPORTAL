@@ -6680,3 +6680,80 @@ table td{font-size:12px}
 .crewInvoiceMatchBanner>div{display:grid;gap:5px}.crewInvoiceMatchBanner strong{font-size:12px}.crewInvoiceMatchBanner span,.crewInvoiceMatchBanner small{font-size:11px;color:#766e66;line-height:1.5}
 @media(max-width:930px){.crewProfilesWorkspace{grid-template-columns:1fr}.crewProfileList{position:static}.crewProfileRows{max-height:300px}}
 @media(max-width:640px){.crewProfileFields,.crewProfileReadOnly{grid-template-columns:1fr}.crewProfileEditor{padding:17px}.crewProfileFooter .button{width:100%}.crewProfileReadOnly small{grid-column:1}}
+
+
+/* SHAKENSTYLE account area reorganization */
+.uiSidebarAreaGroup{margin-top:3px}
+.uiSidebarAreaGroup.selected>summary{color:#fff;background:rgba(255,255,255,.07)}
+.uiSidebarAreaGroup.selected>summary span:first-child{font-weight:850}
+.uiSidebarAreaGroup.selected .uiSidebarGroupItems{padding-bottom:6px}
+.settingsNavGroup+.settingsNavGroup{border-top:1px solid #eee6de;margin-top:7px;padding-top:8px}
+.settingsNavGroup{min-width:0}
+.accessAreasPage{max-width:1520px}
+.accessAreaMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:0 0 21px}
+.accessAreaMetric{padding:18px 21px;border:1px solid #eae4dd;background:#fff;border-radius:14px;display:grid;gap:5px}
+.accessAreaMetric>span{font-size:12px;font-weight:700;color:#716860}.accessAreaMetric strong{font-size:30px;letter-spacing:-.06em;line-height:1.15}
+.accessAreaMetric small{font-size:11px;color:#887e75}
+.accessAreasGroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:17px;align-items:start}
+.accessAreaGroup{border:1px solid #e6e0da;border-radius:17px;background:#fff;overflow:hidden;box-shadow:0 6px 27px rgba(33,25,17,.035)}
+.accessAreaGroup.personnel{border-top:3px solid #f47724}
+.accessAreaGroup.customer{border-top:3px solid #cfae8d}
+.accessAreaGroup.internal{border-top:3px solid #b3aba4}
+.accessAreaGroupHead{display:flex;align-items:center;gap:13px;padding:20px 19px 18px;border-bottom:1px solid #eee8e2}
+.accessAreaGroupIcon{flex:0 0 42px;width:42px;height:42px;display:grid;place-items:center;border-radius:12px;color:#ed6f1c;background:#fff0e5}
+.accessAreaGroup.customer .accessAreaGroupIcon{background:#f7f1ec;color:#a47c5c}
+.accessAreaGroup.internal .accessAreaGroupIcon{background:#f1efec;color:#6f655d}
+.accessAreaGroupHead>div{flex:1;min-width:0}.accessAreaGroupHead h2{font-size:21px;letter-spacing:-.04em;margin:0 0 4px}
+.accessAreaGroupHead p{margin:0;color:#8b8179;font-size:11px;line-height:1.5}
+.accessAreaGroupHead a{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;font-weight:750;color:#b45c21}
+.accessAreaLinks{display:grid;padding:9px}
+.accessAreaLink{display:flex;align-items:center;gap:12px;min-height:65px;padding:11px 12px;border:0;border-radius:9px;color:#231f1b;background:transparent}
+.accessAreaLink:hover{background:#fcf6f0}
+.accessAreaLinkIcon{width:35px;height:35px;flex:0 0 35px;display:grid;place-items:center;border-radius:10px;background:#faf3ed;color:#cc702d}
+.accessAreaLink>span:nth-child(2){display:grid;gap:5px;min-width:0;flex:1}
+.accessAreaLink strong{font-size:12px;font-weight:790}.accessAreaLink small{font-size:10px;color:#837972;line-height:1.5}
+.accessAreaLinkArrow{color:#cbbeb2;flex-shrink:0}
+.accessSettingsShortcut{margin-top:20px;padding:21px 24px;background:white;border-radius:15px;border:1px solid #e8e1db;display:flex;align-items:center;gap:17px}
+.accessSettingsShortcut>svg{color:#e76b1a;flex:0 0 auto}
+.accessSettingsShortcut>div{flex:1;min-width:0}.accessSettingsShortcut h2{font-size:16px;margin:0 0 5px}
+.accessSettingsShortcut p{font-size:11px;color:#837970;margin:0;line-height:1.5}
+.accessSettingsPanel{min-width:0}
+.accessSettingsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:18px}
+.accessSettingsTile{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:17px 19px;border:1px solid #ede6df;border-radius:12px;background:#fffcf9;min-width:0}
+.accessSettingsTile:hover{border-color:#f3cba7;background:#fff8f1}
+.accessSettingsTile>svg{color:#f27322}.accessSettingsTile strong{font-size:13px}
+.accessSettingsTile span{font-size:11px;line-height:1.55;color:#7f766e}
+.accessSettingsTile small{font-size:11px;font-weight:800;color:#d26d22;margin-top:auto}
+.accessIntegrationList{display:grid;padding:8px 18px}
+.accessIntegrationRow{display:flex;align-items:center;gap:15px;padding:18px 4px;border-bottom:1px solid #eee7e0}
+.accessIntegrationRow:last-child{border-bottom:0}
+.accessIntegrationRow>div{display:grid;gap:5px;flex:1;min-width:0}
+.accessIntegrationRow strong{font-size:13px}.accessIntegrationRow span{font-size:11px;color:#8b8178;line-height:1.5}
+.accessIntegrationRow small{font-size:11px;color:#6e645b;white-space:nowrap;font-weight:700}
+.accessIntegrationRow .button{font-size:11px;white-space:nowrap}
+.accessAreaWarning{padding:14px 17px;border:1px solid #f0d9c1;background:#fff8f1;border-radius:11px;font-size:12px;line-height:1.6;margin-bottom:15px;color:#86613e}
+.crewAccessCard{overflow:hidden;padding:0!important}
+.crewAccessHeader{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px 23px;border-bottom:1px solid #eee8e1}
+.crewAccessHeader h2{margin:0 0 5px;font-size:20px}.crewAccessHeader p{font-size:12px;color:#897f77;margin:0;line-height:1.5}
+.crewAccessFilters{padding:16px 21px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.crewAccessFilters label{min-width:210px;flex:1;display:flex;align-items:center;gap:9px;padding:10px 13px;background:#f7f5f2;border:1px solid #ece6e1;border-radius:9px;color:#8a8076}
+.crewAccessFilters input{width:100%;min-width:0;background:transparent;border:0;outline:0;font-size:12px}
+.crewAccessFilters>div{display:flex;gap:6px;flex-wrap:wrap}.crewAccessFilters button{font-size:11px;border-radius:8px;padding:8px 11px;background:#f4f1ed;border:0;color:#69605a;cursor:pointer}
+.crewAccessFilters button.selected{background:#fff0e6;color:#d1681b;font-weight:750}
+.crewAccessTableWrap{overflow-x:auto}
+.crewAccessTable{width:100%;border-collapse:collapse;text-align:left;min-width:650px;font-size:11px}
+.crewAccessTable thead{background:#faf8f6}.crewAccessTable th{padding:13px 18px;color:#8a7f75;text-transform:uppercase;letter-spacing:.045em;font-size:10px;font-weight:750}
+.crewAccessTable td{padding:14px 18px;border-top:1px solid #f0ebe6;vertical-align:middle}
+.crewAccessTable td:first-child{min-width:175px}
+.crewAccessTable td:first-child strong{display:block;font-size:12px;margin-bottom:4px}
+.crewAccessTable td:first-child small{font-size:10px;color:#8a8178}
+.crewAccessPill{display:inline-flex;align-items:center;gap:5px;font-size:10px;white-space:nowrap;border-radius:8px;padding:7px 9px;color:#625b54;background:#f3f1ed}
+.crewAccessPill.good{color:#347547;background:#edf8ef}.crewAccessPill.warn{color:#a45d31;background:#fff1e7}
+.crewAccessFoot{display:flex;align-items:center;gap:9px;padding:15px 20px;font-size:11px;color:#877d75;background:#fcfaf8;line-height:1.5}
+.crewAccessEmpty{padding:20px;font-size:12px;color:#827971}
+.crewProfileStatusStrip{display:flex;flex-wrap:wrap;gap:9px}
+.crewProfileStatusStrip span{font-size:11px;padding:7px 10px;background:#f4f1ec;color:#6d645c;border-radius:8px}
+.crewProfileStatusStrip span.good{background:#eaf6ed;color:#347547}
+.crewProfileStatusStrip span.warn{background:#fff1e7;color:#a45d31}
+@media(max-width:1050px){.accessAreasGroups{grid-template-columns:1fr 1fr}.accessIntegrationRow{align-items:flex-start;flex-wrap:wrap}}
+@media(max-width:720px){.accessAreaMetrics{grid-template-columns:1fr}.accessAreasGroups{grid-template-columns:1fr}.accessSettingsGrid{grid-template-columns:1fr}.accessIntegrationRow .button{width:100%}.accessSettingsShortcut{flex-wrap:wrap}.accessSettingsShortcut .button{width:100%}.crewAccessHeader{align-items:flex-start;flex-wrap:wrap}.crewAccessHeader .button{width:100%}}

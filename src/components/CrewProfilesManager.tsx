@@ -7,7 +7,7 @@ import {Search,Building2} from 'lucide-react';
 type Member={
  id:string;rentman_crew_id:number;full_name:string;email:string|null;rentman_email:string|null;
  login_email_override:string|null;company_name:string|null;company_alias:string|null;
- invoice_email:string|null;active:boolean;portal_deleted:boolean;
+ invoice_email:string|null;active:boolean;portal_deleted:boolean;manual_disabled:boolean;last_synced_at:string|null;
 };
 function CrewEditor({member}:{member:Member}){
  const [saving,startSaving]=useTransition();
@@ -28,7 +28,12 @@ function CrewEditor({member}:{member:Member}){
   <input type="hidden" name="crew_member_id" value={member.id}/>
   <div className="crewProfileIntro">
    <span className="crewProfileAvatar">{member.full_name?.trim().slice(0,1).toUpperCase()||'C'}</span>
-   <div><h2>{member.full_name}</h2><p>Rentman-medewerker #{member.rentman_crew_id} · {member.active?'Actief':'Inactief'}</p></div>
+   <div><h2>{member.full_name}</h2><p>Rentman-medewerker #{member.rentman_crew_id}</p></div>
+  </div>
+  <div className="crewProfileStatusStrip">
+   <span className={member.active?'good':'warn'}>Rentman: {member.active?'actief':'inactief'}</span>
+   <span className={member.manual_disabled?'warn':'good'}>Handmatig geblokkeerd: {member.manual_disabled?'ja':'nee'}</span>
+   <span>Laatste synchronisatie: {member.last_synced_at?new Date(member.last_synced_at).toLocaleDateString('nl-NL'):'onbekend'}</span>
   </div>
   <div className="crewProfileFields">
    <label><span>Bedrijfsnaam op de factuur</span>
@@ -69,7 +74,7 @@ export default function CrewProfilesManager({members}:{members:Member[]}){
    <header><h2>Bartenders</h2><span>{members.filter(m=>m.active&&!m.portal_deleted).length} actief</span></header>
    <div className="crewProfileFilters">
     <div className="crewProfileSearch"><Search size={15}/><input type="search" placeholder="Naam, bedrijf of e-mail…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
-    <div className="crewProfileToggle"><button type="button" className={filter==='active'?'active':''} onClick={()=>setFilter('active')}>Actief</button><button type="button" className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Alles</button></div>
+    <div className="crewProfileToggle"><button type="button" className={filter==='active'?'active':''} onClick={()=>setFilter('active')}>Rentman actief</button><button type="button" className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Alles</button></div>
    </div>
    <div className="crewProfileRows">{filtered.map(m=><button type="button" key={m.id} onClick={()=>setSelectedId(m.id)}
     className={'crewProfileRow '+(selected?.id===m.id?'selected':'')}>
