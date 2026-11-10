@@ -82,10 +82,10 @@ const timeRangePattern=/(?:^|[^\d])([01]?\d|2[0-3])[.:]([0-5]\d)\s*[-–—]\s*(
  */
 function findInvoicedHourRows(lines:string[],confirmedProjects:string[]):InvoicedHourRow[]{
  const header=lines.findIndex((row,i)=>/\baantal\b/i.test(row)
-  &&lines.slice(i,i+3).some(value=>/\bbeschrijving\b/i.test(value)));
+  &&lines.slice(i,i+3).some(value=>/\b(?:beschrijving|omschrijving)\b/i.test(value)));
  if(header<0)return [];
  const total=lines.findIndex((row,i)=>i>header
-  &&/\b(?:totaalbedrag|subtotal|grand\s*total|btw\s+hoog)\b/i.test(row));
+  &&/\b(?:totaalbedrag|subtotal|subtotaal|grand\s*total|totaal\s*incl|total\s*incl|btw\s+hoog)\b/i.test(row));
  const end=total>header?total:Math.min(lines.length,header+150);
  const verified=new Set(confirmedProjects);
  const found:InvoicedHourRow[]=[];
@@ -104,6 +104,48 @@ function findInvoicedHourRows(lines:string[],confirmedProjects:string[]):Invoice
   if(Math.abs(clockHours-hours)>0.05)continue;
   const ref=description.match(/^\s*(?:project(?:nummer)?\s*[:#-]?\s*)?(\d{4,8})(?=\s*(?:[|:;\-]|$))/i)?.[1];
   found.push({line:i,hours,projectNumber:ref&&verified.has(ref)?ref:null,description:description.slice(0,180)});
+ }
+ // A second common invoice layout uses "Omschrijving | Aantal | Prijs | BTW":
+ // the project and description come first, and the quantity is a later column.
+ // PDF extraction may wrap the end time and quantity onto separate text lines.
+ for(let i=header+1;i<end;i++){
+  const projectRow=lines[i].match(/^(\d{4,8})\s*\|\s*(.+)$/);
+  if(!projectRow)continue;
+  const context=[lines[i]];
+  for(let j=i+1;j<Math.min(i+4,end);j++){
+   if(/^(?:\d{4,8}\s*\||subtotaal|subtotal|totaal|total)\b/i.test(lines[j]))break;
+   context.push(lines[j]);
+  }
+  const fullRange=lines[i].match(timeRangePattern);
+  let clockHours:number|null=null;
+  if(fullRange){
+   const start=Number(fullRange[1])*60+Number(fullRange[2]);
+   const finish=Number(fullRange[3])*60+Number(fullRange[4]);
+   clockHours=round(((finish-start+1440)%1440)/60);
+  }else{
+   const partial=lines[i].match(/(?:^|[^\d])([01]?\d|2[0-3])[.:]([0-5]\d)\s*[-–—](?:\s|$)/);
+   const endTime=context.slice(1)
+    .map(line=>line.match(/^([01]?\d|2[0-3])[.:]([0-5]\d)(?=\s|$)/))
+    .find((value):value is RegExpMatchArray=>value!==null);
+   if(!partial||!endTime)continue;
+   const start=Number(partial[1])*60+Number(partial[2]);
+   const finish=Number(endTime[1])*60+Number(endTime[2]);
+   clockHours=round(((finish-start+1440)%1440)/60);
+  }
+  if(clockHours===null||clockHours<=0||clockHours>24)continue;
+  // Only the numeric quantity directly before a euro-denominated unit price
+  // is considered. This excludes project IDs, VAT percentages, totals and clock times.
+  const quantities=context.flatMap(line=>[...line.matchAll(/(?:^|\s)(\d{1,3}(?:[.,]\d{1,2})?)\s+€\s*\d+(?:[.,]\d{1,2})?\b/g)]
+   .map(match=>asHours(match[1])))
+   .filter((value):value is number=>value!==null&&value>0&&value<=24);
+  const matches=[...new Set(quantities.filter(value=>Math.abs(value-clockHours!)<=0.05))];
+  if(matches.length!==1)continue;
+  const description=context[0].replace(/\s+\d{1,3}(?:[.,]\d{1,2})?\s+€.*$/,'').trim();
+  const number=projectRow[1];
+  found.push({
+   line:i,hours:matches[0],projectNumber:verified.has(number)?number:null,
+   description:description.slice(0,180)
+  });
  }
  return found;
 }

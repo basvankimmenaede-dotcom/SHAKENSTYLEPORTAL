@@ -219,3 +219,35 @@ test('Duplicate confirmed project rows are summed but missing project rows stay 
  assert.equal(parsed.lines.find(x=>x.project_number==='11071').work_hours,8.75);
  assert.equal(parsed.notes.some(x=>/zonder bevestigd projectnummer/.test(x)),false);
 });
+
+
+// Synthetic invoice fixtures reproducing a bartender PDF where the description
+// comes first, the quantity is in a later column and the end time wraps.
+const descriptionFirstInvoice=[
+ 'De Voorbeeldbar','Factuurnummer: 20261029 Factuurdatum: 19-10-2026',
+ 'Omschrijving Aantal Bedrag ex. Btw Btw Totaal','ex. Btw',
+ '11068 | 21.10 | Event catering | 17:00- 6 €25 21% 150',
+ '23:00',
+ 'Subtotaal €150','Totaal btw 21% €31,50','Totaal incl. Btw €181,50'
+].join('\n');
+test('Description-first table reads six hours from a quantity after the project and before unit price',()=>{
+ const result=recognizeInvoiceProjects(descriptionFirstInvoice,'factuur.pdf',['11068']);
+ assert.equal(result.numbers.join(','),'11068');
+ assert.equal(result.lines[0].work_hours,6);
+});
+test('Description-first table also handles extracted text where hours follow the wrapped end time',()=>{
+ const raw=descriptionFirstInvoice.replace('17:00- 6 €25 21% 150\n23:00','17:00-\n23:00\n6 €25 21% 150');
+ const result=recognizeInvoiceProjects(raw,'factuur.pdf',['11068']);
+ assert.equal(result.lines[0].work_hours,6);
+});
+test('Description-first rows must not treat an unrelated quantity as hours',()=>{
+ const raw=descriptionFirstInvoice.replace('17:00- 6 €25','17:00- 1 €25');
+ const result=recognizeInvoiceProjects(raw,'factuur.pdf',['11068']);
+ assert.equal(result.lines[0].work_hours,null);
+});
+test('Description-first rows respect multiple project boundaries',()=>{
+ const raw=descriptionFirstInvoice.replace('Subtotaal €150','11071 | 22.10 | Event catering | 18:00-20:00 2 €25 21% 50\nSubtotaal €200');
+ const result=recognizeInvoiceProjects(raw,'factuur.pdf',['11068','11071']);
+ assert.equal(result.lines.find(item=>item.project_number==='11068').work_hours,6);
+ assert.equal(result.lines.find(item=>item.project_number==='11071').work_hours,2);
+});
