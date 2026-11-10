@@ -20,8 +20,9 @@ export default async function CrewInvoiceOfficePage(){
   ]);
   const names=new Map((membersResult.data||[]).map(m=>[m.id,m.full_name]));
   const activeCrew=(membersResult.data||[]).filter(m=>m.active).map(m=>({id:m.id,full_name:m.full_name})).sort((a,b)=>a.full_name.localeCompare(b.full_name,'nl'));
+  const linkedPdfs=new Map((extractionsResult.data||[]).filter(e=>e.linked_invoice_id).map(e=>[e.linked_invoice_id,e.id]));
   const invoices=(invoicesResult.data||[]).map(i=>({
-    id:i.id,invoice_number:i.invoice_number,name:names.get(i.crew_member_id)||'Onbekende medewerker',
+    id:i.id,extraction_id:linkedPdfs.get(i.id)||null,invoice_number:i.invoice_number,name:names.get(i.crew_member_id)||'Onbekende medewerker',
     total_amount:i.total_amount,status:i.status,correction_reason:i.correction_reason,created_at:i.created_at,
     approved_first_by:i.approved_first_by,approved_second_by:i.approved_second_by,
     approval_policy_one:i.approval_policy_one,approval_policy_two:i.approval_policy_two,
