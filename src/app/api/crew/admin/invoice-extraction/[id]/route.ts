@@ -44,6 +44,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
    message_id:id,attachment_index:index,filename:String(attachment.filename||'Factuur.pdf').slice(0,180),
    storage_path:attachment.path,processing_provider:'manual',status:'needs_review',
    extraction_notes:'Handmatig ingevoerd; vergelijk de gegevens met het originele PDF-bestand.',
+   project_numbers:[],project_lines:[],
    match_strength:'none',match_reason:'Handmatige koppeling: selecteer een bartender.'
   };
   const {error}=await admin.from('invoice_pdf_extractions').upsert(payload,{onConflict:'message_id,attachment_index'});
@@ -71,6 +72,25 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   if(!Number.isFinite(amount)||amount<0||amount>99999999)return NextResponse.json({error:'Controleer het totaalbedrag.'},{status:400});
   if(invoiceDate&&(!/^20\d{2}-\d{2}-\d{2}$/.test(invoiceDate)||Number.isNaN(Date.parse(invoiceDate))))
    return NextResponse.json({error:'Controleer de factuurdatum.'},{status:400});
+  const numberInput=Array.isArray(body.projectNumbers)?body.projectNumbers:[];
+  const selectedNumbers=[...new Set(numberInput.map((x:unknown)=>String(x||'').trim()))];
+  if(selectedNumbers.length>15||selectedNumbers.some(n=>!/^[0-9]{4,8}$/.test(n)))
+   return NextResponse.json({error:'Controleer de projectnummers. Gebruik maximaal 15 echte Rentman-projectnummers.'},{status:400});
+  type ProjectLineInput={project_number?:unknown;work_hours?:unknown;travel_hours?:unknown;expenses_amount?:unknown};
+  const rawProjectLines=Array.isArray(body.projectLines)?body.projectLines as ProjectLineInput[]:[];
+  if(rawProjectLines.length>15)return NextResponse.json({error:'Te veel projectregels.'},{status:400});
+  const numeric=(value:unknown)=>{
+   if(value===null||value===undefined||value==='')return null;
+   const number=Number(value);
+   return Number.isFinite(number)&&number>=0&&number<=100000?Math.round(number*100)/100:NaN;
+  };
+  const chosenLines=selectedNumbers.map(n=>{
+   const line=rawProjectLines.find(x=>x.project_number===n);
+   const worked=numeric(line?.work_hours),travel=numeric(line?.travel_hours),expenses=numeric(line?.expenses_amount);
+   return {project_number:n,work_hours:worked,travel_hours:travel,expenses_amount:expenses,source:'manual',evidence:null};
+  });
+  if(chosenLines.some(line=>[line.work_hours,line.travel_hours,line.expenses_amount].some(v=>typeof v==='number'&&!Number.isFinite(v))))
+   return NextResponse.json({error:'Controleer de opgegeven projecturen en onkosten.'},{status:400});
   const [{data:extraction},{data:member}]=await Promise.all([
    admin.from('invoice_pdf_extractions').select('id,message_id,storage_path,status,linked_invoice_id').eq('id',extractionId).eq('message_id',id).maybeSingle(),
    admin.from('crew_portal_members').select('id,portal_deleted').eq('id',memberId).maybeSingle()
@@ -84,17 +104,45 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
    return NextResponse.json({error:'Ongeldige bestandslocatie.'},{status:400});
   const {data:invoice,error:insertError}=await admin.from('crew_invoices').insert({
    crew_member_id:memberId,invoice_number:invoiceNumber,invoice_date:invoiceDate||null,
-   total_amount:amount,status:'received',document_path:extraction.storage_path
+   total_amount:amount,status:'received',document_path:extraction.storage_path,
+   project_numbers:selectedNumbers,project_lines:chosenLines
   }).select('id').single();
   if(insertError||!invoice){
    return NextResponse.json({error:'Koppelen mislukt. Controleer of deze PDF al gekoppeld is.'},{status:409});
   }
   const {error:updateError}=await admin.from('invoice_pdf_extractions')
-   .update({status:'linked',linked_invoice_id:invoice.id,reviewed_at:new Date().toISOString()})
+   .update({status:'linked',linked_invoice_id:invoice.id,reviewed_at:new Date().toISOString(),
+    project_numbers:selectedNumbers,project_lines:chosenLines})
    .eq('id',extractionId).neq('status','linked');
   if(updateError)console.error('PDF linked but extraction update failed',updateError.message);
-  await admin.from('invoice_inbox_messages').update({linked_invoice_id:invoice.id}).eq('id',id).is('linked_invoice_id',null);
-  return NextResponse.json({ok:true,message:'Factuur gekoppeld aan de bartender. Status: Ontvangen.'});
+  const {data:inbox}=await admin.from('invoice_inbox_messages').select('attachments').eq('id',id).maybeSingle();
+  const {data:allExtractions}=await admin.from('invoice_pdf_extractions')
+   .select('attachment_index,linked_invoice_id').eq('message_id',id);
+  const expected=Array.isArray(inbox?.attachments)?inbox.attachments.length:0;
+  const fullyLinked=expected>0&&Array.from({length:expected},(_,i)=>i).every(i=>
+    (allExtractions||[]).some(e=>e.attachment_index===i&&e.linked_invoice_id));
+  const patch=fullyLinked?{linked_invoice_id:invoice.id,archived_at:new Date().toISOString(),archive_reason:'linked'}:
+    {linked_invoice_id:invoice.id};
+  await admin.from('invoice_inbox_messages').update(patch).eq('id',id).is('linked_invoice_id',null);
+  return NextResponse.json({ok:true,message:'Factuur gekoppeld. De shiftrapportvergelijking verschijnt in het controleoverzicht.'});
+ }
+ if(action==='archive'||action==='restore'){
+   const {data:message}=await admin.from('invoice_inbox_messages').select('id,archived_at')
+    .eq('id',id).maybeSingle();
+   if(!message)return NextResponse.json({error:'E-mail niet gevonden.'},{status:404});
+   if(action==='archive'){
+    const reason=typeof body.reason==='string'?body.reason.trim():'';
+    if(reason.length<5||reason.length>250)return NextResponse.json({error:'Geef een korte archiefreden op.'},{status:400});
+    const {error}=await admin.from('invoice_inbox_messages').update({
+     archived_at:new Date().toISOString(),archive_reason:reason
+    }).eq('id',id);
+    if(error)return NextResponse.json({error:'Archiveren is mislukt.'},{status:500});
+    return NextResponse.json({ok:true,message:'E-mail naar het archief verplaatst. PDF blijft bewaard.'});
+   }
+   const {error}=await admin.from('invoice_inbox_messages')
+    .update({archived_at:null,archive_reason:null,archived_by:null}).eq('id',id);
+   if(error)return NextResponse.json({error:'Herstellen is mislukt.'},{status:500});
+   return NextResponse.json({ok:true,message:'E-mail staat weer in de werkvoorraad.'});
  }
  return NextResponse.json({error:'Ongeldige actie.'},{status:400});
 }
