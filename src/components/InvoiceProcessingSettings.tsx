@@ -17,7 +17,7 @@ export default function InvoiceProcessingSettings({initial,accounts}:{initial:Se
  const [error,setError]=useState('');
  const [dirty,setDirty]=useState(false);
  const router=useRouter();
- const set=<K extends keyof Settings>(key:K,value:Settings[K])=>{
+ const set=<K extends keyof Settings,>(key:K,value:Settings[K])=>{
   setSettings(s=>({...s,[key]:value}));setDirty(true);setError('');setNotice('');
  };
  async function request(action:'save'|'test'){

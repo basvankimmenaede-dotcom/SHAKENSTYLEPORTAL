@@ -30,7 +30,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
    return NextResponse.json({ok:true,message:result.failed?'PDF-extractie afgerond met aandachtspunten.':'PDF uitgelezen. Controleer de gegevens voordat je de factuur koppelt.'});
   }catch(e){
    console.error('Manual invoice extraction failed',e instanceof Error?e.message:'unknown');
-   return NextResponse.json({error:'PDF-verwerking mislukt. Controleer het bericht.'},{status:500});
+   return NextResponse.json({error:e instanceof Error?e.message:'PDF-verwerking mislukt. Controleer het bericht.'},{status:503});
   }
  }
  if(action==='link'){

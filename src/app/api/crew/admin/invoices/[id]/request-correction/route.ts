@@ -30,8 +30,9 @@ export async function POST(request:NextRequest,context:{params:Promise<{id:strin
 
   const admin=createAdminClient();
   const {data:invoice,error:invoiceError}=await admin.from('crew_invoices')
-    .select('id,crew_member_id,invoice_number,status,correction_reason').eq('id',id).maybeSingle();
+    .select('id,crew_member_id,invoice_number,status,correction_reason,approved_first_by').eq('id',id).maybeSingle();
   if(invoiceError||!invoice)return NextResponse.json({error:'Factuur niet gevonden'},{status:404});
+  if(invoice.approved_first_by)return NextResponse.json({error:'De factuur heeft al een eerste goedkeuring. Pas deze factuur niet meer via een correctiemail aan.'},{status:409});
   if(!['received','in_review'].includes(invoice.status))
     return NextResponse.json({error:'Voor deze factuur kan geen nieuw correctieverzoek worden verzonden.'},{status:409});
 

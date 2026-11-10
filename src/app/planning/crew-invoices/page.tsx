@@ -2,14 +2,16 @@ import { requireModulePermission, permissionAtLeast } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import CrewInvoiceAdminList from '@/components/CrewInvoiceAdminList';
 import InvoiceInboxReview from '@/components/InvoiceInboxReview';
+import {getInvoiceProcessingSettings,listEligibleApprovers} from '@/lib/invoice-processing-settings';
 
 export const dynamic='force-dynamic';
 export default async function CrewInvoiceOfficePage(){
   const session=await requireModulePermission('billing','view');
   const canManage=session.profile.role==='admin'||permissionAtLeast(session.permissionLevel,'manage');
   const admin=createAdminClient();
+  const [invoiceConfig,approvers]=await Promise.all([getInvoiceProcessingSettings(),listEligibleApprovers()]);
   const [invoicesResult,membersResult,inboxResult,imapResult,extractionsResult]=await Promise.all([
-    admin.from('crew_invoices').select('id,crew_member_id,invoice_number,total_amount,status,correction_reason,created_at')
+    admin.from('crew_invoices').select('id,crew_member_id,invoice_number,total_amount,status,correction_reason,created_at,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at,forward_error')
       .order('created_at',{ascending:false}).limit(150),
     admin.from('crew_portal_members').select('id,full_name,active'),
     admin.from('invoice_inbox_messages').select('id,sender,subject,received_at,status,attachments,error_message').order('received_by_portal_at',{ascending:false}).limit(100),
@@ -20,7 +22,10 @@ export default async function CrewInvoiceOfficePage(){
   const activeCrew=(membersResult.data||[]).filter(m=>m.active).map(m=>({id:m.id,full_name:m.full_name})).sort((a,b)=>a.full_name.localeCompare(b.full_name,'nl'));
   const invoices=(invoicesResult.data||[]).map(i=>({
     id:i.id,invoice_number:i.invoice_number,name:names.get(i.crew_member_id)||'Onbekende medewerker',
-    total_amount:i.total_amount,status:i.status,correction_reason:i.correction_reason,created_at:i.created_at
+    total_amount:i.total_amount,status:i.status,correction_reason:i.correction_reason,created_at:i.created_at,
+    approved_first_by:i.approved_first_by,approved_second_by:i.approved_second_by,
+    approval_policy_one:i.approval_policy_one,approval_policy_two:i.approval_policy_two,
+    forward_to:i.forward_to,forward_attempted_at:i.forward_attempted_at,forwarded_at:i.forwarded_at,forward_error:i.forward_error
   }));
   return <main className="container">
     <section className="hero"><div><h1>Inkomende facturen</h1>
@@ -34,7 +39,9 @@ export default async function CrewInvoiceOfficePage(){
         members={activeCrew}
         canManage={canManage}/>}
     <section style={{marginTop:24}}><h2 style={{fontSize:21,margin:'0 0 14px'}}>Gekoppelde crewfacturen</h2>
-    {invoicesResult.error?<div className="error">Facturen konden niet worden opgehaald.</div>:<CrewInvoiceAdminList invoices={invoices} canManage={canManage}/>}
+    {invoicesResult.error?<div className="error">Facturen konden niet worden opgehaald.</div>:<CrewInvoiceAdminList invoices={invoices} canManage={canManage} currentUserId={session.user.id}
+      approvers={approvers} configuredOne={invoiceConfig.approver_one||''}
+      configuredTwo={invoiceConfig.approver_two||''} configuredForwardTo={invoiceConfig.forward_email}/>}
     </section>
   </main>;
 }

@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { ClipboardCheck, ListChecks, Mail, Monitor, Repeat2, Settings2, Users } from 'lucide-react';
+import { ClipboardCheck, ListChecks, Mail, Monitor, Repeat2, Settings2, Users, FileCheck2 } from 'lucide-react';
 
 const items=[
   {key:'general',href:'/planning/instellingen',label:'Algemeen',icon:Settings2},
   {key:'recurring',href:'/planning/instellingen/terugkerende-taken',label:'Terugkerende taken',icon:Repeat2},
   {key:'invoice-email',href:'/planning/instellingen/facturen',label:'Factuur e-mailadres',icon:Mail},
+  {key:'invoice-processing',href:'/planning/instellingen/factuurverwerking',label:'Factuurverwerking',icon:FileCheck2},
   {key:'checklists',href:'/planning/templates',label:'Checklists',icon:ListChecks},
   {key:'closing',href:'/planning/afsluitlijst/beheer',label:'Afsluitlijst',icon:ClipboardCheck},
   {key:'users',href:'/admin/users',label:'Gebruikers & rechten',icon:Users},

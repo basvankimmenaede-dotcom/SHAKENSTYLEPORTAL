@@ -6589,3 +6589,54 @@ table td{font-size:12px}
 .invoiceReviewFooter>span{font-size:11px;color:#8a8079;max-width:540px}.invoiceReviewFooter .button{display:inline-flex;gap:8px;align-items:center;font-size:12px}
 @media(max-width:1100px){.invoiceReviewFields{grid-template-columns:repeat(2,minmax(0,1fr))}.invoiceReviewItemHeader{grid-template-columns:minmax(160px,2fr) 110px 65px 95px 16px;gap:7px;padding:15px}}
 @media(max-width:720px){.invoiceReviewHeading{padding:18px}.invoiceReviewItemHeader{grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding:13px 17px}.invoiceReviewItemMeta{display:none}.invoiceReviewExpanded{padding:14px}.invoiceReviewFields{grid-template-columns:1fr}.invoiceReviewPdfTop>div{flex-wrap:wrap}}
+
+
+/* Invoicing workflow settings and approval */
+.invoiceProcessSettings{display:grid;gap:16px;width:100%;min-width:0;max-width:950px}
+.invoiceProcessPanel{min-width:0}
+.invoiceProcessHeader{display:flex;gap:14px;padding:21px 23px;border-bottom:1px solid #eee9e4;align-items:flex-start}
+.invoiceProcessHeader>div:nth-child(2){min-width:0;flex:1}
+.invoiceProcessIcon{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:12px;background:#fff0e5;color:#ed6f22}
+.invoiceProcessEyebrow{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#ca6422}
+.invoiceProcessHeader h2{margin:3px 0 5px;font-size:19px}
+.invoiceProcessHeader p{font-size:12px;color:#827a73;line-height:1.6;margin:0}
+.invoiceProcessBody{padding:21px 23px;display:grid;gap:14px}
+.invoiceProcessGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.invoiceProcessGrid label,.invoiceProcessWide{display:grid;gap:7px;min-width:0}
+.invoiceProcessGrid label>span,.invoiceProcessWide>span{font-size:12px;font-weight:750}
+.invoiceProcessGrid .input,.invoiceProcessGrid .select,.invoiceProcessWide .input{width:100%;min-width:0;font-size:12px;min-height:44px}
+.invoiceProcessWide textarea{min-height:100px;resize:vertical;font-family:ui-monospace,monospace!important;font-size:11px!important;line-height:1.5}
+.invoiceProcessNote{display:flex;align-items:flex-start;gap:8px;color:#827a73;font-size:12px;line-height:1.55;margin:1px 0}
+.invoiceProcessNote svg{flex:0 0 auto;margin-top:1px;color:#7e9b83}
+.invoiceProcessReadOnly{display:grid;align-content:center;gap:6px;font-size:12px}
+.invoiceProcessReadOnly span{color:#827a73}
+.invoiceProcessPill{font-size:10px;font-weight:750;background:#f9eeee;color:#a63b2c;padding:7px 10px;border-radius:9px;white-space:nowrap}
+.invoiceProcessPill.connected{background:#e8f5e9;color:#286e3b}
+.invoiceProcessActions{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.invoiceProcessHelp{display:inline-flex;gap:5px;align-items:center;font-size:12px;color:#c1601d}
+.invoiceProcessOkay{font-size:12px;color:#286e3b;margin:0}
+.invoiceProcessBottom{padding:18px 22px;background:white;border:1px solid #eee7e1;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:15px}
+.invoiceProcessBottom>div{display:grid;gap:3px}.invoiceProcessBottom strong{font-size:12px}.invoiceProcessBottom span{font-size:11px;color:#827a73}
+.invoiceProcessMessage{font-size:12px;padding:12px 14px;border-radius:9px;margin:0}
+.invoiceProcessMessage.error{background:#fff0eb;color:#a63b2c}.invoiceProcessMessage.success{background:#eaf6ed;color:#246e3b}
+.invoiceApprovalCard{padding:20px!important;display:grid;gap:15px}
+.invoiceApprovalTop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.invoiceApprovalTop>div{display:grid;gap:4px}.invoiceApprovalTop strong{font-size:14px}.invoiceApprovalTop span{font-size:12px}
+.invoiceApprovalSteps{display:flex;gap:12px;flex-wrap:wrap}
+.invoiceApprovalStep{display:flex;gap:8px;align-items:center;background:#f7f5f2;padding:11px 13px;border-radius:9px;min-width:190px}
+.invoiceApprovalStep svg{color:#938b83;flex:0 0 auto}.invoiceApprovalStep.complete{background:#ecf7ee}.invoiceApprovalStep.complete svg{color:#2b7540}
+.invoiceApprovalStep>div{display:grid;gap:3px}.invoiceApprovalStep strong{font-size:11px}.invoiceApprovalStep span{font-size:11px;color:#827a73}
+.invoiceApprovalActions{display:flex;gap:10px;flex-wrap:wrap}
+.invoiceApprovalWarning{display:flex;gap:8px;align-items:flex-start;color:#a15a1e;background:#fff4e6;padding:11px;border-radius:9px;font-size:12px}
+.invoiceApprovalForward{display:flex;align-items:center;gap:8px;color:#2d7841;font-size:12px;margin:0}
+.invoiceApprovalCorrection{display:grid;gap:10px;width:100%;max-width:570px}
+.invoiceApprovalCorrection label{font-size:12px;font-weight:700}.invoiceApprovalCorrection textarea{width:100%}
+.invoiceApprovalCorrection>div{display:flex;gap:10px;flex-wrap:wrap}
+.invoicePdfUnprocessedActions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.invoicePdfOverlay{position:fixed;inset:0;z-index:120;background:rgba(15,15,15,.66);padding:3vh 3vw;display:grid;place-items:center}
+.invoicePdfDialog{width:min(1150px,100%);height:min(94vh,1050px);border-radius:13px;background:white;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 70px rgba(0,0,0,.25)}
+.invoicePdfDialogHeader{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:15px}
+.invoicePdfDialogHeader strong{font-size:14px;overflow-wrap:anywhere}
+.invoicePdfDialogHeader>div{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.invoicePdfFrame{flex:1;width:100%;border:0;background:#ececec;min-height:250px}
+@media(max-width:800px){.invoiceProcessGrid{grid-template-columns:1fr}.invoiceProcessHeader{flex-wrap:wrap;padding:18px}.invoiceProcessBody{padding:18px}.invoiceProcessBottom{flex-wrap:wrap}.invoiceProcessBottom .button{width:100%}.invoicePdfDialogHeader{align-items:flex-start;flex-wrap:wrap}.invoicePdfOverlay{padding:8px}}
