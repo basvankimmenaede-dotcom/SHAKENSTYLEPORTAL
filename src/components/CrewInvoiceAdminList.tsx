@@ -3,17 +3,20 @@ import Link from 'next/link';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {CheckCircle2,Clock3,MailCheck,AlertTriangle} from 'lucide-react';
+import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
+import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
 
 type Invoice={
  id:string;extraction_id:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
  correction_reason:string|null;created_at:string;approved_first_by:string|null;approved_second_by:string|null;
+ project_numbers:string[];project_lines:{project_number:string;work_hours:number|null;travel_hours:number|null;expenses_amount:number|null}[];
  approval_policy_one:string|null;approval_policy_two:string|null;forward_to:string|null;
  forwarded_at:string|null;forward_attempted_at:string|null;forward_error:string|null;
 };
 type Approver={id:string;full_name:string};
-export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,approvers,configuredOne,configuredTwo,configuredForwardTo}:{
+export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,approvers,configuredOne,configuredTwo,configuredForwardTo,comparisons}:{
  invoices:Invoice[];canManage:boolean;currentUserId:string;approvers:Approver[];
- configuredOne:string;configuredTwo:string;configuredForwardTo:string;
+ configuredOne:string;configuredTwo:string;configuredForwardTo:string;comparisons:Record<string,InvoiceCheck>;
 }){
  const [selected,setSelected]=useState<string|null>(null);
  const [reason,setReason]=useState('');
@@ -21,6 +24,22 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
  const [saving,setSaving]=useState<string|null>(null);
  const [notice,setNotice]=useState('');
  const [preview,setPreview]=useState<{id:string;number:string}|null>(null);
+ const [editId,setEditId]=useState<string|null>(null);
+ const [editProjects,setEditProjects]=useState('');
+ const [editLines,setEditLines]=useState<Record<string,{work_hours:string;travel_hours:string;expenses_amount:string}>>({});
+ const editNumbers=[...new Set(editProjects.split(/[\s;,]+/).map(s=>s.trim()).filter(Boolean))].slice(0,15);
+ const editValid=editNumbers.every(n=>/^\d{4,8}$/.test(n));
+ const setLine=(number:string,key:'work_hours'|'travel_hours'|'expenses_amount',value:string)=>{
+   setEditLines(previous=>({...previous,[number]:{work_hours:'',travel_hours:'',expenses_amount:'',...(previous[number]||{}),[key]:value}}));
+ };
+ const startEdit=(inv:Invoice)=>{
+  setEditId(inv.id);setEditProjects((inv.project_numbers||[]).join(', '));
+  setEditLines(Object.fromEntries((inv.project_lines||[]).map(line=>[line.project_number,{
+   work_hours:line.work_hours===null?'':String(line.work_hours),
+   travel_hours:line.travel_hours===null?'':String(line.travel_hours),
+   expenses_amount:line.expenses_amount===null?'':String(line.expenses_amount)
+  }])));
+ };
  const router=useRouter();
  const labels:Record<string,string>={
   received:'Ontvangen',in_review:'In behandeling',correction_sending:'Correctiemail controleren',
@@ -52,13 +71,41 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
      &&['received','in_review'].includes(inv.status);
    const forwarding=Boolean(second&&!inv.forwarded_at);
    const approved=inv.status==='approved'&&Boolean(inv.forwarded_at);
+   const review=comparisons[inv.id]||{status:'unverified' as const,projects:[]};
+   const canEdit=canManage&&['received','in_review'].includes(inv.status)&&!first&&!second&&!inv.forward_attempted_at;
    return <section key={inv.id} className="card invoiceApprovalCard">
     <div className="invoiceApprovalTop">
      <div><strong>{inv.name}</strong>
       <span>{inv.invoice_number} · {inv.total_amount===null?'Bedrag onbekend':Number(inv.total_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}</span>
+      <span className="invoiceNumberList">{(inv.project_numbers||[]).length?(inv.project_numbers||[]).map(n=>'#'+n).join(' · '):'Nog geen projectnummer'}</span>
      </div><span className={'invoiceReviewStatus '+(approved?'linked':forwarding?'warning':'')}>{forwarding?'Doorsturen controleren':labels[inv.status]||'In behandeling'}</span>
     </div>
     {inv.correction_reason&&<p className="muted">Correctiereden: {inv.correction_reason}</p>}
+    <InvoiceShiftComparison comparison={review}/>
+    {canEdit&&(editId===inv.id?<div className="invoiceProjectEditor">
+      <strong>Projectgegevens controleren</strong>
+      <label><span>Projectnummer(s)</span><input className="input" value={editProjects}
+       onChange={e=>setEditProjects(e.target.value)} placeholder="Bijv. 11057, 11059"/></label>
+      <p>Controleer de uren per project tegen de originele PDF. Laat onbekende gegevens leeg.</p>
+      {editValid&&editNumbers.map(n=><div className="invoiceProjectHoursRow" key={n}>
+       <strong>#{n}</strong>
+       {([['work_hours','Factuururen'],['travel_hours','Reisuren'],['expenses_amount','Onkosten (€)']] as const)
+        .map(([key,label])=><label key={key}><span>{label}</span>
+         <input className="input" type="number" step="0.01" min="0" value={editLines[n]?.[key]||''}
+          onChange={e=>setLine(n,key,e.target.value)} placeholder="Niet vermeld"/></label>)}
+      </div>)}
+      {!editValid?<p className="error">Controleer de projectnummers.</p>:null}
+      <div className="invoiceProjectEditorActions"><button className="button orange" type="button" disabled={!editValid||Boolean(saving)}
+       onClick={()=>post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/project-review',{projectNumbers:editNumbers,
+        projectLines:editNumbers.map(project_number=>({
+         project_number,work_hours:editLines[project_number]?.work_hours||null,
+         travel_hours:editLines[project_number]?.travel_hours||null,
+         expenses_amount:editLines[project_number]?.expenses_amount||null
+        }))})}>Projectgegevens opslaan</button>
+       <button className="button secondary" type="button" onClick={()=>setEditId(null)}>Annuleren</button></div>
+     </div>:<div className="invoiceProjectEditTrigger">
+      <button className="button secondary" type="button" onClick={()=>startEdit(inv)}>Projectnummer / uren aanpassen</button>
+     </div>)}
     <div className="invoiceApprovalSteps">
      {approverIds.filter(Boolean).map((id,i)=>{
       const completed=first===id||second===id;
@@ -73,7 +120,11 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
     <div className="invoiceApprovalActions">
      {inv.extraction_id&&<button className="button secondary" type="button" onClick={()=>setPreview({id:inv.extraction_id!,number:inv.invoice_number})}>PDF bekijken</button>}
      {allowed&&<button className="button orange" type="button" disabled={Boolean(saving)}
-      onClick={()=>post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/approve')}>
+      onClick={()=>{
+       if(['difference','missing_report'].includes(review.status)&&
+         !window.confirm('Er is een afwijking of een ontbrekend shiftrapport. Wil je deze factuur toch goedkeuren?'))return;
+       void post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/approve');
+      }}>
       {saving===inv.id?'Verwerken…':first?'Tweede akkoord & doorsturen':'Factuur goedkeuren (1/2)'}
      </button>}
      {canManage&&['received','in_review'].includes(inv.status)&&!first&&
