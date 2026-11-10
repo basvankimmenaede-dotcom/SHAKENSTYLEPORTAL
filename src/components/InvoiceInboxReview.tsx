@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {FileText,RefreshCw,CheckCircle2,AlertCircle,Link2} from 'lucide-react';
+import {FileText,RefreshCw,AlertCircle,Link2} from 'lucide-react';
 
 type Attachment={filename:string;path:string;size:number};
 type Email={id:string;sender:string|null;subject:string|null;received_at:string|null;status:string;attachments:Attachment[];error_message:string|null};
@@ -12,7 +12,6 @@ type Extraction={
 };
 type Member={id:string;full_name:string};
 function displayDate(date:string|null){return date?new Date(date).toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'}):'Onbekend';}
-function formatAmount(value:number|null){return value===null?'Nog niet herkend':Number(value).toLocaleString('nl-NL',{style:'currency',currency:'EUR'});}
 function statusLabel(status:string){
  return status==='linked'?'Gekoppeld':status==='extracted'?'Uitgelezen':status==='needs_review'?'Controle nodig':status==='failed'?'Uitlezen mislukt':status==='no_pdf'?'Geen PDF':status==='too_large'?'Te groot':'Ontvangen';
 }
