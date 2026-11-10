@@ -54,7 +54,7 @@ export async function checkImapConnection(row:ImapRow){
   return {exists:mailbox.exists||0};
  }finally{await client.logout().catch(()=>undefined);}
 }
-export function safeImapStatus(row:ImapRow){
+export function safeImapStatus(row:Pick<ImapRow,'host'|'port'|'username'|'password_encrypted'|'enabled'|'tested_at'|'last_sync_at'|'last_sync_result'|'last_error'>){
  return {
   host:row.host,port:row.port,username:row.username,hasPassword:Boolean(row.password_encrypted),
   enabled:row.enabled,testedAt:row.tested_at,lastSyncAt:row.last_sync_at,
