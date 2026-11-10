@@ -105,7 +105,7 @@ test('A VAT percentage next to a total label is not treated as an amount',()=>{
 });
 
 const {recognizeInvoiceProjects}=loadTypeScriptModule('src/lib/invoice-project-recognition.ts');
-const {compareInvoiceToShiftReports}=loadTypeScriptModule('src/lib/invoice-shift-comparison.ts');
+const {compareInvoiceToShiftReports,getInvoiceApprovalBlockReason}=loadTypeScriptModule('src/lib/invoice-shift-comparison.ts');
 test('Invoice 99 contains project 11057, not invoice number as project',()=>{
  const parsed=recognizeInvoiceProjects('Invoice 99\nFactuurdatum 26-10-2026\nTotaal € 1560,00',
   'Invoice 99 11057 TML Rode Hoed.pdf',['11057','11077']);
@@ -170,4 +170,24 @@ test('Full work, travel and expenses match is allowed only with submitted report
   billing:[]
  });
  assert.equal(result.status,'match');
+});
+
+test('Invoice approval is blocked for mismatches, missing reports and incomplete evidence',()=>{
+ assert.match(getInvoiceApprovalBlockReason({status:'unverified',projects:[]}),/projectnummer/i);
+ assert.match(getInvoiceApprovalBlockReason({status:'difference',projects:[{status:'difference'}]}),/wijkt af/i);
+ assert.match(getInvoiceApprovalBlockReason({status:'missing_report',projects:[{status:'missing_report'}]}),/shiftrapporten/i);
+ assert.match(getInvoiceApprovalBlockReason({status:'unverified',projects:[{status:'unverified'}]}),/vergelijking/i);
+ assert.match(getInvoiceApprovalBlockReason({status:'difference',projects:[{status:'unknown_project'}]}),/onbekend/i);
+});
+test('An approved shift report counts as evidence for a complete invoice match',()=>{
+ const check=compareInvoiceToShiftReports({
+  crewMemberId:'luca',projectNumbers:['11057'],
+  projectLines:[{project_number:'11057',work_hours:8,travel_hours:0,expenses_amount:0,source:'manual',evidence:null}],
+  catalog:[{rentman_project_id:3578,project_number:'11057',project_name:'TML ADE'}],
+  assignments:[{id:'a1',crew_member_id:'luca',rentman_project_id:3578,starts_at:'2026-10-21T08:00:00Z',ends_at:'2026-10-21T16:00:00Z'}],
+  reports:[{assignment_id:'a1',work_started_at:'2026-10-21T08:00:00Z',work_ended_at:'2026-10-21T16:00:00Z',break_minutes:0,travel_minutes:0,expenses_amount:0,status:'approved'}],
+  billing:[]
+ });
+ assert.equal(check.status,'match');
+ assert.equal(getInvoiceApprovalBlockReason(check),null);
 });

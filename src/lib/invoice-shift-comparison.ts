@@ -28,7 +28,7 @@ export function compareInvoiceToShiftReports(input:{
 }):InvoiceCheck{
  const {crewMemberId,projectNumbers,projectLines,catalog,assignments,reports,billing}=input;
  const directory=new Map(catalog.map(p=>[p.project_number,p]));
- const reportByAssignment=new Map(reports.filter(r=>r.status==='submitted').map(r=>[r.assignment_id,r]));
+ const reportByAssignment=new Map(reports.filter(r=>r.status==='submitted'||r.status==='approved').map(r=>[r.assignment_id,r]));
  const checks:ProjectCheck[]=[];
  for(const n of [...new Set(projectNumbers)]){
   const project=directory.get(n);
@@ -68,4 +68,15 @@ export function compareInvoiceToShiftReports(input:{
   checks.some(c=>c.status==='missing_report')?'missing_report':
   checks.length>0&&checks.every(c=>c.status==='match')?'match':'unverified';
  return {status,projects:checks};
+}
+
+/** A positive, complete comparison is required before either approval or forwarding. */
+export function getInvoiceApprovalBlockReason(check:InvoiceCheck):string|null{
+ if(check.projects.length===0)return 'Bevestig eerst het projectnummer en koppel de factuur aan een Rentman-project.';
+ if(check.projects.some(p=>p.status==='unknown_project'))return 'Een of meer projectnummers zijn onbekend. Controleer de koppeling met Rentman.';
+ if(check.projects.some(p=>p.status==='missing_assignment'))return 'Er ontbreken bijbehorende ingeplande diensten voor deze bartender. Controleer de projectkoppeling.';
+ if(check.status==='difference')return 'De factuur wijkt af van de shiftrapporten. Vraag een correctie aan voordat je goedkeurt.';
+ if(check.status==='missing_report')return 'Er ontbreken shiftrapporten. Goedkeuren kan pas wanneer de rapporten zijn ingediend en gecontroleerd.';
+ if(check.status!=='match')return 'De vergelijking is nog niet compleet. Controleer de factuururen, reisuren en onkosten en vul 0 in waar niets is gefactureerd.';
+ return null;
 }

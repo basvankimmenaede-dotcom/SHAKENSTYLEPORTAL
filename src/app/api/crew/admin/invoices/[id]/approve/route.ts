@@ -5,6 +5,8 @@ import {createClient} from '@/lib/supabase/server';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {getUserPermissionLevel,permissionAtLeast} from '@/lib/auth';
 import {getInvoiceProcessingSettings,invoiceEmailPattern,uuidPattern} from '@/lib/invoice-processing-settings';
+import {loadCrewInvoiceComparisons} from '@/lib/invoice-comparison-loader';
+import {getInvoiceApprovalBlockReason} from '@/lib/invoice-shift-comparison';
 
 export const runtime='nodejs';
 export const maxDuration=60;
@@ -35,7 +37,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  if(!settings.approver_one||!settings.approver_two||settings.approver_one===settings.approver_two||!invoiceEmailPattern.test(settings.forward_email))
   return NextResponse.json({error:'Stel eerst twee verschillende goedkeurders en een boekhoudadres in bij Factuurverwerking.'},{status:409});
  const {data:invoice,error:loadError}=await admin.from('crew_invoices')
-  .select('id,crew_member_id,invoice_number,invoice_date,total_amount,status,document_path,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at')
+  .select('id,crew_member_id,invoice_number,invoice_date,total_amount,status,document_path,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at,project_numbers,project_lines')
   .eq('id',id).maybeSingle();
  if(loadError||!invoice)return NextResponse.json({error:'Factuur niet gevonden.'},{status:404});
  if(invoice.status==='approved')return NextResponse.json({error:'Deze factuur is al goedgekeurd en doorgestuurd.'},{status:409});
@@ -43,6 +45,20 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   return NextResponse.json({error:'Deze factuur wacht op een correctie of is niet klaar voor goedkeuring.'},{status:409});
  if(!invoice.document_path||!invoice.document_path.startsWith('incoming/')||!invoice.document_path.endsWith('.pdf'))
   return NextResponse.json({error:'Geen geldig origineel PDF-bestand gevonden.'},{status:409});
+ // Re-check on the server for both approvals. UI warnings can be bypassed, and shift reports may change.
+ let check;
+ try{
+  const comparisons=await loadCrewInvoiceComparisons([{
+   id:invoice.id,crew_member_id:invoice.crew_member_id,
+   project_numbers:invoice.project_numbers,project_lines:invoice.project_lines
+  }]);
+  check=comparisons[invoice.id];
+ }catch(error){
+  console.error('Invoice approval comparison could not be loaded',error instanceof Error?error.message:'unknown');
+  return NextResponse.json({error:'De vergelijking met shiftrapporten is tijdelijk niet beschikbaar. De factuur is niet goedgekeurd.'},{status:503});
+ }
+ const blockReason=getInvoiceApprovalBlockReason(check||{status:'unverified',projects:[]});
+ if(blockReason)return NextResponse.json({error:blockReason},{status:409});
  const now=new Date().toISOString();
  if(!invoice.approved_first_by){
   if(![settings.approver_one,settings.approver_two].includes(user.id))

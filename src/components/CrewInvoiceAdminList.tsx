@@ -4,7 +4,7 @@ import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {CheckCircle2,Clock3,MailCheck,AlertTriangle} from 'lucide-react';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
-import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
+import {getInvoiceApprovalBlockReason,type InvoiceCheck} from '@/lib/invoice-shift-comparison';
 
 type Invoice={
  id:string;extraction_id:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
@@ -72,6 +72,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const forwarding=Boolean(second&&!inv.forwarded_at);
    const approved=inv.status==='approved'&&Boolean(inv.forwarded_at);
    const review=comparisons[inv.id]||{status:'unverified' as const,projects:[]};
+   const approvalBlockReason=getInvoiceApprovalBlockReason(review);
    const canEdit=canManage&&['received','in_review'].includes(inv.status)&&!first&&!second&&!inv.forward_attempted_at;
    return <section key={inv.id} className="card invoiceApprovalCard">
     <div className="invoiceApprovalTop">
@@ -82,11 +83,12 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
     </div>
     {inv.correction_reason&&<p className="muted">Correctiereden: {inv.correction_reason}</p>}
     <InvoiceShiftComparison comparison={review}/>
+    {allowed&&approvalBlockReason&&<div className="invoiceApprovalWarning" role="alert"><AlertTriangle size={17}/><span>{approvalBlockReason}</span></div>}
     {canEdit&&(editId===inv.id?<div className="invoiceProjectEditor">
       <strong>Projectgegevens controleren</strong>
       <label><span>Projectnummer(s)</span><input className="input" value={editProjects}
        onChange={e=>setEditProjects(e.target.value)} placeholder="Bijv. 11057, 11059"/></label>
-      <p>Controleer de uren per project tegen de originele PDF. Laat onbekende gegevens leeg.</p>
+      <p>Controleer de uren per project tegen de originele PDF. Vul 0 in als geen reisuren of onkosten zijn gefactureerd. Laat echt onbekende gegevens leeg.</p>
       {editValid&&editNumbers.map(n=><div className="invoiceProjectHoursRow" key={n}>
        <strong>#{n}</strong>
        {([['work_hours','Factuururen'],['travel_hours','Reisuren'],['expenses_amount','Onkosten (€)']] as const)
@@ -119,12 +121,9 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
     {approved&&<p className="invoiceApprovalForward"><MailCheck size={16}/> PDF doorgestuurd naar {inv.forward_to}.</p>}
     <div className="invoiceApprovalActions">
      {inv.extraction_id&&<button className="button secondary" type="button" onClick={()=>setPreview({id:inv.extraction_id!,number:inv.invoice_number})}>PDF bekijken</button>}
-     {allowed&&<button className="button orange" type="button" disabled={Boolean(saving)}
-      onClick={()=>{
-       if(['difference','missing_report'].includes(review.status)&&
-         !window.confirm('Er is een afwijking of een ontbrekend shiftrapport. Wil je deze factuur toch goedkeuren?'))return;
-       void post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/approve');
-      }}>
+     {allowed&&<button className="button orange" type="button" disabled={Boolean(saving)||Boolean(approvalBlockReason)}
+      title={approvalBlockReason||undefined}
+      onClick={()=>void post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/approve')}>
       {saving===inv.id?'Verwerken…':first?'Tweede akkoord & doorsturen':'Factuur goedkeuren (1/2)'}
      </button>}
      {canManage&&['received','in_review'].includes(inv.status)&&!first&&
