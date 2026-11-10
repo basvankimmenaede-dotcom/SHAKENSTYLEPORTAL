@@ -62,7 +62,7 @@ export default async function AccessAreaHub({area='all'}:{area?:Area}){
    {area==='all'?<Link className="button secondary" href="/admin/users">Alle accounts</Link>:
     <Link className="button secondary" href="/admin/accounts">Alle accountgroepen</Link>}
   </section>
-  <section className="accessAreaMetrics">{metrics.map((m,i)=><div className="accessAreaMetric" key={m.name}>
+  <section className="accessAreaMetrics">{metrics.map(m=><div className="accessAreaMetric" key={m.name}>
    <span>{m.name}</span><strong>{m.value??'—'}</strong><small>{m.desc}</small>
   </div>)}</section>
   <div className="accessAreasGroups">{groups.map(group=>{

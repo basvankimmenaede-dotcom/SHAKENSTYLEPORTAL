@@ -6757,3 +6757,8 @@ table td{font-size:12px}
 .crewProfileStatusStrip span.warn{background:#fff1e7;color:#a45d31}
 @media(max-width:1050px){.accessAreasGroups{grid-template-columns:1fr 1fr}.accessIntegrationRow{align-items:flex-start;flex-wrap:wrap}}
 @media(max-width:720px){.accessAreaMetrics{grid-template-columns:1fr}.accessAreasGroups{grid-template-columns:1fr}.accessSettingsGrid{grid-template-columns:1fr}.accessIntegrationRow .button{width:100%}.accessSettingsShortcut{flex-wrap:wrap}.accessSettingsShortcut .button{width:100%}.crewAccessHeader{align-items:flex-start;flex-wrap:wrap}.crewAccessHeader .button{width:100%}}
+
+.accessDashboardLink{color:#221e1a;display:flex;flex-direction:column;min-height:174px}
+.accessDashboardLink:hover{border-color:#f2b67e;box-shadow:0 8px 30px rgba(40,29,18,.06)}
+.accessDashboardLink>.accessAreaGroupHead{flex:1}
+.accessDashboardLink>span{font-size:12px;padding:14px 19px;font-weight:800;color:#dc701c}

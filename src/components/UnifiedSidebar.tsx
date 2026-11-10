@@ -5,7 +5,7 @@ import {
   BadgeEuro,Boxes,ReceiptText,Building2,CalendarClock,CalendarDays,
   CheckSquare2,ChevronDown,ClipboardCheck,Gauge,PackageSearch,Route,
   Settings,SlidersHorizontal,Users,UserRoundCog,ShieldCheck,
-  KeyRound,Mail,Clock3,UserCheck,BriefcaseBusiness,ContactRound,
+  KeyRound,Mail,Clock3,BriefcaseBusiness,ContactRound,
   FileCheck2,Repeat2,Monitor,ListChecks
 } from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';

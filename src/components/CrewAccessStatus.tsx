@@ -47,6 +47,6 @@ export default function CrewAccessStatus({members}:{members:Member[]}){
    </table>
    {!filtered.length?<p className="crewAccessEmpty">Geen crewleden binnen dit filter.</p>:null}
   </div>
-  <div className="crewAccessFoot"><Clock3 size={15}/> Rentman geeft een aparte actieve status terug. 'Weergeven in planner' of 'Kan inloggen' hoeft niet dezelfde instelling te zijn.</div>
+  <div className="crewAccessFoot"><Clock3 size={15}/> Rentman geeft een aparte actieve status terug. &lsquo;Weergeven in planner&rsquo; of &lsquo;Kan inloggen&rsquo; hoeft niet dezelfde instelling te zijn.</div>
  </section>;
 }
