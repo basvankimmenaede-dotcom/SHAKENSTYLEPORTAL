@@ -123,7 +123,11 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
     (allExtractions||[]).some(e=>e.attachment_index===i&&e.linked_invoice_id));
   const patch=fullyLinked?{linked_invoice_id:invoice.id,archived_at:new Date().toISOString(),archive_reason:'linked'}:
     {linked_invoice_id:invoice.id};
-  await admin.from('invoice_inbox_messages').update(patch).eq('id',id).is('linked_invoice_id',null);
+  // Multi-PDF e-mails may already have a linked_invoice_id from the first attachment.
+  // Always archive when the last PDF is linked, without hiding an unlinked attachment.
+  const messageUpdate=admin.from('invoice_inbox_messages').update(patch).eq('id',id);
+  if(fullyLinked)await messageUpdate;
+  else await messageUpdate.is('linked_invoice_id',null);
   return NextResponse.json({ok:true,message:'Factuur gekoppeld. De shiftrapportvergelijking verschijnt in het controleoverzicht.'});
  }
  if(action==='archive'||action==='restore'){
