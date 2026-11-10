@@ -6,6 +6,7 @@ import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
 type ArchivedInvoice={
  id:string;invoice_number:string;name:string;total_amount:number|null;
+ supplier_id:string|null;cost_category:string|null;
  status:string;correction_reason:string|null;updated_at:string;
  forwarded_at:string|null;forward_to:string|null;extraction_id:string|null;
  project_numbers:string[];
@@ -37,7 +38,7 @@ export default function InvoiceArchiveList({invoices,emails,comparisons,canManag
   {invoices.map(inv=>{const rejected=inv.status==='rejected';return <details className="invoiceArchiveEntry" key={inv.id}>
    <summary>
     <span className="invoiceArchiveFile"><FileText size={18}/><span><strong>{inv.name} · {inv.invoice_number}</strong>
-     <small>{(inv.project_numbers||[]).map(n=>'#'+n).join(' · ')||'Projectnummer niet vastgelegd'}</small></span></span>
+     <small>{(inv.project_numbers||[]).map(n=>'#'+n).join(' · ')||(inv.supplier_id?'Algemene kosten':'Projectnummer niet vastgelegd')}</small></span></span>
     <span>{inv.total_amount===null?'Bedrag onbekend':Number(inv.total_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}</span>
     <span>{date(rejected?inv.updated_at:inv.forwarded_at)}</span>
     <span className={'invoiceReviewStatus '+(rejected?'rejected':'linked')}>{rejected?'Afgekeurd':'Afgehandeld'}</span>

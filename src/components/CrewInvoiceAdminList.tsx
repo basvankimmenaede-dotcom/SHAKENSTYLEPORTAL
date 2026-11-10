@@ -6,9 +6,10 @@ import {CheckCircle2,Clock3,MailCheck,AlertTriangle,ChevronDown} from 'lucide-re
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
 import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
 import {canDeclineInvoice} from '@/lib/invoice-decision';
+import {INVOICE_COST_CATEGORY_LABELS,type InvoiceCostCategory} from '@/lib/invoice-suppliers';
 
 type Invoice={
- id:string;extraction_id:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
+ id:string;extraction_id:string|null;supplier_id:string|null;cost_category:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
  correction_reason:string|null;created_at:string;approved_first_by:string|null;approved_second_by:string|null;
  project_numbers:string[];project_lines:{project_number:string;work_hours:number|null;travel_hours:number|null;expenses_amount:number|null}[];
  approval_policy_one:string|null;approval_policy_two:string|null;forward_to:string|null;
@@ -81,10 +82,11 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const canDecline=canDeclineInvoice(inv,currentUserId,canManage,configuredOne,configuredTwo);
    const forwarding=Boolean(second&&!inv.forwarded_at);
    const approved=inv.status==='approved'&&Boolean(inv.forwarded_at);
+   const supplierInvoice=Boolean(inv.supplier_id);
    const review=comparisons[inv.id]||{status:'unverified' as const,projects:[]};
    const canEdit=canManage&&['received','in_review'].includes(inv.status)&&!first&&!second&&!inv.forward_attempted_at;
-   const needsAttention=['difference','missing_report'].includes(review.status);
-   const comparisonLabel=review.status==='difference'?'Afwijking':review.status==='missing_report'?'Rapport ontbreekt':review.status==='match'?'Uren kloppen':'Controle nodig';
+   const needsAttention=!supplierInvoice&&['difference','missing_report'].includes(review.status);
+   const comparisonLabel=supplierInvoice?'Leverancier':review.status==='difference'?'Afwijking':review.status==='missing_report'?'Rapport ontbreekt':review.status==='match'?'Uren kloppen':'Controle nodig';
    const expandedNow=expanded===inv.id;
    return <section key={inv.id} className="card invoiceApprovalCard invoiceApprovalCompact">
     <button className="invoiceCompactToggle" type="button" aria-expanded={expandedNow}
@@ -103,13 +105,18 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
     </button>
     {expandedNow&&<div id={'invoice-details-'+inv.id} className="invoiceCompactDetails">
     {inv.correction_reason&&<p className="muted">Correctiereden: {inv.correction_reason}</p>}
-    <InvoiceShiftComparison comparison={review}/>
+    {supplierInvoice?<div className="invoiceSupplierReview">
+      <strong>Leveranciersfactuur</strong>
+      <p><span>Kostensoort: </span><strong>{INVOICE_COST_CATEGORY_LABELS[inv.cost_category as InvoiceCostCategory]||'Overig'}</strong></p>
+      <p><span>Project: </span>{(inv.project_numbers||[]).length?(inv.project_numbers||[]).map(n=>'#'+n).join(' · '):'Geen project gekoppeld · algemene bedrijfskosten'}</p>
+      <small>Controleer het bedrag, de factuurregels en eventueel de bestelling met de originele PDF. Voor leveranciers is geen shiftrapport vereist.</small>
+     </div>:<InvoiceShiftComparison comparison={review}/>}
     {canEdit&&(editId===inv.id?<div className="invoiceProjectEditor">
       <strong>Projectgegevens controleren</strong>
       <label><span>Projectnummer(s)</span><input className="input" value={editProjects}
        onChange={e=>setEditProjects(e.target.value)} placeholder="Bijv. 11057, 11059"/></label>
-      <p>Controleer de uren per project tegen de originele PDF. Laat onbekende gegevens leeg.</p>
-      {editValid&&editNumbers.map(n=><div className="invoiceProjectHoursRow" key={n}>
+      <p>{supplierInvoice?'Een leveranciersfactuur mag ook zonder projectnummer worden opgeslagen.':'Controleer de uren per project tegen de originele PDF. Laat onbekende gegevens leeg.'}</p>
+      {!supplierInvoice&&editValid&&editNumbers.map(n=><div className="invoiceProjectHoursRow" key={n}>
        <strong>#{n}</strong>
        {([['work_hours','Factuururen'],['travel_hours','Reisuren'],['expenses_amount','Onkosten (€)']] as const)
         .map(([key,label])=><label key={key}><span>{label}</span>
