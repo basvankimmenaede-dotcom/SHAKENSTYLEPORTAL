@@ -22,7 +22,8 @@ export async function loadCrewInvoiceComparisons(invoices:ReviewInvoiceInput[]):
  const catalog=(directory||[]) as InvoiceProjectRef[];
  const projectIds=[...new Set(catalog.map(p=>p.rentman_project_id))];
  const crewIds=[...new Set(invoices.map(inv=>inv.crew_member_id))];
- let assignments:InvoiceAssignment[]=[],reports:InvoiceShiftReport[]=[],billing:InvoiceBillingItem[]=[];
+ let assignments:InvoiceAssignment[]=[],billing:InvoiceBillingItem[]=[];
+ const reports:InvoiceShiftReport[]=[];
  if(projectIds.length){
   const [assignmentResult,billingResult]=await Promise.all([
    db.from('crew_portal_assignments')
