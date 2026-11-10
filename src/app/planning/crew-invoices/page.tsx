@@ -3,7 +3,7 @@ import {requireModulePermission,permissionAtLeast} from '@/lib/auth';
 import {createAdminClient} from '@/lib/supabase/admin';
 import CrewInvoiceAdminList from '@/components/CrewInvoiceAdminList';
 import InvoiceInboxReview from '@/components/InvoiceInboxReview';
-import InvoiceOfficeTabs,type {InvoiceTab} from '@/components/InvoiceOfficeTabs';
+import InvoiceOfficeTabs,{type InvoiceTab} from '@/components/InvoiceOfficeTabs';
 import InvoiceArchiveList from '@/components/InvoiceArchiveList';
 import {getInvoiceProcessingSettings,listEligibleApprovers} from '@/lib/invoice-processing-settings';
 import {findCrewInvoiceMatch} from '@/lib/crew-invoice-matching';
