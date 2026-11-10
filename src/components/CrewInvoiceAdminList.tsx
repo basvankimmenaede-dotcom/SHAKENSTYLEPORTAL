@@ -30,7 +30,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
  const editNumbers=[...new Set(editProjects.split(/[\s;,]+/).map(s=>s.trim()).filter(Boolean))].slice(0,15);
  const editValid=editNumbers.every(n=>/^\d{4,8}$/.test(n));
  const setLine=(number:string,key:'work_hours'|'travel_hours'|'expenses_amount',value:string)=>{
-   setEditLines(previous=>({...previous,[number]:{work_hours:'',travel_hours:'',expenses_amount:'',...(previous[number]||{}),[key]:value}}));
+   setEditLines(previous=>({...previous,[number]:{...(previous[number]||{work_hours:'',travel_hours:'',expenses_amount:''}),[key]:value}}));
  };
  const startEdit=(inv:Invoice)=>{
   setEditId(inv.id);setEditProjects((inv.project_numbers||[]).join(', '));

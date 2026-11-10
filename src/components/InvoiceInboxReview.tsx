@@ -33,7 +33,7 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
  const projectNumbers=[...new Set(projectText.split(/[;,\s]+/).map(n=>n.trim()).filter(Boolean))].slice(0,15);
  const projectFormatValid=projectNumbers.every(n=>/^\d{4,8}$/.test(n));
  const changeProjectLine=(number:string,key:'work_hours'|'travel_hours'|'expenses_amount',value:string)=>
-  setProjectLines(previous=>({...previous,[number]:{work_hours:'',travel_hours:'',expenses_amount:'',...(previous[number]||{}),[key]:value}}));
+  setProjectLines(previous=>({...previous,[number]:{...(previous[number]||{work_hours:'',travel_hours:'',expenses_amount:''}),[key]:value}}));
  const linked=item.status==='linked';
  return <div className="invoiceReviewPdf">
   <div className="invoiceReviewPdfTop">
