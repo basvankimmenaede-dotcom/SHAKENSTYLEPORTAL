@@ -13,6 +13,7 @@ import {
   setUserPassword,
 } from '@/app/admin/actions';
 
+export type AccountView='all'|'customers'|'internal'|'rights'|'invites'|'security';
 type PermissionKey = 'portal' | 'planning' | 'tasks' | 'billing' | 'checklists' | 'user_admin';
 type PermissionLevel = 'none' | 'own' | 'view' | 'manage';
 
@@ -102,31 +103,47 @@ export default function UsersManager({
   distributors,
   brands,
   currentUserId,
+  view = 'all',
 }: {
   users: UserItem[];
   distributors: Distributor[];
   brands: Brand[];
   currentUserId: string;
+  view?: AccountView;
 }) {
-  const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? '');
+  const scopedUsers=useMemo(()=>{
+    if(view==='customers')return users.filter(user=>user.role==='customer');
+    if(view==='internal')return users.filter(user=>user.role==='admin'||user.role==='warehouse');
+    if(view==='invites')return users.filter(user=>['invited','started'].includes(statusOf(user).key));
+    return users;
+  },[users,view]);
+  const context={
+    all:{title:'Alle accounts',description:'Alle portaalaccounts en toegangsrechten bij elkaar.'},
+    customers:{title:'Klantaccounts',description:'Klantgebruikers, organisaties, merktoegang en inloggen.'},
+    internal:{title:'Interne accounts',description:'Accounts van kantoor en magazijn, met hun rechten en loginstatus.'},
+    rights:{title:'Rollen & rechten',description:'Beheer de rechten per portaalmodule en account.'},
+    invites:{title:'Uitnodigingen & activatie',description:'Accounts met openstaande activatie. Verstuur uitnodigingen opnieuw.'},
+    security:{title:'Login & beveiliging',description:'Beheer wachtwoordresets, accountstatus en veilige toegang.'},
+  }[view];
+  const [selectedUserId, setSelectedUserId] = useState(scopedUsers[0]?.id ?? '');
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'invited' | 'inactive'>('all');
-  const [tab, setTab] = useState<'general' | 'rights' | 'portal' | 'account'>('general');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'invited' | 'inactive'>(view==='invites'?'invited':'all');
+  const [tab, setTab] = useState<'general' | 'rights' | 'portal' | 'account'>(view==='rights'?'rights':view==='security'?'account':'general');
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteRole, setInviteRole] = useState<'customer' | 'warehouse' | 'admin'>('customer');
+  const [inviteRole, setInviteRole] = useState<'customer' | 'warehouse' | 'admin'>(view==='internal'?'warehouse':'customer');
   const [accountMessage, setAccountMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [accountPending, startAccountTransition] = useTransition();
 
   const counts = useMemo(() => {
-    const active = users.filter((user) => statusOf(user).key === 'active').length;
-    const invited = users.filter((user) => ['invited', 'started'].includes(statusOf(user).key)).length;
-    const inactive = users.length - active - invited;
-    return { total: users.length, active, invited, inactive };
-  }, [users]);
+    const active = scopedUsers.filter((user) => statusOf(user).key === 'active').length;
+    const invited = scopedUsers.filter((user) => ['invited', 'started'].includes(statusOf(user).key)).length;
+    const inactive = scopedUsers.length - active - invited;
+    return { total: scopedUsers.length, active, invited, inactive };
+  }, [scopedUsers]);
 
   const filteredUsers = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return users.filter((user) => {
+    return scopedUsers.filter((user) => {
       const status = statusOf(user).key;
       const matchesStatus = statusFilter === 'all'
         || (statusFilter === 'active' && status === 'active')
@@ -138,14 +155,17 @@ export default function UsersManager({
         || user.role.toLowerCase().includes(needle);
       return matchesStatus && matchesQuery;
     });
-  }, [query, statusFilter, users]);
+  }, [query, statusFilter, scopedUsers]);
 
-  const selectedUser = users.find((user) => user.id === selectedUserId)
+  const selectedUser = filteredUsers.find((user) => user.id === selectedUserId)
     ?? filteredUsers[0]
-    ?? users[0];
+    ?? scopedUsers[0];
 
   if (!selectedUser) {
-    return <main className="container usersAdminPage"><div className="notice">Geen gebruikers gevonden.</div></main>;
+    return <main className="container usersAdminPage"><section className="usersAdminHeader">
+      <div><span className="usersAdminEyebrow">Gebruikers & toegang</span><h1>{context.title}</h1><p>{context.description}</p></div>
+      <Link className="button secondary" href="/admin/accounts">Accountoverzicht</Link>
+    </section><div className="notice">Geen accounts gevonden in deze categorie. Voeg een gebruiker toe via <Link href="/admin/users">Alle accounts</Link>.</div></main>;
   }
 
   const status = statusOf(selectedUser);
@@ -157,17 +177,17 @@ export default function UsersManager({
     <main className="container usersAdminPage">
       <section className="usersAdminHeader">
         <div>
-          <span className="usersAdminEyebrow">Beheer</span>
-          <h1>Gebruikers & rechten</h1>
-          <p>Beheer gebruikers, rollen, moduletoegang en merktoegang vanuit één overzicht.</p>
+          <span className="usersAdminEyebrow">Gebruikers & toegang</span>
+          <h1>{context.title}</h1>
+          <p>{context.description}</p>
         </div>
         <div className="crewProfileHeaderActions">
-          <Link href="/admin/users/crew" className="button secondary">Crewprofielen</Link>
+          <Link href="/admin/accounts" className="button secondary">Accountoverzicht</Link>
           <button
             className="button orange"
             type="button"
             onClick={() => {
-              setInviteRole('customer');
+              setInviteRole(view==='internal'?'warehouse':'customer');
               setInviteOpen(true);
             }}
           >
@@ -187,7 +207,7 @@ export default function UsersManager({
           <section className="planningTaskCreateModal" role="dialog" aria-modal="true" aria-labelledby="new-user-title">
             <button className="planningTaskCreateClose" type="button" onClick={() => setInviteOpen(false)}>×</button>
             <h2 id="new-user-title">Nieuwe gebruiker</h2>
-            <p className="muted">Vul eerst de basisgegevens en rol in. De standaardrol is altijd Customer.</p>
+            <p className="muted">Vul de basisgegevens in. Kies Klant, Magazijn of Admin op basis van de benodigde toegang.</p>
 
             <form action={inviteCustomer} className="usersInviteForm" onSubmit={() => setInviteOpen(false)}>
               <div className="field">
@@ -248,7 +268,7 @@ export default function UsersManager({
 
       <section className="usersMetricGrid">
         <div className="usersMetricCard"><span>Totaal</span><strong>{counts.total}</strong><small>gebruikers</small></div>
-        <div className="usersMetricCard active"><span>Actief</span><strong>{counts.active}</strong><small>kunnen inloggen</small></div>
+        <div className="usersMetricCard active"><span>Actief</span><strong>{counts.active}</strong><small>hebben ingelogd</small></div>
         <div className="usersMetricCard invited"><span>Uitgenodigd</span><strong>{counts.invited}</strong><small>activatie open</small></div>
         <div className="usersMetricCard inactive"><span>Inactief</span><strong>{counts.inactive}</strong><small>nog niet actief</small></div>
       </section>
@@ -292,7 +312,7 @@ export default function UsersManager({
                   className={user.id === selectedUser.id ? 'usersDirectoryRow active' : 'usersDirectoryRow'}
                   onClick={() => {
                     setSelectedUserId(user.id);
-                    setTab('general');
+                    setTab(view==='rights'?'rights':view==='security'?'account':'general');
                     setAccountMessage(null);
                   }}
                   key={user.id}
@@ -303,7 +323,7 @@ export default function UsersManager({
                     <small>{user.email}</small>
                   </span>
                   <span className={`usersRoleBadge ${user.role}`}>
-                    {user.role === 'admin' ? 'Admin' : user.role === 'warehouse' ? 'Magazijn' : 'Customer'}
+                    {user.role === 'admin' ? 'Admin' : user.role === 'warehouse' ? 'Magazijn' : 'Klant'}
                   </span>
                   <i className={`usersStatusDot ${userStatus.key}`} aria-label={userStatus.label} />
                 </button>
@@ -343,7 +363,7 @@ export default function UsersManager({
             {([
               ['general', 'Algemeen'],
               ['rights', 'Rechten'],
-              ['portal', 'Klantenportaal'],
+              ['portal', 'Merktoegang'],
               ['account', 'Account'],
             ] as const).map(([key, label]) => (
               <button
