@@ -219,3 +219,21 @@ test('Duplicate confirmed project rows are summed but missing project rows stay 
  assert.equal(parsed.lines.find(x=>x.project_number==='11071').work_hours,8.75);
  assert.equal(parsed.notes.some(x=>/zonder bevestigd projectnummer/.test(x)),false);
 });
+
+
+const {canDeclineInvoice}=loadTypeScriptModule('src/lib/invoice-decision.ts');
+test('Second approver may reject or correct, first approver cannot',()=>{
+ const inv={status:'in_review',approved_first_by:'bas',approved_second_by:null,approval_policy_one:'bas',approval_policy_two:'michael',forward_attempted_at:null,forwarded_at:null};
+ assert.equal(canDeclineInvoice(inv,'michael',true,'bas','michael'),true);
+ assert.equal(canDeclineInvoice(inv,'bas',true,'bas','michael'),false);
+ assert.equal(canDeclineInvoice(inv,'outsider',true,'bas','michael'),false);
+ assert.equal(canDeclineInvoice(inv,'michael',false,'bas','michael'),false);
+ assert.equal(canDeclineInvoice({...inv,forward_attempted_at:'2026-11-10'},'michael',true,'bas','michael'),false);
+ assert.equal(canDeclineInvoice({...inv,status:'approved'},'michael',true,'bas','michael'),false);
+ assert.equal(canDeclineInvoice({...inv,status:'rejected'},'michael',true,'bas','michael'),false);
+});
+test('Office can request corrections before first approval, but not after forwarding',()=>{
+ const inv={status:'received',approved_first_by:null,approved_second_by:null,approval_policy_one:null,approval_policy_two:null,forward_attempted_at:null,forwarded_at:null};
+ assert.equal(canDeclineInvoice(inv,'office',true,null,null),true);
+ assert.equal(canDeclineInvoice({...inv,forward_attempted_at:'pending'},'office',true,null,null),false);
+});
