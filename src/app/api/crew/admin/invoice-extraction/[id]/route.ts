@@ -52,8 +52,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  }
  if(action==='extract'){
   try{
-   const result=await processInvoiceMessage(id);
-   return NextResponse.json({ok:true,message:result.failed?'PDF-extractie afgerond met aandachtspunten.':'PDF uitgelezen. Controleer de gegevens voordat je de factuur koppelt.'});
+   const result=await processInvoiceMessage(id,{force:true});
+   return NextResponse.json({ok:true,message:result.failed?'Deze PDF kon niet automatisch worden herkend. Bekijk het foutbericht en vul de gegevens eventueel handmatig in.':
+    result.processed?'PDF automatisch herkend. Controleer het origineel en bevestig de bartender.':'Deze PDF is al verwerkt.'});
   }catch(e){
    console.error('Manual invoice extraction failed',e instanceof Error?e.message:'unknown');
    return NextResponse.json({error:e instanceof Error?e.message:'PDF-verwerking mislukt. Controleer het bericht.'},{status:503});
@@ -65,8 +66,8 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   const invoiceNumber=typeof body.invoiceNumber==='string'?body.invoiceNumber.trim():'';
   const invoiceDate=typeof body.invoiceDate==='string'?body.invoiceDate.trim():'';
   const amount=typeof body.totalAmount==='number'?body.totalAmount:Number(body.totalAmount);
-  if(!UUID.test(extractionId)||!UUID.test(memberId)||!/^[A-Za-z0-9][A-Za-z0-9_/.-]{2,64}$/.test(invoiceNumber))
-   return NextResponse.json({error:'Vul een geldig crewlid en factuurnummer in.'},{status:400});
+  if(!UUID.test(extractionId)||!UUID.test(memberId)||!/^[A-Za-z0-9][A-Za-z0-9_/.-]{0,63}$/.test(invoiceNumber))
+   return NextResponse.json({error:'Selecteer een crewlid en geef het factuurnummer op zoals het op de PDF staat (1–64 tekens).'}, {status:400});
   if(!Number.isFinite(amount)||amount<0||amount>99999999)return NextResponse.json({error:'Controleer het totaalbedrag.'},{status:400});
   if(invoiceDate&&(!/^20\d{2}-\d{2}-\d{2}$/.test(invoiceDate)||Number.isNaN(Date.parse(invoiceDate))))
    return NextResponse.json({error:'Controleer de factuurdatum.'},{status:400});

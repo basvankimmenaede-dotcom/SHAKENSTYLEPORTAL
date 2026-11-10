@@ -9,6 +9,7 @@ type Extraction={
  id:string;message_id:string;attachment_index:number;filename:string;storage_path:string;status:string;
  invoice_number:string|null;invoice_date:string|null;total_amount:number|null;supplier_name:string|null;
  suggested_crew_member_id:string|null;match_strength:string|null;match_reason:string|null;extraction_notes:string|null;linked_invoice_id:string|null;
+ processing_provider:string|null;processed_at:string|null;
 };
 type Member={id:string;full_name:string;company_name:string|null;company_alias:string|null;invoice_email:string|null;email:string|null;rentman_email:string|null;login_email_override:string|null};
 function displayDate(date:string|null){return date?new Date(date).toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'}):'Onbekend';}
@@ -23,16 +24,23 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
  const linked=item.status==='linked';
  return <div className="invoiceReviewPdf">
   <div className="invoiceReviewPdfTop">
-   <div><FileText size={18}/><strong>{item.filename}</strong><span className={'invoiceReviewStatus '+(linked?'linked':item.status==='failed'?'warning':'')}>{statusLabel(item.status)}</span></div>
+   <div><FileText size={18}/><strong>{item.filename}</strong><span className={'invoiceReviewStatus '+(linked?'linked':item.status==='failed'?'warning':'')}>{statusLabel(item.status)}</span>
+    <span className="invoiceRecognitionMethod">{item.processing_provider==='google_document_ai'?'Google Document AI':
+     item.processing_provider==='pdf_text'?'Automatisch uit PDF':'Handmatig ingevoerd'}</span></div>
    <button type="button" className="button secondary" onClick={()=>openPdf(item.message_id,item.attachment_index,item.filename)}>PDF bekijken</button>
   </div>
-  {item.status==='failed'?<div className="invoiceReviewHint"><AlertCircle size={16}/> Google AI kon deze PDF niet uitlezen.
-   {canManage&&<button type="button" className="button secondary" disabled={busy} onClick={()=>run(item.message_id,{action:'prepare',attachmentIndex:item.attachment_index})}>Handmatig invullen</button>}
+  {item.status==='failed'?<div className="invoiceRecognitionFailure">
+   <p className="invoiceReviewHint"><AlertCircle size={16}/> {item.extraction_notes||'Deze PDF kon niet automatisch worden uitgelezen.'}</p>
+   {canManage&&<div className="invoicePdfUnprocessedActions">
+    <button type="button" className="button secondary" disabled={busy} onClick={()=>run(item.message_id,{action:'prepare',attachmentIndex:item.attachment_index})}>Handmatig invullen</button>
+    <button type="button" className="button secondary" disabled={busy} onClick={()=>run(item.message_id,{action:'extract'})}>Opnieuw herkennen</button>
+   </div>}
   </div>:<>
    {item.extraction_notes&&<p className="invoiceReviewHint"><AlertCircle size={16}/>{item.extraction_notes}</p>}
    <div className={'crewInvoiceMatchBanner '+(item.match_strength==='strong'?'strong':item.match_strength==='ambiguous'?'ambiguous':'')}>
     <div>
      <strong>{item.suggested_crew_member_id?'Voorgestelde bartender: '+(members.find(m=>m.id===item.suggested_crew_member_id)?.full_name||'Onbekend'):'Bartender handmatig kiezen'}</strong>
+     <span className="invoiceRecognitionStrength">{item.match_strength==='strong'?'Sterke overeenkomst':item.match_strength==='ambiguous'?'Tegenstrijdige gegevens':item.match_strength==='possible'?'Mogelijke overeenkomst':'Geen overeenkomst'}</span>
      <span>{item.match_reason||'Geen automatische overeenkomst gevonden. Je kunt de factuur handmatig koppelen.'}</span>
      {item.supplier_name&&<small>Leverancier op factuur: {item.supplier_name}</small>}
      
@@ -47,7 +55,11 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
     </select></label>
    </div>
    <div className="invoiceReviewFooter">
-    <span>{linked?'Deze factuur is gekoppeld en zichtbaar in de crewomgeving.':'Controleer de gegevens met de PDF. Onbekende leveranciers blijven zonder crewkoppeling.'}</span>
+    <span>{linked?'Deze factuur is gekoppeld en zichtbaar in de crewomgeving.':'Controleer de herkende gegevens met de PDF. Je moet de koppeling altijd zelf bevestigen.'}</span>
+    {!linked&&canManage&&<button className="button secondary" type="button" disabled={busy} onClick={()=>{
+      if(window.confirm('Deze PDF opnieuw herkennen? Nog niet gekoppelde invoervelden worden opnieuw gevuld.'))
+       void run(item.message_id,{action:'extract'});
+    }}>Opnieuw herkennen</button>}
     {!linked&&canManage&&<button className="button orange" type="button"
       disabled={busy||!memberId||!invoiceNumber.trim()||totalAmount.trim()===''||!Number.isFinite(Number(totalAmount))}
       onClick={()=>run(item.message_id,{action:'link',extractionId:item.id,memberId,invoiceNumber:invoiceNumber.trim(),invoiceDate,totalAmount:Number(totalAmount)})}>
@@ -101,13 +113,13 @@ export default function InvoiceInboxReview({emails,extractions,members,canManage
        {mail.error_message&&<p className="invoiceReviewHint">{mail.error_message}</p>}
        {!hasPdf?<p className="muted">Geen bruikbare PDF-bijlage gevonden.</p>:<>
         {!documents.length&&<div className="invoiceReviewUnprocessed">
-         <span>Deze PDF is ontvangen. Laat Google AI de gegevens herkennen, of voer ze handmatig in.</span>
+         <span>Deze PDF is ontvangen. Herken de gegevens automatisch uit de PDF of vul ze handmatig in.</span>
          <div className="invoicePdfUnprocessedActions">{mail.attachments.map((file,i)=><button type="button" className="button secondary" key={i} onClick={()=>openPdf(mail.id,i,file.filename)}>PDF bekijken</button>)}
-         {canManage&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'prepare',attachmentIndex:0})}>Handmatig koppelen</button>}
-         {canManage&&<button className="button orange" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> {busy===mail.id?'Verwerken…':'Google AI uitlezen'}</button>}</div>
+         {canManage&&mail.attachments.map((file,i)=><button key={i} className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'prepare',attachmentIndex:i})}>Handmatig {mail.attachments.length>1?String(i+1):'invullen'}</button>)}
+         {canManage&&<button className="button orange" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> {busy===mail.id?'Verwerken…':'Automatisch herkennen'}</button>}</div>
         </div>}
-        {documents.map(item=><ExtractedInvoice key={item.id} item={item} members={members} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
-        {canManage&&documents.length>0&&documents.every(x=>x.status==='failed')&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> Opnieuw met Google AI uitlezen</button>}
+        {documents.map(item=><ExtractedInvoice key={item.id+':'+(item.processed_at||'')} item={item} members={members} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
+        {canManage&&documents.length>0&&documents.every(x=>x.status==='failed')&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> Opnieuw automatisch herkennen</button>}
        </>}
       </div>}
     </article>;

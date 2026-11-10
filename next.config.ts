@@ -2,6 +2,8 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Ensure pdf-parse workers and Node canvas dependencies are available in Vercel functions.
+  serverExternalPackages: ['pdf-parse','@napi-rs/canvas'],
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

@@ -17,7 +17,7 @@ export default async function CrewInvoiceOfficePage(){
     admin.from('crew_portal_members').select('id,full_name,email,rentman_email,login_email_override,company_name,company_alias,invoice_email,portal_deleted'),
     admin.from('invoice_inbox_messages').select('id,sender,subject,received_at,status,attachments,error_message').order('received_by_portal_at',{ascending:false}).limit(100),
     admin.from('invoice_imap_settings').select('username,enabled,tested_at').eq('id',1).maybeSingle(),
-    admin.from('invoice_pdf_extractions').select('id,message_id,attachment_index,filename,storage_path,status,invoice_number,invoice_date,total_amount,supplier_name,ai_fields,detected_emails,suggested_crew_member_id,match_strength,match_reason,extraction_notes,linked_invoice_id').order('created_at',{ascending:false}).limit(300)
+    admin.from('invoice_pdf_extractions').select('id,message_id,attachment_index,filename,storage_path,status,invoice_number,invoice_date,total_amount,supplier_name,ai_fields,detected_emails,text_preview,processing_provider,processed_at,suggested_crew_member_id,match_strength,match_reason,extraction_notes,linked_invoice_id').order('created_at',{ascending:false}).limit(300)
   ]);
   const names=new Map((membersResult.data||[]).map(m=>[m.id,m.full_name]));
   // Invoice processing never depends on Rentman status or the member's portal login.
@@ -27,14 +27,15 @@ export default async function CrewInvoiceOfficePage(){
     email:m.email||null,rentman_email:m.rentman_email||null,login_email_override:m.login_email_override||null
   })).sort((a,b)=>a.full_name.localeCompare(b.full_name,'nl'));
   const updatedMatches=(extractionsResult.data||[]).map(e=>{
-   if(e.linked_invoice_id)return e;
+   const {text_preview:sourceText,...safe}=e;
+   if(e.linked_invoice_id)return safe;
    const googleFields=(e.ai_fields||{}) as Record<string,{value?:string}>;
    const match=findCrewInvoiceMatch({
     supplierName:e.supplier_name||null,
     supplierEmail:googleFields.supplier_email?.value||null,
-    detectedEmails:e.detected_emails||[]
+    detectedEmails:e.detected_emails||[],documentText:sourceText||null
    },activeCrew);
-   return {...e,suggested_crew_member_id:match.suggestedCrewMemberId,
+   return {...safe,suggested_crew_member_id:match.suggestedCrewMemberId,
     match_strength:match.strength,match_reason:match.reason};
   });
   const linkedPdfs=new Map((extractionsResult.data||[]).filter(e=>e.linked_invoice_id).map(e=>[e.linked_invoice_id,e.id]));

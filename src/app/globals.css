@@ -6777,3 +6777,9 @@ table td{font-size:12px}
 .crewProfileAccessControl small{color:#817164;font-size:11px;line-height:1.5}
 .crewProfileAccessControl .button{white-space:nowrap;min-height:40px}
 @media(max-width:640px){.crewProfileAccessControl .button{width:100%}}
+
+/* Automatic recognition indicators */
+.invoiceRecognitionMethod{display:inline-flex;align-items:center;padding:5px 8px;border-radius:7px;background:#f5f0eb;font-size:10px;font-weight:720;color:#79695f;white-space:nowrap}
+.invoiceRecognitionStrength{font-size:10px!important;font-weight:750;color:#856f5d}
+.invoiceRecognitionFailure{display:grid;gap:9px}
+.invoiceRecognitionFailure .invoiceReviewHint{margin:0}
