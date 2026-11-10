@@ -5,7 +5,7 @@ import {useRouter} from 'next/navigation';
 import {CheckCircle2,Clock3,MailCheck,AlertTriangle} from 'lucide-react';
 
 type Invoice={
- id:string;invoice_number:string;name:string;total_amount:number|null;status:string;
+ id:string;extraction_id:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
  correction_reason:string|null;created_at:string;approved_first_by:string|null;approved_second_by:string|null;
  approval_policy_one:string|null;approval_policy_two:string|null;forward_to:string|null;
  forwarded_at:string|null;forward_attempted_at:string|null;forward_error:string|null;
@@ -20,6 +20,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
  const [error,setError]=useState('');
  const [saving,setSaving]=useState<string|null>(null);
  const [notice,setNotice]=useState('');
+ const [preview,setPreview]=useState<{id:string;number:string}|null>(null);
  const router=useRouter();
  const labels:Record<string,string>={
   received:'Ontvangen',in_review:'In behandeling',correction_sending:'Correctiemail controleren',
@@ -70,6 +71,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
     {forwarding&&<div className="invoiceApprovalWarning"><AlertTriangle size={17}/><span>{inv.forward_error||'Beide akkoorden zijn vastgelegd, maar doorsturen is nog niet bevestigd. Controleer de boekhoudmailbox.'}</span></div>}
     {approved&&<p className="invoiceApprovalForward"><MailCheck size={16}/> PDF doorgestuurd naar {inv.forward_to}.</p>}
     <div className="invoiceApprovalActions">
+     {inv.extraction_id&&<button className="button secondary" type="button" onClick={()=>setPreview({id:inv.extraction_id!,number:inv.invoice_number})}>PDF bekijken</button>}
      {allowed&&<button className="button orange" type="button" disabled={Boolean(saving)}
       onClick={()=>post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/approve')}>
       {saving===inv.id?'Verwerken…':first?'Tweede akkoord & doorsturen':'Factuur goedkeuren (1/2)'}
@@ -86,5 +88,12 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
     </div>
    </section>;
   })}
+  {preview&&<div className="invoicePdfOverlay" role="dialog" aria-modal="true" aria-label={'Factuur: '+preview.number}>
+    <div className="invoicePdfDialog"><div className="invoicePdfDialogHeader"><strong>Factuur {preview.number}</strong>
+      <div><a className="button secondary" href={'/api/crew/admin/invoice-extraction/'+preview.id+'/pdf'} target="_blank" rel="noopener noreferrer">Open in nieuw tabblad</a>
+      <button type="button" className="button secondary" onClick={()=>setPreview(null)}>Sluiten</button></div></div>
+      <iframe title={'Factuur: '+preview.number} className="invoicePdfFrame" src={'/api/crew/admin/invoice-extraction/'+preview.id+'/pdf'}/>
+    </div>
+  </div>}
  </div>;
 }
