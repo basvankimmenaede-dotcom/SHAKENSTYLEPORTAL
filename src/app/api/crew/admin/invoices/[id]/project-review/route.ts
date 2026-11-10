@@ -39,13 +39,13 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   return NextResponse.json({error:'Controleer de uren en onkosten.'},{status:400});
  const db=createAdminClient();
  const {data:invoice,error:loadError}=await db.from('crew_invoices')
-  .select('id,status,approved_first_by,approved_second_by,forward_attempted_at,project_numbers,project_lines')
+  .select('id,status,supplier_id,approved_first_by,approved_second_by,forward_attempted_at,project_numbers,project_lines')
   .eq('id',id).maybeSingle();
  if(loadError||!invoice)return NextResponse.json({error:'Factuur niet gevonden.'},{status:404});
  if(!['received','in_review'].includes(invoice.status)||invoice.approved_first_by||invoice.approved_second_by||invoice.forward_attempted_at)
   return NextResponse.json({error:'Projectgegevens kunnen niet meer worden gewijzigd nadat de goedkeuring is begonnen.'},{status:409});
  const {data:updated,error}=await db.from('crew_invoices').update({
-  project_numbers:numbers,project_lines:lines,updated_at:new Date().toISOString()
+  project_numbers:numbers,project_lines:invoice.supplier_id?[]:lines,updated_at:new Date().toISOString()
  }).eq('id',id).in('status',['received','in_review']).is('approved_first_by',null).is('approved_second_by',null)
   .select('id').maybeSingle();
  if(error||!updated)return NextResponse.json({error:'Projectgegevens konden niet worden opgeslagen. Vernieuw de pagina.'},{status:409});

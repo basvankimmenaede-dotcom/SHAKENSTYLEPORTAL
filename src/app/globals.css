@@ -6903,3 +6903,19 @@ table td{font-size:12px}
  .invoiceCompactFlags>span{font-size:10px}
  .invoiceCompactAmount{font-size:12px}
 }
+
+
+/* General supplier invoices, reuse the existing office layout. */
+.invoiceSupplierAdd{display:grid;justify-items:start;gap:9px;margin:8px 0 18px}
+.invoiceSupplierAddForm{width:min(850px,100%);display:grid;gap:13px;border:1px solid #ece4db;border-radius:13px;padding:16px;background:#fff}
+.invoiceSupplierAddForm>strong{font-size:14px}
+.invoiceSupplierFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.invoiceSupplierFields label{display:grid;gap:5px;color:#4a423b;font-weight:650;font-size:12px}
+.invoiceSupplierFields .input,.invoiceSupplierFields .select{width:100%;min-width:0}
+.invoiceSupplierActions{display:flex;gap:10px;flex-wrap:wrap}
+.invoiceSupplierReview{display:grid;gap:6px;border:1px solid #e9e3dc;background:#fbfaf7;border-radius:11px;padding:13px 15px}
+.invoiceSupplierReview>strong{font-size:13px}
+.invoiceSupplierReview p{font-size:12px;margin:0}
+.invoiceSupplierReview p>span,.invoiceSupplierReview small{color:#837a71}
+.invoiceSupplierReview small{font-size:11px;line-height:1.5}
+@media(max-width:600px){.invoiceSupplierFields{grid-template-columns:1fr}}
