@@ -65,13 +65,25 @@ function invoiceNo(lines:string[],filename:string):{value:string|null;confidence
  return {value:fromFilename?.[1]?.replace(/\.pdf$/i,'').replace(/[.,;]$/,'')||null,confidence:fromFilename?0.54:0};
 }
 function invoiceDate(lines:string[]):{value:string|null;confidence:number}{
- const labeled=lines.filter(line=>/(?:factuurdatum|invoice\s*date|datum\s*factuur|datum\s*uitgifte|issue\s*date)/i.test(line));
- for(const line of labeled){
-  const date=isoDate(line);
+ const label=/(?:factuurdatum|invoice\s*date|datum\s*factuur|datum\s*uitgifte|issue\s*date)/i;
+ const unrelatedDate=/(?:vervaldatum|due\s*date|betaal\s*voor|payment\s*date|leverdatum|delivery\s*date)/i;
+ for(let i=0;i<Math.min(lines.length,100);i++){
+  if(!label.test(lines[i])||unrelatedDate.test(lines[i]))continue;
+  const date=isoDate(lines[i]);
   if(date)return {value:date,confidence:0.92};
+  // PDF layout engines often put the label and its value on consecutive lines.
+  // Do not scan past a new label or accidentally interpret a payment due date.
+  for(let offset=1;offset<=2&&i+offset<lines.length;offset++){
+   const following=lines[i+offset];
+   if(unrelatedDate.test(following)||label.test(following))break;
+   const next=isoDate(following);
+   if(next)return {value:next,confidence:offset===1?0.91:0.83};
+   // Only empty/mere punctuation can separate a date label and its value.
+   if(/[a-z]/i.test(following)||/\b\d{4}\b/.test(following))break;
+  }
  }
  for(const line of lines.slice(0,55)){
-  if(/(?:vervaldatum|due\s*date|betaal\s*voor|payment\s*date|leverdatum)/i.test(line))continue;
+  if(unrelatedDate.test(line))continue;
   if(!/\bdatum\b|\bdate\b/i.test(line))continue;
   const date=isoDate(line);
   if(date)return {value:date,confidence:0.75};
@@ -95,12 +107,25 @@ function invoiceAmount(lines:string[]):{value:number|null;confidence:number}{
  return {value:null,confidence:0};
 }
 function supplierFromLines(lines:string[]):{value:string|null;confidence:number}{
- // Explicit vendor labels are preferred. A generic header line is not treated as a trusted supplier.
+ // Explicit labels take priority. Never assume the addressee is the supplier.
  const labeled=/(?:leverancier|afzender|supplier|vendor|verkoper|uitgegeven\s*door|issued\s*by|from)\s*[:\-]\s*(.+)$/i;
  for(const line of lines.slice(0,60)){
   const named=line.match(labeled)?.[1]?.trim();
-  if(named&&named.length>=4&&named.length<=140&&!/^SHAKENSTYLE\b/i.test(named))
+  if(named&&named.length>=4&&named.length<=140&&!/^SHAKE\s*'?N?\s*STYLE\b/i.test(named))
    return {value:named,confidence:0.8};
+ }
+ // For invoice templates with the supplier heading followed by address, postcode
+ // and a KvK registration, find that heading rather than the customer's address.
+ for(let i=0;i<Math.min(lines.length,60);i++){
+  if(!/\bkvk\s*[-:]?\s*(?:nummer|nr\.?|number)?\b/i.test(lines[i]))continue;
+  for(let j=i-2;j>=Math.max(0,i-9);j--){
+   const candidate=lines[j].trim();
+   const address=lines.slice(j+1,i).some(row=>/\b\d{4}\s?[a-z]{2}\b/i.test(row));
+   if(!address||candidate.length<5||candidate.length>120||/\d|[@:€]/.test(candidate))continue;
+   if(/\b(?:factuur|invoice|btw|vat|kvk|iban|telefoon|tel\.?|e-mail|email|t\.a\.v\.|straat|weg)\b/i.test(candidate))continue;
+   if(/^SHAKE\s*'?N?\s*STYLE\b/i.test(candidate))continue;
+   return {value:candidate,confidence:0.72};
+  }
  }
  return {value:null,confidence:0};
 }

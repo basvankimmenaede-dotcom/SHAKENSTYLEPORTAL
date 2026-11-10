@@ -70,6 +70,44 @@ function parseExpense(line:string):number|null{
   :Number(raw.replace(/[.,]/g,''));
  return Number.isFinite(value)&&value>=0&&value<100000?round(value):null;
 }
+
+type InvoicedHourRow={line:number;hours:number;projectNumber:string|null;description:string};
+const quantityPattern=/^(\d{1,3}(?:[.,]\d{1,2})?)\s+(.+)$/;
+const unitPricePattern=/\b(?:stuksprijs|unit\s*price|prijs\s*per\s*(?:uur|stuk)|uurtarief)\b/i;
+const timeRangePattern=/(?:^|[^\d])([01]?\d|2[0-3])[.:]([0-5]\d)\s*[-–—]\s*([01]?\d|2[0-3])[.:]([0-5]\d)(?!\d)/;
+/**
+ * Recognize billed *hours*, not arbitrary item quantities: the table must contain an
+ * explicit quantity, a unit price and a clock range confirming that quantity.
+ * Rows without a verified project number are intentionally left unassigned.
+ */
+function findInvoicedHourRows(lines:string[],confirmedProjects:string[]):InvoicedHourRow[]{
+ const header=lines.findIndex((row,i)=>/\baantal\b/i.test(row)
+  &&lines.slice(i,i+3).some(value=>/\bbeschrijving\b/i.test(value)));
+ if(header<0)return [];
+ const total=lines.findIndex((row,i)=>i>header
+  &&/\b(?:totaalbedrag|subtotal|grand\s*total|btw\s+hoog)\b/i.test(row));
+ const end=total>header?total:Math.min(lines.length,header+150);
+ const verified=new Set(confirmedProjects);
+ const found:InvoicedHourRow[]=[];
+ for(let i=header+1;i<end;i++){
+  const match=lines[i].match(quantityPattern);
+  if(!match)continue;
+  const hours=asHours(match[1]);
+  if(hours===null||hours<=0||hours>24)continue;
+  if(!lines.slice(i+1,Math.min(i+4,end)).some(value=>unitPricePattern.test(value)))continue;
+  const description=match[2].replace(/\s*€.*$/,'').trim();
+  const range=description.match(timeRangePattern);
+  if(!range)continue;
+  const start=Number(range[1])*60+Number(range[2]);
+  const finish=Number(range[3])*60+Number(range[4]);
+  const clockHours=((finish-start+1440)%1440)/60;
+  if(Math.abs(clockHours-hours)>0.05)continue;
+  const ref=description.match(/^\s*(?:project(?:nummer)?\s*[:#-]?\s*)?(\d{4,8})(?=\s*(?:[|:;\-]|$))/i)?.[1];
+  found.push({line:i,hours,projectNumber:ref&&verified.has(ref)?ref:null,description:description.slice(0,180)});
+ }
+ return found;
+}
+
 /**
  * A catalog match is only a suggestion: office must confirm project refs before linking.
  * No available catalog means only explicitly labelled numbers can be recognized.
@@ -89,6 +127,7 @@ export function recognizeInvoiceProjects(text:string,filename:string,knownNumber
   if(inText(source,n))numbers.add(n);
  }
  const sorted=[...numbers].sort((a,b)=>a.localeCompare(b,'nl'));
+ const billedRows=findInvoicedHourRows(lines,sorted);
  const linesOut:InvoiceProjectLine[]=[];
  for(const n of sorted){
   const labeled=new RegExp('\\b(?:project(?:nummer|nr|no|number)?|opdracht(?:nummer|nr)?|job\\s*(?:number|no))\\s*[#:.\\-]?\\s*'+n+'\\b','i');
@@ -111,8 +150,19 @@ export function recognizeInvoiceProjects(text:string,filename:string,knownNumber
    }
    evidence=lines[row].slice(0,160);
   }
+  // A verified table row and corroborating clock times are stronger than
+  // a free-form 'hours' mention in a nearby, potentially unrelated paragraph.
+  const billedForProject=billedRows.filter(item=>item.projectNumber===n);
+  if(billedForProject.length){
+   work_hours=round(billedForProject.reduce((sum,item)=>sum+item.hours,0));
+   evidence=billedForProject.map(item=>item.description).join('; ').slice(0,160);
+  }
   linesOut.push({project_number:n,work_hours,travel_hours,expenses_amount,source:'pdf_text',evidence});
  }
+ const unassigned=billedRows.filter(item=>item.projectNumber===null);
+ if(unassigned.length)notes.push('Factuurregel(s) zonder bevestigd projectnummer: '+
+  unassigned.map(item=>String(item.hours).replace('.',',')+' uur – '+item.description).join('; ')+
+  '. Wijs deze uren handmatig toe aan het juiste project voordat je koppelt.');
  if(sorted.length===0)notes.push('Geen projectnummer herkend. Controleer of het projectnummer op de PDF staat.');
  if(sorted.length>1)notes.push('Meerdere projectnummers gevonden. Controleer de uren per project voordat je koppelt.');
  if(sorted.some(n=>!known.includes(n)))notes.push('Een projectnummer staat nog niet in de projectcatalogus. Controleer de koppeling met Rentman.');
