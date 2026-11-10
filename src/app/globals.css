@@ -6783,3 +6783,81 @@ table td{font-size:12px}
 .invoiceRecognitionStrength{font-size:10px!important;font-weight:750;color:#856f5d}
 .invoiceRecognitionFailure{display:grid;gap:9px}
 .invoiceRecognitionFailure .invoiceReviewHint{margin:0}
+
+
+/* Crew invoice comparison and archive (2026) */
+.invoiceOfficePage{max-width:1520px}
+.invoiceOfficeTabs{display:flex;align-items:center;gap:8px;border-bottom:1px solid #e8e2dc;margin:4px 0 18px;flex-wrap:wrap}
+.invoiceOfficeTab{display:inline-flex;align-items:center;gap:9px;padding:13px 18px;color:#786f65;border-bottom:3px solid transparent;text-decoration:none;font-size:13px;font-weight:770}
+.invoiceOfficeTab:hover{color:#db6a1b}.invoiceOfficeTab.active{border-color:#f47525;color:#201b18}
+.invoiceOfficeTab strong{background:#f4efea;padding:3px 8px;border-radius:8px;font-size:11px;color:#665f57}
+.invoiceOfficeTab.active strong{background:#fff0e5;color:#b45a17}
+.invoiceOfficeSearch{display:flex;gap:9px;align-items:center;max-width:660px;margin:0 0 21px}
+.invoiceOfficeSearch>.input{flex:1;min-width:0}.invoiceOfficeSearch .button{white-space:nowrap}
+.invoiceSectionHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 12px}
+.invoiceSectionHeader h2{margin:0;font-size:21px;letter-spacing:-.04em}
+.invoiceSectionHeader>span{font-size:11px;color:#84786d}
+.invoicePageNav{display:flex;gap:9px;align-items:center;justify-content:flex-end;margin:15px 0 22px}
+.invoicePageNav span{font-size:12px;color:#837970;margin-right:auto}
+.invoiceOfficePending{margin-top:26px}
+.invoiceProjectEntry{padding:16px;background:#faf8f5;border:1px solid #eee7df;border-radius:12px;display:grid;gap:10px;margin:12px 0}
+.invoiceProjectEntry>label{display:grid;gap:7px}.invoiceProjectEntry>label>span{font-weight:760;font-size:12px}
+.invoiceProjectEntry>small{color:#8b8178;font-size:11px}
+.invoiceProjectHours{display:grid;gap:10px;margin-top:3px}
+.invoiceProjectHoursRow{display:grid;grid-template-columns:80px repeat(3,minmax(0,1fr));gap:9px;align-items:end;padding:13px;background:#fff;border:1px solid #eee9e2;border-radius:9px}
+.invoiceProjectHoursRow>strong{font-size:13px;padding-bottom:12px;color:#2b241d}
+.invoiceProjectHoursRow label{display:grid;gap:6px;min-width:0}.invoiceProjectHoursRow label span{font-size:10px;font-weight:720;color:#7b7065}
+.invoiceProjectHoursRow input{width:100%;min-width:0}
+.invoiceProjectHoursHint{font-size:11px;color:#8e7d6d;margin:0;line-height:1.5}
+.invoiceEmailArchiveAction{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #eae4de}
+.invoiceEmailArchiveAction small{font-size:11px;color:#897f76}
+.invoiceNumberList{display:block;color:#9c7150!important;font-size:11px!important;margin-top:4px}
+.invoiceComparison{border:1px solid #eae3dc;border-radius:13px;overflow:hidden;margin:14px 0;background:#fdfbf9}
+.invoiceComparisonTitle{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 17px;border-bottom:1px solid #e9e3dd;background:#fff}
+.invoiceComparisonTitle strong{font-size:13px}
+.invoiceCompareTag{display:inline-flex;align-items:center;gap:4px;padding:6px 9px;border-radius:8px;background:#f1efec;font-size:10px;font-weight:750;color:#7b736a;white-space:nowrap}
+.invoiceCompareTag.match{background:#eaf6ed;color:#42774a}
+.invoiceCompareTag.difference,.invoiceCompareTag.missing_assignment{background:#fff0e7;color:#bd571e}
+.invoiceCompareTag.missing_report,.invoiceCompareTag.unknown_project{background:#fff7e8;color:#a47a27}
+.invoiceComparisonProject{padding:15px 17px;border-bottom:1px solid #eee9e4}
+.invoiceComparisonProject:last-of-type{border-bottom:0}
+.invoiceComparisonProjectHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px}
+.invoiceComparisonProjectHead>div{display:grid;gap:5px;min-width:0}
+.invoiceComparisonProjectHead strong{font-size:12px}.invoiceComparisonProjectHead small{font-size:10px;color:#8d8176}
+.invoiceComparisonMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0}
+.invoiceComparisonMetrics>div{display:grid;gap:4px;background:white;border:1px solid #eee8e1;padding:11px;border-radius:9px}
+.invoiceComparisonMetrics span{font-size:10px;color:#867b72}
+.invoiceComparisonMetrics strong{font-size:16px;white-space:nowrap}
+.invoiceComparisonMetrics strong.difference{color:#d45b25}
+.invoiceCompareExtras{display:flex;flex-wrap:wrap;gap:9px;font-size:11px;color:#6e6256;margin-top:9px}
+.invoiceCompareNote{font-size:11px;line-height:1.55;color:#82776e;margin:9px 0}
+.invoiceComparisonProjectLinks{display:flex;align-items:center;gap:15px;font-size:10px;color:#7e746b}
+.invoiceComparisonProjectLinks a{font-weight:760;color:#c56826}
+.invoiceComparisonDisclaimer{margin:0;padding:12px 16px;font-size:10px;color:#83796f;background:#f7f3ef}
+.invoiceCompareEmpty{display:grid;gap:5px;padding:13px 17px;background:#fff9f1;border:1px solid #f1e1cd;border-radius:10px;margin:13px 0}
+.invoiceCompareEmpty strong{font-size:12px}.invoiceCompareEmpty span{font-size:11px;color:#907f6e}
+.invoiceProjectEditTrigger{display:flex;justify-content:flex-end;margin:12px 0}
+.invoiceProjectEditor{display:grid;gap:12px;padding:18px;background:#fff9f2;border:1px solid #f1ddc5;border-radius:12px;margin:15px 0}
+.invoiceProjectEditor>strong{font-size:14px}.invoiceProjectEditor>p{font-size:11px;color:#817267;margin:0}
+.invoiceProjectEditor>label{display:grid;gap:7px;font-size:12px}
+.invoiceProjectEditorActions{display:flex;gap:9px;align-items:center}
+.invoiceArchiveList{display:grid;gap:10px}
+.invoiceArchiveEntry{border:1px solid #e9e2db;border-radius:12px;background:white;overflow:hidden}
+.invoiceArchiveEntry summary{display:grid;grid-template-columns:minmax(200px,1fr) 125px 105px 104px 14px;align-items:center;gap:14px;padding:17px 20px;cursor:pointer}
+.invoiceArchiveEntry[open] summary{border-bottom:1px solid #eee8e0}
+.invoiceArchiveEntry summary>span{font-size:12px}
+.invoiceArchiveFile{display:flex;gap:12px;align-items:center;min-width:0}
+.invoiceArchiveFile>svg{color:#e57621;flex-shrink:0}
+.invoiceArchiveFile>span{display:grid;gap:6px;min-width:0}
+.invoiceArchiveFile strong{font-size:13px}.invoiceArchiveFile small{font-size:10px;color:#83786d}
+.invoiceArchiveEntryDetail{padding:17px 20px;display:grid;justify-items:start;gap:13px}
+.invoiceArchiveEntryDetail>p{font-size:11px;color:#786e65;line-height:1.55;margin:0}
+.invoiceArchiveEntryDetail .invoiceComparison{width:100%}
+.invoiceArchivedOther{margin:14px 0;border-top:1px solid #e5ded6;padding-top:14px}
+.invoiceArchivedOther h3{font-size:15px;margin:7px 0 11px}
+.invoiceArchivedEmail{padding:13px 15px;display:flex;align-items:center;gap:12px;border:1px solid #eee7df;border-radius:10px;background:white;margin:7px 0}
+.invoiceArchivedEmail>svg{color:#cf6b28}.invoiceArchivedEmail>span{display:grid;gap:5px;min-width:0;flex:1}
+.invoiceArchivedEmail strong{font-size:12px}.invoiceArchivedEmail small{font-size:10px;color:#837b72}
+.invoiceArchiveNote{font-size:11px;color:#827870;margin-top:10px}
+@media(max-width:830px){.invoiceComparisonMetrics{grid-template-columns:1fr 1fr}.invoiceArchiveEntry summary{grid-template-columns:minmax(150px,1fr) 85px 95px 14px}.invoiceArchiveEntry summary>span:nth-child(3){display:none}}
+@media(max-width:610px){.invoiceOfficeSearch{flex-wrap:wrap}.invoiceOfficeTab{padding:10px 10px;font-size:11px}.invoiceProjectHoursRow{grid-template-columns:1fr 1fr}.invoiceProjectHoursRow>strong{grid-column:1 / -1;padding:0}.invoiceComparisonMetrics{grid-template-columns:1fr 1fr}.invoiceArchiveEntry summary{grid-template-columns:minmax(150px,1fr) 90px 14px}.invoiceArchiveEntry summary>span:nth-child(4){display:none}.invoiceComparisonProjectHead{flex-wrap:wrap}.invoiceEmailArchiveAction{align-items:flex-start;flex-direction:column}}
