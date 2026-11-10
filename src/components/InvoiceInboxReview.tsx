@@ -10,7 +10,7 @@ type Extraction={
  invoice_number:string|null;invoice_date:string|null;total_amount:number|null;supplier_name:string|null;
  suggested_crew_member_id:string|null;match_strength:string|null;match_reason:string|null;extraction_notes:string|null;linked_invoice_id:string|null;
 };
-type Member={id:string;full_name:string;active:boolean;company_name:string|null;company_alias:string|null;invoice_email:string|null;email:string|null;rentman_email:string|null;login_email_override:string|null};
+type Member={id:string;full_name:string;company_name:string|null;company_alias:string|null;invoice_email:string|null;email:string|null;rentman_email:string|null;login_email_override:string|null};
 function displayDate(date:string|null){return date?new Date(date).toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'}):'Onbekend';}
 function statusLabel(status:string){
  return status==='linked'?'Gekoppeld':status==='extracted'?'Uitgelezen':status==='needs_review'?'Controle nodig':status==='failed'?'Uitlezen mislukt':status==='no_pdf'?'Geen PDF':status==='too_large'?'Te groot':'Ontvangen';
@@ -35,7 +35,7 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
      <strong>{item.suggested_crew_member_id?'Voorgestelde bartender: '+(members.find(m=>m.id===item.suggested_crew_member_id)?.full_name||'Onbekend'):'Bartender handmatig kiezen'}</strong>
      <span>{item.match_reason||'Geen automatische overeenkomst gevonden. Je kunt de factuur handmatig koppelen.'}</span>
      {item.supplier_name&&<small>Leverancier op factuur: {item.supplier_name}</small>}
-     {members.find(m=>m.id===memberId)?.active===false&&<small>Let op: dit crewlid staat als inactief in Rentman. Je kunt de factuur wel koppelen en verwerken.</small>}
+     
     </div>
    </div>
    <div className="invoiceReviewFields">
@@ -43,7 +43,7 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
     <label><span>Factuurdatum</span><input className="input" type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} disabled={linked||!canManage}/></label>
     <label><span>Totaalbedrag (€)</span><input className="input" type="number" step="0.01" min="0" value={totalAmount} onChange={e=>setTotalAmount(e.target.value)} placeholder="0,00" disabled={linked||!canManage}/></label>
     <label><span>Bartender</span><select className="select" value={memberId} onChange={e=>setMemberId(e.target.value)} disabled={linked||!canManage}>
-     <option value="">Niet gekoppeld / leverancier</option>{members.map(m=><option key={m.id} value={m.id}>{m.full_name}{m.company_name?' · '+m.company_name:''}{!m.active?' · Niet actief in Rentman':''}</option>)}
+     <option value="">Niet gekoppeld / leverancier</option>{members.map(m=><option key={m.id} value={m.id}>{m.full_name}{m.company_name?' · '+m.company_name:''}</option>)}
     </select></label>
    </div>
    <div className="invoiceReviewFooter">

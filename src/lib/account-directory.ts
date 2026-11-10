@@ -24,7 +24,7 @@ export function classifyAccount({role,email,distributorId,hasBrandAccess,crewEma
 export async function getAccountDirectoryCounts(){
  const admin=createAdminClient();
  const [crew,customers,companies,brands,usersPage]=await Promise.all([
-  admin.from('crew_portal_members').select('email,rentman_email,login_email_override,active,portal_deleted'),
+  admin.from('crew_portal_members').select('email,rentman_email,login_email_override,portal_enabled,portal_deleted'),
   admin.from('profiles').select('id,role,distributor_id'),
   admin.from('distributors').select('*',{count:'exact',head:true}),
   admin.from('user_brand_access').select('user_id'),
@@ -52,7 +52,7 @@ export async function getAccountDirectoryCounts(){
  }
  const liveCrew=(crew.data||[]).filter(c=>!c.portal_deleted);
  return {
-  crew:liveCrew.length,crewActive:liveCrew.filter(c=>c.active).length,
+  crew:liveCrew.length,crewActive:liveCrew.filter(c=>c.portal_enabled).length,
   customers:kinds.customer,internal:kinds.internal,
   crewAccounts:kinds.crew,unlinked:kinds.unlinked,organizations:companies.count??0
  };

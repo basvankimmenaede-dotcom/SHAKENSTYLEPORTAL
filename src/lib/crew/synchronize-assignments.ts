@@ -18,7 +18,7 @@ export async function synchronizeCrewAssignments(){
   const [rentmanAssignments,planning,membersResult]=await Promise.all([
    getPlanningCrewAssignmentsForRange(dateKey(-30),dateKey(60)),
    getPlanningProjects(),
-   admin.from('crew_portal_members').select('id,rentman_crew_id').eq('active',true)
+   admin.from('crew_portal_members').select('id,rentman_crew_id').eq('portal_deleted',false)
   ]);
   if(membersResult.error)throw membersResult.error;
   const memberIds=new Map((membersResult.data||[]).map(m=>[Number(m.rentman_crew_id),m.id]));

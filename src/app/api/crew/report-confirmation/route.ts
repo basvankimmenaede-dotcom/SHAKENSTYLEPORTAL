@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   if (!user?.email) return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 });
   const { assignmentId } = await request.json().catch(() => ({}));
   if (typeof assignmentId !== 'string' || !/^[0-9a-f-]{36}$/i.test(assignmentId)) return NextResponse.json({ error: 'Ongeldige dienst' }, { status: 400 });
-  const { data: member } = await supabase.from('crew_portal_members').select('id,full_name').eq('active', true).maybeSingle();
+  const { data: member } = await supabase.from('crew_portal_members').select('id,full_name').eq('portal_enabled', true).maybeSingle();
   if (!member) return NextResponse.json({ error: 'Geen crew-toegang' }, { status: 403 });
   const admin = createAdminClient();
   const { data: assignment } = await admin.from('crew_portal_assignments').select('id,project_name,rentman_project_id,starts_at,project_location').eq('id',assignmentId).eq('crew_member_id',member.id).maybeSingle();

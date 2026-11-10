@@ -14,7 +14,7 @@ export async function GET(request:NextRequest){
  const supabase=await createClient();
  const {data:{user}}=await supabase.auth.getUser();
  if(!user?.email)return NextResponse.json({error:'Niet ingelogd'},{status:401});
- const {data:member}=await supabase.from('crew_portal_members').select('id,email,login_email_override,rentman_crew_id').eq('active',true).maybeSingle();
+ const {data:member}=await supabase.from('crew_portal_members').select('id,email,login_email_override,rentman_crew_id').eq('portal_enabled',true).maybeSingle();
  if(!member||(member.login_email_override||member.email||'').trim().toLowerCase()!==user.email.trim().toLowerCase())return NextResponse.json({error:'Geen Crew-toegang'},{status:403});
  const assignmentId=request.nextUrl.searchParams.get('assignmentId');
  if(!assignmentId)return NextResponse.json({error:'Dienst ontbreekt'},{status:400});

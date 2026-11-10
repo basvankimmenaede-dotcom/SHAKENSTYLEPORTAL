@@ -17,10 +17,10 @@ export default function CrewLogin({signedInButNotLinked=false}:{signedInButNotLi
    const supabase=createClient();
    const {error}=await supabase.auth.signInWithPassword({email:email.trim().toLowerCase(),password});
    if(error){setStatus('E-mailadres of wachtwoord onjuist. Neem contact op met kantoor als je geen wachtwoord hebt.');return;}
-   const {data:member,error:memberError}=await supabase.from('crew_portal_members').select('id').eq('active',true).maybeSingle();
+   const {data:member,error:memberError}=await supabase.from('crew_portal_members').select('id').eq('portal_enabled',true).maybeSingle();
    if(memberError||!member){
     await supabase.auth.signOut();
-    setStatus('Dit account heeft geen actieve Crew-toegang. Neem contact op met kantoor.');
+    setStatus('Dit account heeft geen portaaltoegang. Neem contact op met kantoor.');
     return;
    }
    router.refresh();
@@ -39,7 +39,7 @@ export default function CrewLogin({signedInButNotLinked=false}:{signedInButNotLi
    <button className="button orange" type="submit" disabled={busy} style={{width:'100%',marginTop:8}}>{busy?'Inloggen…':'Inloggen'}</button>
   </form>
   {status&&<div className="error" role="alert">{status}</div>}
-  <p className="muted" style={{fontSize:12,lineHeight:1.5,marginTop:22}}>Alleen actieve medewerkers van SHAKENSTYLE kunnen inloggen.</p>
+  <p className="muted" style={{fontSize:12,lineHeight:1.5,marginTop:22}}>Alleen medewerkers met ingeschakelde portaaltoegang kunnen inloggen. De Rentman-status staat hier los van.</p>
   <div className="loginPortalSwitch"><strong>Ben je klant of kantoormedewerker?</strong>
     <p>Gebruik de algemene SHAKENSTYLE Portal-login.</p>
     <Link href="/login">Open klanten- en kantoorlogin →</Link>

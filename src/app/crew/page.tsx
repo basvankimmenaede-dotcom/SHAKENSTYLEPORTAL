@@ -13,8 +13,8 @@ export default async function CrewPage() {
 
   const { data: member } = await supabase
     .from('crew_portal_members')
-    .select('id,full_name,email,login_email_override,rentman_crew_id,active')
-    .eq('active', true).maybeSingle();
+    .select('id,full_name,email,login_email_override,rentman_crew_id,portal_enabled')
+    .eq('portal_enabled', true).maybeSingle();
   const linkedEmail = (member?.login_email_override || member?.email || '').trim().toLowerCase();
   if (!member || !Number.isSafeInteger(Number(member.rentman_crew_id)) ||
       Number(member.rentman_crew_id) <= 0 || linkedEmail !== user.email.trim().toLowerCase()) {

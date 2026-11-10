@@ -14,15 +14,15 @@ export default async function CrewInvoiceOfficePage(){
   const [invoicesResult,membersResult,inboxResult,imapResult,extractionsResult]=await Promise.all([
     admin.from('crew_invoices').select('id,crew_member_id,invoice_number,total_amount,status,correction_reason,created_at,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at,forward_error')
       .order('created_at',{ascending:false}).limit(150),
-    admin.from('crew_portal_members').select('id,full_name,email,rentman_email,login_email_override,company_name,company_alias,invoice_email,active,portal_deleted'),
+    admin.from('crew_portal_members').select('id,full_name,email,rentman_email,login_email_override,company_name,company_alias,invoice_email,portal_deleted'),
     admin.from('invoice_inbox_messages').select('id,sender,subject,received_at,status,attachments,error_message').order('received_by_portal_at',{ascending:false}).limit(100),
     admin.from('invoice_imap_settings').select('username,enabled,tested_at').eq('id',1).maybeSingle(),
     admin.from('invoice_pdf_extractions').select('id,message_id,attachment_index,filename,storage_path,status,invoice_number,invoice_date,total_amount,supplier_name,ai_fields,detected_emails,suggested_crew_member_id,match_strength,match_reason,extraction_notes,linked_invoice_id').order('created_at',{ascending:false}).limit(300)
   ]);
   const names=new Map((membersResult.data||[]).map(m=>[m.id,m.full_name]));
-  // Accounting can receive invoices from both active and inactive Rentman crew.
+  // Invoice processing never depends on Rentman status or the member's portal login.
   const activeCrew=(membersResult.data||[]).filter(m=>!m.portal_deleted).map(m=>({
-    id:m.id,full_name:m.full_name,active:Boolean(m.active),company_name:m.company_name||null,
+    id:m.id,full_name:m.full_name,company_name:m.company_name||null,
     company_alias:m.company_alias||null,invoice_email:m.invoice_email||null,
     email:m.email||null,rentman_email:m.rentman_email||null,login_email_override:m.login_email_override||null
   })).sort((a,b)=>a.full_name.localeCompare(b.full_name,'nl'));

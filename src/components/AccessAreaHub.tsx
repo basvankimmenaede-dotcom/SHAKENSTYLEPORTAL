@@ -13,11 +13,11 @@ type Destination={name:string;desc:string;href:string;icon:LucideIcon};
 type Group={label:string;desc:string;url:string;icon:LucideIcon;entries:Destination[]};
 const sections:Record<'personnel'|'customers'|'internal',Group>={
  personnel:{label:'Personeel',desc:'Bartenders, crewtoegang, diensten, uren en crewfacturen.',url:'/admin/personeel',icon:UsersRound,entries:[
-  {name:'Crewprofielen',desc:'Rentman-status, bedrijf en factuur e-mailadres per medewerker.',href:'/admin/users/crew',icon:UserRoundCog},
+  {name:'Crewprofielen',desc:'Portaaltoegang, bedrijfsgegevens en factuuradres per medewerker.',href:'/admin/users/crew',icon:UserRoundCog},
   {name:'Diensten & uren',desc:'Planning, crewshifts en geregistreerde uren.',href:'/planning',icon:CalendarDays},
   {name:'Crewfacturen',desc:'Facturen ontvangen, koppelen, controleren en goedkeuren.',href:'/planning/crew-invoices',icon:ReceiptText},
   {name:'Tarieven & contracturen',desc:'Contracturen, tariefbronnen en de financiële koppeling.',href:'/admin/personeel/tarieven',icon:Clock3},
-  {name:'Crew-loginstatus',desc:'Controle van Rentman, portaalaccount en handmatige blokkades.',href:'/admin/personeel/inloggen',icon:KeyRound},
+  {name:'Crew-loginstatus',desc:'Portaalstatus, loginaccount en Rentman-informatie.',href:'/admin/personeel/inloggen',icon:KeyRound},
   {name:'Open diensten',desc:'Beschikbare diensten en personeelsplanning.',href:'/planning/open-shifts',icon:ClipboardList}
  ]},
  customers:{label:'Klanten',desc:'Klantbedrijven, contactpersonen, merken en portaaltoegang.',url:'/admin/klanten',icon:Building2,entries:[
@@ -42,7 +42,7 @@ export default async function AccessAreaHub({area='all'}:{area?:Area}){
  const accountStats=await getAccountDirectoryCounts();
  const groups=area==='all'?Object.values(sections):[sections[area]];
  const metrics=[
-  {name:'Crewprofielen',value:accountStats.crew,desc:accountStats.crewActive+' actief in Rentman'},
+  {name:'Crewprofielen',value:accountStats.crew,desc:accountStats.crewActive+' actief in het portaal'},
   {name:'Klantaccounts',value:accountStats.customers,desc:accountStats.organizations+' klantorganisaties'},
   {name:'Interne accounts',value:accountStats.internal,desc:'kantoor en magazijn'}
  ];

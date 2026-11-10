@@ -37,10 +37,11 @@ export async function POST(request:NextRequest,context:{params:Promise<{id:strin
     return NextResponse.json({error:'Voor deze factuur kan geen nieuw correctieverzoek worden verzonden.'},{status:409});
 
   const {data:member}=await admin.from('crew_portal_members')
-    .select('full_name,email,login_email_override,active').eq('id',invoice.crew_member_id).maybeSingle();
-  const recipient=String(member?.login_email_override||member?.email||'').trim().toLowerCase();
-  if(!member?.active||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))
-    return NextResponse.json({error:'Er is geen actief e-mailadres gekoppeld aan deze bartender.'},{status:409});
+    .select('full_name,email,rentman_email,invoice_email,login_email_override').eq('id',invoice.crew_member_id).maybeSingle();
+  // Accounting communications are independent of Rentman planning status and portal sign-in access.
+  const recipient=String(member?.invoice_email||member?.login_email_override||member?.email||member?.rentman_email||'').trim().toLowerCase();
+  if(!member||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))
+    return NextResponse.json({error:'Er is geen geldig factuur- of contact-e-mailadres voor deze bartender bekend.'},{status:409});
 
   // Compare-and-set is a lock against duplicate requests from separate administrators.
   const {data:claimed,error:lockError}=await admin.from('crew_invoices')
