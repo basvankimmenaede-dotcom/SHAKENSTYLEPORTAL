@@ -42,6 +42,7 @@ function euroValue(raw:string):number|null{
 function priceOnLine(line:string):number|null{
  // Ignore accidental numerals elsewhere in a PDF; only use totals in explicitly labelled rows.
  const fragments=[...line.matchAll(/(?:€\s*)?\b\d{1,8}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?\b\s*€?/g)]
+  .filter(match=>!line.slice((match.index||0)+match[0].length).trimStart().startsWith('%'))
   .map(match=>({raw:match[0],value:euroValue(match[0])})).filter(x=>x.value!==null);
  return fragments.length?fragments[fragments.length-1].value:null;
 }

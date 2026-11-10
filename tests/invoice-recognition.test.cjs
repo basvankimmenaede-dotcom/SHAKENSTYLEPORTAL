@@ -95,6 +95,11 @@ function makePdf(){
 test('pdf-parse extracts text on the Node server without DOMMatrix crashes',async()=>{
  const pdf=makePdf();
  const text=await readInvoicePdfText(pdf);
- assert.match(text,/Invoice No\\. 99/);
+ assert.match(text,/Invoice No\. 99/);
  assert.match(text,/2026-10-26/);
+});
+
+test('A VAT percentage next to a total label is not treated as an amount',()=>{
+ const result=recognizeInvoiceText('Invoice 44\nTotaal inclusief btw 21%\nBTW 21%','Invoice 44.pdf');
+ assert.equal(result.total_amount,null);
 });
