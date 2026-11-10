@@ -23,7 +23,7 @@ export default async function PortalIntegrationsSettingsPage(){
  ];
  return <SettingsWorkspace active="integrations" title="Integraties" description="Alle koppelingen en hun configuratie op één plek.">
   <section className="settingsPanel accessSettingsPanel">
-   <header className="settingsPanelHeader"><div><span>Technische koppelingen</span><h2>Verbindingen</h2><p>Een status "geconfigureerd" betekent niet dat er al een volledige end-to-end test is geslaagd.</p></div></header>
+   <header className="settingsPanelHeader"><div><span>Technische koppelingen</span><h2>Verbindingen</h2><p>Een status &ldquo;geconfigureerd&rdquo; betekent niet dat er al een volledige end-to-end test is geslaagd.</p></div></header>
    <div className="accessIntegrationList">{cards.map(item=><div className="accessIntegrationRow" key={item.title}>
     <div><strong>{item.title}</strong><span>{item.description}</span></div>
     <small>{item.status}</small><Link className="button secondary" href={item.href}>{item.action}</Link>
