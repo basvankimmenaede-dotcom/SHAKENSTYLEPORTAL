@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import {createAdminClient} from '@/lib/supabase/admin';
+import {getAccountDirectoryCounts} from '@/lib/account-directory';
 import {requireAdmin} from '@/lib/auth';
 import {
   UsersRound,UserRoundCog,Building2,CalendarDays,ReceiptText,Clock3,ShieldCheck,
@@ -25,7 +25,7 @@ const sections:Record<'personnel'|'customers'|'internal',Group>={
   {name:'Organisaties',desc:'Distributeurs en hun gekoppelde merken.',href:'/admin/distributors',icon:Building2},
   {name:'Merken & materialen',desc:'Welke mappen en merken in het klantportaal zichtbaar zijn.',href:'/admin/brands',icon:Boxes},
   {name:'Klantenportaal',desc:'De daadwerkelijke klantweergave en materialen.',href:'/portal',icon:FileText},
-  {name:'Toegangsrechten',desc:'Merktoegang en projectgerelateerde permissies per account.',href:'/admin/klanten/accounts',icon:ShieldCheck}
+  {name:'Toegangsrechten',desc:'Merktoegang en portaalrechten per klantaccount.',href:'/admin/klanten/accounts',icon:ShieldCheck}
  ]},
  internal:{label:'Intern',desc:'Kantoor- en magazijnaccounts, rollen en beveiliging.',url:'/admin/intern',icon:BriefcaseBusiness,entries:[
   {name:'Interne accounts',desc:'Kantoor, magazijn, accountrollen en toegang.',href:'/admin/intern/accounts',icon:UserRoundCog},
@@ -39,25 +39,18 @@ const sections:Record<'personnel'|'customers'|'internal',Group>={
 
 export default async function AccessAreaHub({area='all'}:{area?:Area}){
  await requireAdmin();
- const admin=createAdminClient();
- const [crewAll,crewActive,customers,internals,companies]=await Promise.all([
-  admin.from('crew_portal_members').select('*',{count:'exact',head:true}).eq('portal_deleted',false),
-  admin.from('crew_portal_members').select('*',{count:'exact',head:true}).eq('active',true).eq('portal_deleted',false),
-  admin.from('profiles').select('*',{count:'exact',head:true}).eq('role','customer'),
-  admin.from('profiles').select('*',{count:'exact',head:true}).in('role',['admin','warehouse']),
-  admin.from('distributors').select('*',{count:'exact',head:true})
- ]);
+ const accountStats=await getAccountDirectoryCounts();
  const groups=area==='all'?Object.values(sections):[sections[area]];
  const metrics=[
-  {name:'Crewprofielen',value:crewAll.count,desc:(crewActive.count??0)+' actief in Rentman'},
-  {name:'Klantaccounts',value:customers.count,desc:(companies.count??0)+' klantorganisaties'},
-  {name:'Interne accounts',value:internals.count,desc:'kantoor en magazijn'}
+  {name:'Crewprofielen',value:accountStats.crew,desc:accountStats.crewActive+' actief in Rentman'},
+  {name:'Klantaccounts',value:accountStats.customers,desc:accountStats.organizations+' klantorganisaties'},
+  {name:'Interne accounts',value:accountStats.internal,desc:'kantoor en magazijn'}
  ];
  return <main className="container accessAreasPage">
   <section className="usersAdminHeader">
    <div><span className="usersAdminEyebrow">SHAKENSTYLE Portal / Gebruikers & toegang</span>
     <h1>{area==='all'?'Accounts & toegang':sections[area].label}</h1>
-    <p>{area==='all'?'Klanten, personeel en interne accounts hebben elk hun eigen beheeromgeving. Alle bestaande toegangen blijven behouden.':sections[area].desc}</p>
+    <p>{area==='all'?'Klanten, personeel en interne accounts hebben elk hun eigen beheeromgeving. Crewlogins zijn gescheiden van klantaccounts, ook bij een oude technische Customer-rol.':sections[area].desc}</p>
    </div>
    {area==='all'?<Link className="button secondary" href="/admin/users">Alle accounts</Link>:
     <Link className="button secondary" href="/admin/accounts">Alle accountgroepen</Link>}
@@ -65,6 +58,7 @@ export default async function AccessAreaHub({area='all'}:{area?:Area}){
   <section className="accessAreaMetrics">{metrics.map(m=><div className="accessAreaMetric" key={m.name}>
    <span>{m.name}</span><strong>{m.value??'—'}</strong><small>{m.desc}</small>
   </div>)}</section>
+  {area==='all'&&accountStats.unlinked>0?<div className="accessAreaWarning">{accountStats.unlinked} account(s) zonder crew- of organisatiekoppeling. Controleer deze onder <Link href="/admin/intern/inloggen">Login & beveiliging</Link>.</div>:null}
   <div className="accessAreasGroups">{groups.map(group=>{
     const Icon=group.icon;
     return <section className={'accessAreaGroup '+(group.label==='Personeel'?'personnel':group.label==='Klanten'?'customer':'internal')} key={group.label}>

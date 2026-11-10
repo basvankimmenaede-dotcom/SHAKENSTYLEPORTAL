@@ -30,7 +30,7 @@ export async function getAccountDirectoryCounts(){
   admin.from('user_brand_access').select('user_id'),
   admin.auth.admin.listUsers({page:1,perPage:200})
  ]);
- if(crew.error||customers.error)throw new Error('Accountstatistieken konden niet worden opgehaald.');
+ if(crew.error||customers.error||usersPage.error)throw new Error('Accountstatistieken konden niet volledig worden opgehaald.');
  const authUsers=[...(usersPage.data?.users||[])];
  let page=2;
  while(authUsers.length&&authUsers.length%200===0&&page<=20){

@@ -1,15 +1,10 @@
 import Link from 'next/link';
 import {requireAdmin} from '@/lib/auth';
-import {createAdminClient} from '@/lib/supabase/admin';
+import {getAccountDirectoryCounts} from '@/lib/account-directory';
 import SyncRentmanButton from '@/components/SyncRentmanButton';
 export default async function AdminDashboard(){
  const {profile}=await requireAdmin();
- const admin=createAdminClient();
- const [crew,customers,internals]=await Promise.all([
-  admin.from('crew_portal_members').select('*',{count:'exact',head:true}).eq('portal_deleted',false),
-  admin.from('profiles').select('*',{count:'exact',head:true}).eq('role','customer'),
-  admin.from('profiles').select('*',{count:'exact',head:true}).in('role',['admin','warehouse'])
- ]);
+ const accountStats=await getAccountDirectoryCounts();
  return <main className="container accessAreasPage">
   <section className="usersAdminHeader">
    <div><span className="usersAdminEyebrow">SHAKENSTYLE Portal</span>
@@ -17,9 +12,9 @@ export default async function AdminDashboard(){
    <SyncRentmanButton/>
   </section>
   <section className="accessAreaMetrics">
-   <div className="accessAreaMetric"><span>Crewprofielen</span><strong>{crew.count??'—'}</strong><small>Rentman-gekoppeld</small></div>
-   <div className="accessAreaMetric"><span>Klantaccounts</span><strong>{customers.count??'—'}</strong><small>Gekoppeld aan organisaties</small></div>
-   <div className="accessAreaMetric"><span>Interne accounts</span><strong>{internals.count??'—'}</strong><small>Kantoor & magazijn</small></div>
+   <div className="accessAreaMetric"><span>Crewprofielen</span><strong>{accountStats.crew}</strong><small>Rentman-gekoppeld</small></div>
+   <div className="accessAreaMetric"><span>Klantaccounts</span><strong>{accountStats.customers}</strong><small>Gekoppeld aan organisaties</small></div>
+   <div className="accessAreaMetric"><span>Interne accounts</span><strong>{accountStats.internal}</strong><small>Kantoor & magazijn</small></div>
   </section>
   <section className="accessAreasGroups">
    <Link className="accessAreaGroup personnel accessDashboardLink" href="/admin/personeel">
