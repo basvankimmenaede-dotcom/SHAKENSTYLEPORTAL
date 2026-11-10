@@ -15,7 +15,7 @@ export default async function InvoiceMailboxSettingsPage(){
   ]);
   const defaults={host:'mail.antagonist.nl',port:993,username:'',password_encrypted:null,enabled:false,tested_at:null,last_sync_at:null,last_sync_result:null,last_error:null};
   const imap=safeImapStatus(imapResult.data||defaults);
-  return <SettingsWorkspace active="invoice-email" title="Factuur e-mailadres" description="Beheer het ontvangstadres, de mailboxverbinding en het ophalen van facturen.">
+  return <SettingsWorkspace active="invoice-email" title="E-mail & mailboxen" description="Beheer het factuurontvangstadres, de beveiligde IMAP-verbinding en automatische synchronisatie.">
     <InvoiceEmailSettings email={addressResult.data?.incoming_invoice_email??''} imap={imap}/>
   </SettingsWorkspace>;
 }

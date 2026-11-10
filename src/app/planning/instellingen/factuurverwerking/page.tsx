@@ -6,7 +6,7 @@ export const dynamic='force-dynamic';
 export default async function InvoiceProcessingSettingsPage(){
  await requireAdmin();
  const [settings,accounts]=await Promise.all([getInvoiceProcessingSettings(),listEligibleApprovers()]);
- return <SettingsWorkspace active="invoice-processing" title="Factuurverwerking"
+ return <SettingsWorkspace active="invoice-processing" title="Factuurworkflow"
   description="Beheer Google Document AI, de twee goedkeurders en het adres voor de boekhouding.">
    <InvoiceProcessingSettings initial={publicProcessingSettings(settings)} accounts={accounts}/>
  </SettingsWorkspace>;
