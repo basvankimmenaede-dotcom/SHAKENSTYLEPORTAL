@@ -2,6 +2,7 @@
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {FileText,RefreshCw,AlertCircle,Link2} from 'lucide-react';
+import {INVOICE_SUPPLIER_CATEGORIES,INVOICE_COST_CATEGORY_LABELS,type InvoiceCostCategory,type InvoiceSupplier} from '@/lib/invoice-suppliers';
 
 type Attachment={filename:string;path:string;size:number};
 type Email={id:string;sender:string|null;subject:string|null;received_at:string|null;status:string;attachments:Attachment[];error_message:string|null};
@@ -17,8 +18,12 @@ function displayDate(date:string|null){return date?new Date(date).toLocaleString
 function statusLabel(status:string){
  return status==='linked'?'Gekoppeld':status==='extracted'?'Uitgelezen':status==='needs_review'?'Controle nodig':status==='failed'?'Uitlezen mislukt':status==='no_pdf'?'Geen PDF':status==='too_large'?'Te groot':'Ontvangen';
 }
-function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extraction;members:Member[];canManage:boolean;run:(id:string,payload:Record<string,unknown>)=>Promise<void>;busy:boolean;openPdf:(messageId:string,index:number,filename:string)=>void}){
+function ExtractedInvoice({item,members,suppliers,canManage,run,busy,openPdf}:{item:Extraction;members:Member[];suppliers:InvoiceSupplier[];canManage:boolean;run:(id:string,payload:Record<string,unknown>)=>Promise<void>;busy:boolean;openPdf:(messageId:string,index:number,filename:string)=>void}){
+ const supplierSuggestion=suppliers.find(s=>s.company_name.toLowerCase()===String(item.supplier_name||'').trim().toLowerCase());
+ const [partyType,setPartyType]=useState<'crew'|'supplier'>(supplierSuggestion&&!item.suggested_crew_member_id?'supplier':'crew');
  const [memberId,setMemberId]=useState(item.suggested_crew_member_id||'');
+ const [supplierId,setSupplierId]=useState(supplierSuggestion?.id||'');
+ const [category,setCategory]=useState<InvoiceCostCategory>(supplierSuggestion?.default_cost_category||'overig');
  const [invoiceNumber,setInvoiceNumber]=useState(item.invoice_number||'');
  const [invoiceDate,setInvoiceDate]=useState(item.invoice_date||'');
  const [totalAmount,setTotalAmount]=useState(item.total_amount===null?'':String(item.total_amount));
@@ -52,7 +57,7 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
    {item.extraction_notes&&<p className="invoiceReviewHint"><AlertCircle size={16}/>{item.extraction_notes}</p>}
    <div className={'crewInvoiceMatchBanner '+(item.match_strength==='strong'?'strong':item.match_strength==='ambiguous'?'ambiguous':'')}>
     <div>
-     <strong>{item.suggested_crew_member_id?'Voorgestelde bartender: '+(members.find(m=>m.id===item.suggested_crew_member_id)?.full_name||'Onbekend'):'Bartender handmatig kiezen'}</strong>
+     <strong>{partyType==='supplier'?(supplierSuggestion?'Mogelijke leverancier: '+supplierSuggestion.company_name:'Kies de leverancier handmatig'):(item.suggested_crew_member_id?'Voorgestelde bartender: '+(members.find(m=>m.id===item.suggested_crew_member_id)?.full_name||'Onbekend'):'Bartender handmatig kiezen')}</strong>
      <span className="invoiceRecognitionStrength">{item.match_strength==='strong'?'Sterke overeenkomst':item.match_strength==='ambiguous'?'Tegenstrijdige gegevens':item.match_strength==='possible'?'Mogelijke overeenkomst':'Geen overeenkomst'}</span>
      <span>{item.match_reason||'Geen automatische overeenkomst gevonden. Je kunt de factuur handmatig koppelen.'}</span>
      {item.supplier_name&&<small>Leverancier op factuur: {item.supplier_name}</small>}
@@ -63,15 +68,28 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
     <label><span>Factuurnummer</span><input className="input" value={invoiceNumber} onChange={e=>setInvoiceNumber(e.target.value)} maxLength={64} disabled={linked||!canManage}/></label>
     <label><span>Factuurdatum</span><input className="input" type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)} disabled={linked||!canManage}/></label>
     <label><span>Totaalbedrag (€)</span><input className="input" type="number" step="0.01" min="0" value={totalAmount} onChange={e=>setTotalAmount(e.target.value)} placeholder="0,00" disabled={linked||!canManage}/></label>
-    <label><span>Bartender</span><select className="select" value={memberId} onChange={e=>setMemberId(e.target.value)} disabled={linked||!canManage}>
-     <option value="">Niet gekoppeld / leverancier</option>{members.map(m=><option key={m.id} value={m.id}>{m.full_name}{m.company_name?' · '+m.company_name:''}</option>)}
+    <label><span>Type factuur</span><select className="select" value={partyType} onChange={e=>setPartyType(e.target.value==='supplier'?'supplier':'crew')} disabled={linked||!canManage}>
+     <option value="crew">Bartender / freelance personeel</option><option value="supplier">Andere leverancier</option>
     </select></label>
+    {partyType==='crew'?<label><span>Bartender</span><select className="select" value={memberId} onChange={e=>setMemberId(e.target.value)} disabled={linked||!canManage}>
+     <option value="">Kies bartender</option>{members.map(m=><option key={m.id} value={m.id}>{m.full_name}{m.company_name?' · '+m.company_name:''}</option>)}
+    </select></label>:
+    <><label><span>Leverancier</span><select className="select" value={supplierId} onChange={e=>{
+      const id=e.target.value;setSupplierId(id);
+      setCategory(suppliers.find(s=>s.id===id)?.default_cost_category||'overig');
+     }} disabled={linked||!canManage}>
+      <option value="">Kies leverancier</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.company_name}</option>)}
+     </select></label>
+     <label><span>Kostensoort</span><select className="select" value={category} onChange={e=>setCategory(e.target.value as InvoiceCostCategory)} disabled={linked||!canManage}>
+      {INVOICE_SUPPLIER_CATEGORIES.map(k=><option key={k} value={k}>{INVOICE_COST_CATEGORY_LABELS[k]}</option>)}
+     </select></label></>}
    </div>
    <div className="invoiceProjectEntry">
-     <label><span>Projectnummer(s) op de PDF</span><input className="input" value={projectText}
+     <label><span>{partyType==='supplier'?'Rentman-projectnummer(s) (optioneel)':'Projectnummer(s) op de PDF'}</span><input className="input" value={projectText}
        placeholder="Bijv. 11057, 11059" onChange={e=>setProjectText(e.target.value)} disabled={linked||!canManage}/></label>
      <small>Vul meerdere nummers gescheiden door een komma in. Dit zijn Rentman-projectnummers, geen interne ID’s.</small>
-     {projectNumbers.length>0&&projectFormatValid&&<div className="invoiceProjectHours">
+     {partyType==='supplier'&&<p className="invoiceProjectHoursHint">Geen project? Laat dit veld leeg. Deze factuur wordt geboekt op de gekozen kostensoort.</p>}
+     {partyType==='crew'&&projectNumbers.length>0&&projectFormatValid&&<div className="invoiceProjectHours">
        {projectNumbers.map(number=><div className="invoiceProjectHoursRow" key={number}>
         <strong>#{number}</strong>
         {([
@@ -90,25 +108,25 @@ function ExtractedInvoice({item,members,canManage,run,busy,openPdf}:{item:Extrac
      {!projectFormatValid&&<p className="invoiceProjectHoursHint">Gebruik alleen geldige projectnummers van 4 tot 8 cijfers.</p>}
     </div>
    <div className="invoiceReviewFooter">
-    <span>{linked?'Deze factuur is gekoppeld en zichtbaar in de crewomgeving.':'Controleer de herkende gegevens met de PDF. Je moet de koppeling altijd zelf bevestigen.'}</span>
+    <span>{linked?'Deze factuur is gekoppeld.':partyType==='supplier'?'Controleer de gegevens met de originele PDF. Projectkoppeling is optioneel.':'Controleer de herkende gegevens met de PDF. Je moet de koppeling altijd zelf bevestigen.'}</span>
     {!linked&&canManage&&<button className="button secondary" type="button" disabled={busy} onClick={()=>{
       if(window.confirm('Deze PDF opnieuw herkennen? Nog niet gekoppelde invoervelden worden opnieuw gevuld.'))
        void run(item.message_id,{action:'extract'});
     }}>Opnieuw herkennen</button>}
     {!linked&&canManage&&<button className="button orange" type="button"
-      disabled={busy||!memberId||!projectFormatValid||!invoiceNumber.trim()||totalAmount.trim()===''||!Number.isFinite(Number(totalAmount))}
-      onClick={()=>run(item.message_id,{action:'link',extractionId:item.id,memberId,invoiceNumber:invoiceNumber.trim(),invoiceDate,totalAmount:Number(totalAmount),
-       projectNumbers,projectLines:projectNumbers.map(project_number=>({
+      disabled={busy||(partyType==='crew'?!memberId:!supplierId)||!projectFormatValid||!invoiceNumber.trim()||totalAmount.trim()===''||!Number.isFinite(Number(totalAmount))}
+      onClick={()=>run(item.message_id,{action:'link',extractionId:item.id,partyType,memberId,supplierId,costCategory:category,invoiceNumber:invoiceNumber.trim(),invoiceDate,totalAmount:Number(totalAmount),
+       projectNumbers,projectLines:partyType==='crew'?projectNumbers.map(project_number=>({
         project_number,work_hours:projectLines[project_number]?.work_hours||null,
         travel_hours:projectLines[project_number]?.travel_hours||null,
         expenses_amount:projectLines[project_number]?.expenses_amount||null
-       }))})}>
-      <Link2 size={15}/> Koppelen aan bartender</button>}
+       })):[]})}>
+      <Link2 size={15}/> {partyType==='crew'?'Koppelen aan bartender':'Koppelen aan leverancier'}</button>}
    </div>
   </>}
  </div>;
 }
-export default function InvoiceInboxReview({emails,extractions,members,canManage}:{emails:Email[];extractions:Extraction[];members:Member[];canManage:boolean}){
+export default function InvoiceInboxReview({emails,extractions,members,suppliers,canManage}:{emails:Email[];extractions:Extraction[];members:Member[];suppliers:InvoiceSupplier[];canManage:boolean}){
  const [busy,setBusy]=useState<string|null>(null);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
@@ -132,7 +150,7 @@ export default function InvoiceInboxReview({emails,extractions,members,canManage
  }
  return <section className="card invoiceReviewSection">
   <div className="invoiceReviewHeading">
-   <div><h2>Binnengekomen facturen</h2><p>E-mails en PDF-bijlagen uit de gekoppelde mailbox. Herkende gegevens moeten worden gecontroleerd voordat ze aan een bartender worden gekoppeld.</p></div>
+   <div><h2>Binnengekomen facturen</h2><p>E-mails en PDF-bijlagen uit de factuurmailbox. Koppel de factuur aan een bartender of leverancier na controle van de originele PDF.</p></div>
    <span className="invoiceReviewCounter">{emails.length} e-mails</span>
   </div>
   {(error||notice)&&<p className={'invoiceReviewMessage '+(error?'error':'success')} role={error?'alert':'status'}>{error||notice}</p>}
@@ -158,7 +176,7 @@ export default function InvoiceInboxReview({emails,extractions,members,canManage
          {canManage&&mail.attachments.map((file,i)=><button key={i} className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'prepare',attachmentIndex:i})}>Handmatig {mail.attachments.length>1?String(i+1):'invullen'}</button>)}
          {canManage&&<button className="button orange" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> {busy===mail.id?'Verwerken…':'Automatisch herkennen'}</button>}</div>
         </div>}
-        {documents.map(item=><ExtractedInvoice key={item.id+':'+(item.processed_at||'')} item={item} members={members} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
+        {documents.map(item=><ExtractedInvoice key={item.id+':'+(item.processed_at||'')} item={item} members={members} suppliers={suppliers} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
         {canManage&&documents.length>0&&documents.every(x=>x.status==='failed')&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> Opnieuw automatisch herkennen</button>}
        </>}
        {canManage&&<div className="invoiceEmailArchiveAction"><button type="button" className="button secondary"
