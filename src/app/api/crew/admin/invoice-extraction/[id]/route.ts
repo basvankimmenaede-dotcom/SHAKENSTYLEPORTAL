@@ -3,6 +3,7 @@ import {createClient} from '@/lib/supabase/server';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {getUserPermissionLevel,permissionAtLeast} from '@/lib/auth';
 import {processInvoiceMessage} from '@/lib/invoice-pdf-extraction';
+import {INVOICE_SUPPLIER_CATEGORIES} from '@/lib/invoice-suppliers';
 
 export const runtime='nodejs';
 export const maxDuration=60;
@@ -64,11 +65,17 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  if(action==='link'){
   const extractionId=typeof body.extractionId==='string'?body.extractionId:'';
   const memberId=typeof body.memberId==='string'?body.memberId:'';
+  const supplierId=typeof body.supplierId==='string'?body.supplierId:'';
+  const partyType=body.partyType==='supplier'?'supplier':'crew';
+  const costCategory=typeof body.costCategory==='string'?body.costCategory:'overig';
   const invoiceNumber=typeof body.invoiceNumber==='string'?body.invoiceNumber.trim():'';
   const invoiceDate=typeof body.invoiceDate==='string'?body.invoiceDate.trim():'';
   const amount=typeof body.totalAmount==='number'?body.totalAmount:Number(body.totalAmount);
-  if(!UUID.test(extractionId)||!UUID.test(memberId)||!/^[A-Za-z0-9][A-Za-z0-9_/.-]{0,63}$/.test(invoiceNumber))
-   return NextResponse.json({error:'Selecteer een crewlid en geef het factuurnummer op zoals het op de PDF staat (1–64 tekens).'}, {status:400});
+  if(!UUID.test(extractionId)||
+   (partyType==='crew'&&!UUID.test(memberId))||
+   (partyType==='supplier'&&(!UUID.test(supplierId)||!INVOICE_SUPPLIER_CATEGORIES.includes(costCategory as typeof INVOICE_SUPPLIER_CATEGORIES[number])))||
+   !/^[A-Za-z0-9][A-Za-z0-9_/.-]{0,63}$/.test(invoiceNumber))
+   return NextResponse.json({error:'Kies een geldige bartender of leverancier en controleer het factuurnummer en de kostensoort.'}, {status:400});
   if(!Number.isFinite(amount)||amount<0||amount>99999999)return NextResponse.json({error:'Controleer het totaalbedrag.'},{status:400});
   if(invoiceDate&&(!/^20\d{2}-\d{2}-\d{2}$/.test(invoiceDate)||Number.isNaN(Date.parse(invoiceDate))))
    return NextResponse.json({error:'Controleer de factuurdatum.'},{status:400});
@@ -91,28 +98,45 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   });
   if(chosenLines.some(line=>[line.work_hours,line.travel_hours,line.expenses_amount].some(v=>typeof v==='number'&&!Number.isFinite(v))))
    return NextResponse.json({error:'Controleer de opgegeven projecturen en onkosten.'},{status:400});
-  const [{data:extraction},{data:member}]=await Promise.all([
+  const [{data:extraction},{data:member},{data:supplier}]=await Promise.all([
    admin.from('invoice_pdf_extractions').select('id,message_id,storage_path,status,linked_invoice_id').eq('id',extractionId).eq('message_id',id).maybeSingle(),
-   admin.from('crew_portal_members').select('id,portal_deleted').eq('id',memberId).maybeSingle()
+   partyType==='crew'?admin.from('crew_portal_members').select('id,portal_deleted').eq('id',memberId).maybeSingle():Promise.resolve({data:null}),
+   partyType==='supplier'?admin.from('invoice_suppliers').select('id,active').eq('id',supplierId).maybeSingle():Promise.resolve({data:null})
   ]);
   if(!extraction||extraction.status==='linked'||extraction.linked_invoice_id)
    return NextResponse.json({error:'Deze bijlage is al gekoppeld of niet gevonden.'},{status:409});
   // An inactive Rentman planning status must not block accounting for historical or outstanding work.
   // A deleted portal crew profile is not available for new links.
-  if(!member||member.portal_deleted)return NextResponse.json({error:'Dit crewprofiel bestaat niet meer of is verwijderd.'},{status:409});
+  if(partyType==='crew'&&(!member||member.portal_deleted))
+   return NextResponse.json({error:'Dit crewprofiel bestaat niet meer of is verwijderd.'},{status:409});
+  if(partyType==='supplier'&&(!supplier||!supplier.active))
+   return NextResponse.json({error:'De leverancier is niet actief of bestaat niet meer.'},{status:409});
   if(!extraction.storage_path.startsWith('incoming/'+id+'/'))
    return NextResponse.json({error:'Ongeldige bestandslocatie.'},{status:400});
+  // An invoice number is unique within the same supplier/crew identity across all projects.
+  // The database also has case-insensitive unique indexes, which handle concurrent requests.
+  const duplicateQuery=admin.from('crew_invoices').select('id,invoice_number,status')
+   .eq(partyType==='crew'?'crew_member_id':'supplier_id',partyType==='crew'?memberId:supplierId)
+   .eq('invoice_number',invoiceNumber).limit(1).maybeSingle();
+  const {data:duplicate,error:duplicateError}=await duplicateQuery;
+  if(duplicateError)return NextResponse.json({error:'De controle op dubbele facturen is niet beschikbaar.'},{status:503});
+  if(duplicate)return NextResponse.json({error:'Deze afzender heeft factuurnummer '+invoiceNumber+' al gebruikt ('+duplicate.status+'). Open de bestaande factuur in het overzicht.'},{status:409});
   const {data:invoice,error:insertError}=await admin.from('crew_invoices').insert({
-   crew_member_id:memberId,invoice_number:invoiceNumber,invoice_date:invoiceDate||null,
+   crew_member_id:partyType==='crew'?memberId:null,
+   supplier_id:partyType==='supplier'?supplierId:null,
+   cost_category:partyType==='supplier'?costCategory:null,
+   invoice_number:invoiceNumber,invoice_date:invoiceDate||null,
    total_amount:amount,status:'received',document_path:extraction.storage_path,
-   project_numbers:selectedNumbers,project_lines:chosenLines
+   project_numbers:selectedNumbers,project_lines:partyType==='crew'?chosenLines:[]
   }).select('id').single();
   if(insertError||!invoice){
-   return NextResponse.json({error:'Koppelen mislukt. Controleer of deze PDF al gekoppeld is.'},{status:409});
+   if(insertError?.code==='23505')return NextResponse.json({error:'Dubbele factuur: dezelfde PDF of hetzelfde factuurnummer is al bij deze afzender geregistreerd.'},{status:409});
+   console.error('Invoice link failed',insertError?.message||'unknown');
+   return NextResponse.json({error:'Koppelen mislukt. Controleer de factuurgegevens en probeer opnieuw.'},{status:409});
   }
   const {error:updateError}=await admin.from('invoice_pdf_extractions')
    .update({status:'linked',linked_invoice_id:invoice.id,reviewed_at:new Date().toISOString(),
-    project_numbers:selectedNumbers,project_lines:chosenLines})
+    project_numbers:selectedNumbers,project_lines:partyType==='crew'?chosenLines:[]})
    .eq('id',extractionId).neq('status','linked');
   if(updateError)console.error('PDF linked but extraction update failed',updateError.message);
   const {data:inbox}=await admin.from('invoice_inbox_messages').select('attachments').eq('id',id).maybeSingle();
@@ -128,7 +152,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   const messageUpdate=admin.from('invoice_inbox_messages').update(patch).eq('id',id);
   if(fullyLinked)await messageUpdate;
   else await messageUpdate.is('linked_invoice_id',null);
-  return NextResponse.json({ok:true,message:'Factuur gekoppeld. De shiftrapportvergelijking verschijnt in het controleoverzicht.'});
+  return NextResponse.json({ok:true,message:partyType==='crew'?
+   'Bartenderfactuur gekoppeld. De shiftrapportvergelijking verschijnt in het controleoverzicht.':
+   'Leveranciersfactuur gekoppeld. De controle en dubbele goedkeuring verschijnen in het overzicht.'});
  }
  if(action==='archive'||action==='restore'){
    const {data:message}=await admin.from('invoice_inbox_messages').select('id,archived_at')
