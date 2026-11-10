@@ -1,5 +1,6 @@
 'use client';
 import {FormEvent,useState} from 'react';
+import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {createClient} from '@/lib/supabase/client';
 import BrandLogo from '@/components/BrandLogo';
@@ -39,5 +40,9 @@ export default function CrewLogin({signedInButNotLinked=false}:{signedInButNotLi
   </form>
   {status&&<div className="error" role="alert">{status}</div>}
   <p className="muted" style={{fontSize:12,lineHeight:1.5,marginTop:22}}>Alleen actieve medewerkers van SHAKENSTYLE kunnen inloggen.</p>
+  <div className="loginPortalSwitch"><strong>Ben je klant of kantoormedewerker?</strong>
+    <p>Gebruik de algemene SHAKENSTYLE Portal-login.</p>
+    <Link href="/login">Open klanten- en kantoorlogin →</Link>
+  </div>
  </section></main>;
 }

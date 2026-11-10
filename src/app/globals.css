@@ -6762,3 +6762,10 @@ table td{font-size:12px}
 .accessDashboardLink:hover{border-color:#f2b67e;box-shadow:0 8px 30px rgba(40,29,18,.06)}
 .accessDashboardLink>.accessAreaGroupHead{flex:1}
 .accessDashboardLink>span{font-size:12px;padding:14px 19px;font-weight:800;color:#dc701c}
+
+/* Separate crew and customer login destinations */
+.loginPortalSwitch{margin:20px 0 13px;padding:15px 17px;border:1px solid #f0e1d2;border-radius:11px;background:#fff9f2;display:grid;gap:6px}
+.loginPortalSwitch strong{font-size:13px;color:#3d3025}
+.loginPortalSwitch p{font-size:12px;color:#85766a;line-height:1.5;margin:0}
+.loginPortalSwitch a{font-weight:800;color:#d5651b;font-size:12px;text-decoration:none}
+.loginPortalSwitch a:hover{text-decoration:underline}

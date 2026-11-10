@@ -42,8 +42,9 @@ function LoginForm() {
     <main className="loginPage">
       <section className="loginCard">
         <div className="loginBrand"><BrandLogo dark /></div>
-        <h1>Storage Portal</h1>
-        <p className="muted">Log in om jouw opgeslagen merken en materialen te bekijken.</p>
+        <p className="muted" style={{fontSize:11,fontWeight:800,letterSpacing:'.07em',marginBottom:5}}>KLANTEN & INTERN</p>
+        <h1>SHAKENSTYLE Portal</h1>
+        <p className="muted">Log in met je klant- of interne account. Voor bartenders is er een aparte crewomgeving.</p>
         {searchParams.get('error') === 'profile' ? <div className="error">Je account bestaat, maar heeft nog geen portalprofiel. Neem contact op met SHAKENSTYLE.</div> : null}
         {searchParams.get('activated') === 'success' ? (
           <div className="success activationSuccess">
@@ -68,6 +69,11 @@ function LoginForm() {
             {loading ? 'Inloggen...' : 'Inloggen'}
           </button>
         </form>
+        <div className="loginPortalSwitch">
+          <strong>Ben je bartender?</strong>
+          <p>Gebruik de aparte crewomgeving voor diensten, uren en facturen.</p>
+          <Link href="/crew">Open Crewportaal →</Link>
+        </div>
         <Link href="/activate" className="textButton">Account activeren</Link>
         <Link href="/forgot-password" className="textButton">Wachtwoord vergeten?</Link>
       </section>
