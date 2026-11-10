@@ -34,13 +34,16 @@ export default function BillingQueue({
   initialItems,
   canManage,
   children,
+  initialProjectNumber = '',
 }: {
   initialItems: BillingQueueItem[];
   canManage: boolean;
   children?: ReactNode;
+  initialProjectNumber?: string;
 }) {
   const [items, setItems] = useState(initialItems);
-  const [filter, setFilter] = useState<Filter>('open');
+  const [filter, setFilter] = useState<Filter>(initialProjectNumber?'all':'open');
+  const [projectNumber,setProjectNumber] = useState(initialProjectNumber);
   const [pending, setPending] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState('');
 
@@ -54,8 +57,9 @@ export default function BillingQueue({
   }, { open: 0, invoiced: 0, skip: 0 }), [items]);
 
   const visible = useMemo(() => (
-    filter === 'all' ? items : items.filter((item) => item.status === filter)
-  ), [filter, items]);
+    items.filter(item=>(filter==='all'||item.status===filter)&&
+      (!projectNumber||String(item.rentman_project_number||'').includes(projectNumber)))
+  ), [filter, items, projectNumber]);
 
   async function updateStatus(item: BillingQueueItem, status: BillingStatus) {
     if (pending.has(item.id)) return;
@@ -106,6 +110,10 @@ export default function BillingQueue({
         <button type="button" onClick={() => setFilter('all')} className={filter === 'all' ? 'active' : ''}>Alles</button>
       </nav>
 
+      {initialProjectNumber&&<div className="billingProjectFilter"><label>Projectnummer
+       <input className="input" value={projectNumber} onChange={e=>setProjectNumber(e.target.value)} placeholder="Bijv. 11057"/></label>
+       <button type="button" className="button secondary" onClick={()=>{setProjectNumber('');setFilter('open');}}>Alle projecten tonen</button>
+      </div>}
       {children}
 
       {error ? <div className="notice">{error}</div> : null}

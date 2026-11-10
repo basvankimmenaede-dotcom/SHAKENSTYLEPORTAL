@@ -7,7 +7,7 @@ export default async function InvoiceProcessingSettingsPage(){
  await requireAdmin();
  const [settings,accounts]=await Promise.all([getInvoiceProcessingSettings(),listEligibleApprovers()]);
  return <SettingsWorkspace active="invoice-processing" title="Factuurworkflow"
-  description="Beheer Google Document AI, de twee goedkeurders en het adres voor de boekhouding.">
+  description="Beheer de twee goedkeurders, het boekhoudadres en bekijk de eigen PDF-herkenning.">
    <InvoiceProcessingSettings initial={publicProcessingSettings(settings)} accounts={accounts}/>
  </SettingsWorkspace>;
 }

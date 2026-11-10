@@ -5,7 +5,9 @@ import { requireModulePermission } from '@/lib/auth';
 import { amsterdamBillingDateKey, billingSyncNeeded, syncBillingQueueOncePerDay } from '@/lib/billing';
 import { getPlanningProjectEquipmentGroups, getPlanningProjects } from '@/lib/rentman';
 
-export default async function BillingPage() {
+export default async function BillingPage({searchParams}:{searchParams:Promise<{project?:string}>}) {
+  const params=await searchParams;
+  const projectNumber=/^\d{4,8}$/.test(params.project||'')?params.project||'':'';
   const { supabase, user, permissionLevel } = await requireModulePermission('billing', 'view');
   const canManage = permissionLevel === 'manage';
 
@@ -51,7 +53,7 @@ export default async function BillingPage() {
         </div>
       </section>
 
-      <BillingQueue initialItems={billingItems} canManage={canManage}>
+      <BillingQueue initialItems={billingItems} canManage={canManage} initialProjectNumber={projectNumber}>
         {canManage ? (
           <details className="card billingManualCard">
             <summary>+ Handmatige facturatieregel toevoegen</summary>
