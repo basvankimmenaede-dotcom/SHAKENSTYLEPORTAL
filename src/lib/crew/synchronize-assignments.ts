@@ -1,6 +1,7 @@
 import {NextResponse} from 'next/server';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {getPlanningCrewAssignmentsForRange,getPlanningProjects} from '@/lib/rentman';
+import {updateCrewProjectCatalogFromPlanning} from '@/lib/invoice-project-directory';
 
 function dateKey(offset:number){
  const d=new Date(Date.now()+offset*86400000);
@@ -22,6 +23,7 @@ export async function synchronizeCrewAssignments(){
   ]);
   if(membersResult.error)throw membersResult.error;
   const memberIds=new Map((membersResult.data||[]).map(m=>[Number(m.rentman_crew_id),m.id]));
+  await updateCrewProjectCatalogFromPlanning(planning.allProjects);
   const projects=new Map(planning.allProjects.map(p=>[p.id,p]));
   let synced=0,skipped=0;
   for(const assignment of rentmanAssignments){
@@ -37,7 +39,8 @@ export async function synchronizeCrewAssignments(){
    const locationName=location?.displayname||location?.name||[location?.visit_street,location?.visit_number,location?.visit_city].filter(Boolean).join(' ')||null;
    const {error}=await admin.from('crew_portal_assignments').upsert({
     rentman_projectcrew_id:assignment.id,crew_member_id:memberId,
-    rentman_project_id:projectId,project_name:project?.name||`Rentman project #${projectId}`,
+    rentman_project_id:projectId,rentman_project_number:project?.number!=null?String(project.number):null,
+    project_name:project?.name||`Rentman project #${projectId}`,
     project_location:locationName,starts_at:start,ends_at:end
    },{onConflict:'rentman_projectcrew_id'});
    if(error){skipped++;continue;}
