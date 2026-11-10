@@ -20,8 +20,9 @@ export default async function CrewInvoiceOfficePage(){
     admin.from('invoice_pdf_extractions').select('id,message_id,attachment_index,filename,storage_path,status,invoice_number,invoice_date,total_amount,supplier_name,ai_fields,detected_emails,suggested_crew_member_id,match_strength,match_reason,extraction_notes,linked_invoice_id').order('created_at',{ascending:false}).limit(300)
   ]);
   const names=new Map((membersResult.data||[]).map(m=>[m.id,m.full_name]));
-  const activeCrew=(membersResult.data||[]).filter(m=>m.active&&!m.portal_deleted).map(m=>({
-    id:m.id,full_name:m.full_name,company_name:m.company_name||null,
+  // Accounting can receive invoices from both active and inactive Rentman crew.
+  const activeCrew=(membersResult.data||[]).filter(m=>!m.portal_deleted).map(m=>({
+    id:m.id,full_name:m.full_name,active:Boolean(m.active),company_name:m.company_name||null,
     company_alias:m.company_alias||null,invoice_email:m.invoice_email||null,
     email:m.email||null,rentman_email:m.rentman_email||null,login_email_override:m.login_email_override||null
   })).sort((a,b)=>a.full_name.localeCompare(b.full_name,'nl'));

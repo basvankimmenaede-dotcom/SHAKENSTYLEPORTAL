@@ -15,7 +15,7 @@ export async function processInvoiceMessage(messageId:string){
  const attachments=(Array.isArray(message.attachments)?message.attachments:[]) as Attachment[];
  if(!attachments.length)return {processed:0,failed:0};
  const {data:members,error:membersError}=await admin.from('crew_portal_members')
-  .select('id,full_name,email,rentman_email,login_email_override,invoice_email,company_name,company_alias').eq('active',true).eq('portal_deleted',false);
+  .select('id,full_name,email,rentman_email,login_email_override,invoice_email,company_name,company_alias').eq('portal_deleted',false);
  if(membersError)throw new Error('Crewleden konden niet worden opgehaald.');
  let processed=0,failed=0;
  for(const [i,attachment] of attachments.slice(0,10).entries()){

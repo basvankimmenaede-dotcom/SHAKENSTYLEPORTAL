@@ -72,11 +72,13 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
    return NextResponse.json({error:'Controleer de factuurdatum.'},{status:400});
   const [{data:extraction},{data:member}]=await Promise.all([
    admin.from('invoice_pdf_extractions').select('id,message_id,storage_path,status,linked_invoice_id').eq('id',extractionId).eq('message_id',id).maybeSingle(),
-   admin.from('crew_portal_members').select('id,active').eq('id',memberId).maybeSingle()
+   admin.from('crew_portal_members').select('id,portal_deleted').eq('id',memberId).maybeSingle()
   ]);
   if(!extraction||extraction.status==='linked'||extraction.linked_invoice_id)
    return NextResponse.json({error:'Deze bijlage is al gekoppeld of niet gevonden.'},{status:409});
-  if(!member?.active)return NextResponse.json({error:'Het gekozen crewlid is niet actief.'},{status:409});
+  // An inactive Rentman planning status must not block accounting for historical or outstanding work.
+  // A deleted portal crew profile is not available for new links.
+  if(!member||member.portal_deleted)return NextResponse.json({error:'Dit crewprofiel bestaat niet meer of is verwijderd.'},{status:409});
   if(!extraction.storage_path.startsWith('incoming/'+id+'/'))
    return NextResponse.json({error:'Ongeldige bestandslocatie.'},{status:400});
   const {data:invoice,error:insertError}=await admin.from('crew_invoices').insert({
