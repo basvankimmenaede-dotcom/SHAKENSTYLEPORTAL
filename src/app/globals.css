@@ -6769,3 +6769,11 @@ table td{font-size:12px}
 .loginPortalSwitch p{font-size:12px;color:#85766a;line-height:1.5;margin:0}
 .loginPortalSwitch a{font-weight:800;color:#d5651b;font-size:12px;text-decoration:none}
 .loginPortalSwitch a:hover{text-decoration:underline}
+
+/* Independent crew portal access control */
+.crewProfileAccessControl{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:16px 18px;background:#fff9f3;border:1px solid #efdcc9;border-radius:12px}
+.crewProfileAccessControl>div{display:grid;gap:5px;min-width:0;flex:1}
+.crewProfileAccessControl strong{font-size:13px;color:#33271f}
+.crewProfileAccessControl small{color:#817164;font-size:11px;line-height:1.5}
+.crewProfileAccessControl .button{white-space:nowrap;min-height:40px}
+@media(max-width:640px){.crewProfileAccessControl .button{width:100%}}

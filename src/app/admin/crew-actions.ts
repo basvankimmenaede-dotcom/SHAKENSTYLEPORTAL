@@ -27,3 +27,24 @@ export async function saveCrewInvoiceIdentity(data:FormData){
  revalidatePath('/planning/crew-invoices');
  return {ok:true,message:'Bedrijfsgegevens opgeslagen.'};
 }
+
+/** Portal access is managed independently from Rentman's planning active flag. */
+export async function setCrewPortalAccess(crewMemberId:string,enabled:boolean){
+ const {user}=await requireAdmin();
+ if(!uuid.test(crewMemberId)||typeof enabled!=='boolean')return {ok:false,message:'Ongeldige aanvraag.'};
+ const admin=createAdminClient();
+ const {data:member,error:loadError}=await admin.from('crew_portal_members')
+  .select('id,portal_enabled,portal_deleted,manual_disabled').eq('id',crewMemberId).maybeSingle();
+ if(loadError||!member||member.portal_deleted)return {ok:false,message:'Dit crewprofiel is niet beschikbaar.'};
+ if(enabled&&member.manual_disabled)return {ok:false,message:'Dit account heeft nog een aparte handmatige blokkade. Controleer dit eerst met beheer.'};
+ if(member.portal_enabled===enabled)return {ok:true,message:enabled?'Portaaltoegang staat al aan.':'Portaaltoegang staat al uit.'};
+ const {data:updated,error}=await admin.from('crew_portal_members')
+  .update({portal_enabled:enabled,portal_access_updated_by:user.id,portal_access_updated_at:new Date().toISOString()})
+  .eq('id',crewMemberId).eq('portal_enabled',!enabled).select('id').maybeSingle();
+ if(error||!updated)return {ok:false,message:'Opslaan mislukt. Vernieuw de pagina en probeer opnieuw.'};
+ revalidatePath('/admin/users/crew');
+ revalidatePath('/admin/personeel/inloggen');
+ revalidatePath('/admin/personeel');
+ revalidatePath('/admin/accounts');
+ return {ok:true,message:enabled?'Portaaltoegang ingeschakeld.':'Portaaltoegang uitgeschakeld.'};
+}

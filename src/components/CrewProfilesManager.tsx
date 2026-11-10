@@ -1,18 +1,30 @@
 'use client';
 import {useMemo,useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
-import {saveCrewInvoiceIdentity} from '@/app/admin/crew-actions';
+import {saveCrewInvoiceIdentity,setCrewPortalAccess} from '@/app/admin/crew-actions';
 import {Search,Building2} from 'lucide-react';
 
 type Member={
  id:string;rentman_crew_id:number;full_name:string;email:string|null;rentman_email:string|null;
  login_email_override:string|null;company_name:string|null;company_alias:string|null;
- invoice_email:string|null;active:boolean;portal_deleted:boolean;manual_disabled:boolean;last_synced_at:string|null;
+ invoice_email:string|null;active:boolean;portal_enabled:boolean;portal_deleted:boolean;manual_disabled:boolean;last_synced_at:string|null;
 };
 function CrewEditor({member}:{member:Member}){
  const [saving,startSaving]=useTransition();
+ const [portalBusy,startPortalChange]=useTransition();
  const [message,setMessage]=useState<{ok:boolean;message:string}|null>(null);
  const router=useRouter();
+ function togglePortal(){
+  if(portalBusy||saving)return;
+  if(member.portal_enabled&&!window.confirm('Portaaltoegang voor '+member.full_name+' uitschakelen?'))return;
+  startPortalChange(async()=>{
+   try{
+    const result=await setCrewPortalAccess(member.id,!member.portal_enabled);
+    setMessage(result);
+    if(result.ok)router.refresh();
+   }catch{setMessage({ok:false,message:'Portaaltoegang kon niet worden aangepast.'});}
+  });
+ }
  function onSubmit(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();
   const data=new FormData(e.currentTarget);
@@ -31,9 +43,17 @@ function CrewEditor({member}:{member:Member}){
    <div><h2>{member.full_name}</h2><p>Rentman-medewerker #{member.rentman_crew_id}</p></div>
   </div>
   <div className="crewProfileStatusStrip">
-   <span className={member.active?'good':'warn'}>Rentman: {member.active?'actief':'inactief'}</span>
-   <span className={member.manual_disabled?'warn':'good'}>Handmatig geblokkeerd: {member.manual_disabled?'ja':'nee'}</span>
+   <span className={member.portal_enabled?'good':'warn'}>Portaal: {member.portal_enabled?'toegang aan':'toegang uit'}</span>
+   <span>Rentman (planning): {member.active?'actief':'inactief'}</span>
+   {member.manual_disabled&&<span className="warn">Extra handmatige blokkade</span>}
    <span>Laatste synchronisatie: {member.last_synced_at?new Date(member.last_synced_at).toLocaleDateString('nl-NL'):'onbekend'}</span>
+  </div>
+  <div className="crewProfileAccessControl">
+   <div><strong>SHAKENSTYLE Crew Portal</strong><small>Toegang wordt hier beheerd en niet meer door de actieve status in Rentman bepaald.</small></div>
+   <button type="button" className={'button '+(member.portal_enabled?'secondary':'orange')} onClick={togglePortal}
+    disabled={portalBusy||saving||Boolean(member.manual_disabled&&!member.portal_enabled)}>
+    {portalBusy?'Opslaan…':member.portal_enabled?'Portaaltoegang uitschakelen':'Portaaltoegang inschakelen'}
+   </button>
   </div>
   <div className="crewProfileFields">
    <label><span>Bedrijfsnaam op de factuur</span>
@@ -60,21 +80,21 @@ function CrewEditor({member}:{member:Member}){
 export default function CrewProfilesManager({members}:{members:Member[]}){
  const [query,setQuery]=useState('');
  const [filter,setFilter]=useState<'active'|'all'>('active');
- const [selectedId,setSelectedId]=useState(members.find(m=>m.active&&!m.portal_deleted)?.id||members[0]?.id||'');
+ const [selectedId,setSelectedId]=useState(members.find(m=>m.portal_enabled&&!m.portal_deleted)?.id||members[0]?.id||'');
  const filtered=useMemo(()=>{
   const q=query.trim().toLowerCase();
-  return members.filter(m=>!m.portal_deleted&&(filter==='all'||m.active))
+  return members.filter(m=>!m.portal_deleted&&(filter==='all'||(m.portal_enabled&&!m.manual_disabled)))
    .filter(m=>!q||[m.full_name,m.company_name,m.company_alias,m.email,m.rentman_email,m.invoice_email]
     .some(v=>(v||'').toLowerCase().includes(q)));
  },[members,filter,query]);
  const selected=filtered.find(m=>m.id===selectedId)||filtered[0];
- const incomplete=members.filter(m=>m.active&&!m.portal_deleted&&(!m.company_name||!m.invoice_email)).length;
+ const incomplete=members.filter(m=>m.portal_enabled&&!m.portal_deleted&&(!m.company_name||!m.invoice_email)).length;
  return <div className="crewProfilesWorkspace">
   <aside className="crewProfileList">
-   <header><h2>Bartenders</h2><span>{members.filter(m=>m.active&&!m.portal_deleted).length} actief</span></header>
+   <header><h2>Bartenders</h2><span>{members.filter(m=>m.portal_enabled&&!m.portal_deleted&&!m.manual_disabled).length} actief</span></header>
    <div className="crewProfileFilters">
     <div className="crewProfileSearch"><Search size={15}/><input type="search" placeholder="Naam, bedrijf of e-mail…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
-    <div className="crewProfileToggle"><button type="button" className={filter==='active'?'active':''} onClick={()=>setFilter('active')}>Rentman actief</button><button type="button" className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Alles</button></div>
+    <div className="crewProfileToggle"><button type="button" className={filter==='active'?'active':''} onClick={()=>setFilter('active')}>Portaal actief</button><button type="button" className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Alles</button></div>
    </div>
    <div className="crewProfileRows">{filtered.map(m=><button type="button" key={m.id} onClick={()=>setSelectedId(m.id)}
     className={'crewProfileRow '+(selected?.id===m.id?'selected':'')}>
@@ -86,7 +106,7 @@ export default function CrewProfilesManager({members}:{members:Member[]}){
    </div>
   </aside>
   <section className="crewProfileContent">
-   <div className="crewProfileBanner"><Building2 size={17}/><span>{incomplete} actieve crewleden hebben nog geen volledige bedrijfsnaam en factuur e-mailadres.</span></div>
+   <div className="crewProfileBanner"><Building2 size={17}/><span>{incomplete} crewleden met portaaltoegang hebben nog geen volledige bedrijfsnaam en factuur e-mailadres.</span></div>
    {selected?<CrewEditor key={selected.id} member={selected}/>:<div className="notice">Selecteer een crewlid in het overzicht.</div>}
   </section>
  </div>;
