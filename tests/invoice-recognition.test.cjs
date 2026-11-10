@@ -13,12 +13,12 @@ function loadTypeScriptModule(file){
  const exported={};
  const context={module:{exports:exported},exports:exported,require:(name)=>{
   if(name==='server-only')return {};
-  throw new Error('Unexpected runtime dependency '+name);
+  return require(name);
  },console,Buffer,Date,Set,Map,Number,String};
  vm.runInNewContext(output,context,{filename:file});
  return context.module.exports;
 }
-const {recognizeInvoiceText}=loadTypeScriptModule('src/lib/local-invoice-reader.ts');
+const {recognizeInvoiceText,readInvoicePdfText}=loadTypeScriptModule('src/lib/local-invoice-reader.ts');
 const {findCrewInvoiceMatch}=loadTypeScriptModule('src/lib/crew-invoice-matching.ts');
 
 test('Dutch invoice 99, EU date and VAT-inclusive amount',()=>{
@@ -69,4 +69,32 @@ test('Contradictory supplier and company evidence blocks a strong match',()=>{
  },crew);
  assert.equal(result.suggestedCrewMemberId,null);
  assert.equal(result.strength,'ambiguous');
+});
+
+function makePdf(){
+ const text='BT /F1 13 Tf 55 745 Td (Invoice No. 99) Tj 0 -24 Td (Invoice date: 2026-10-26) Tj 0 -24 Td (Total 195.00) Tj ET';
+ const objects=[
+  '<< /Type /Catalog /Pages 2 0 R >>',
+  '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  '<< /Length '+Buffer.byteLength(text)+' >>\\nstream\\n'+text+'\\nendstream'
+ ];
+ let pdf='%PDF-1.4\\n';
+ const offsets=[0];
+ for(let i=0;i<objects.length;i++){
+  offsets.push(Buffer.byteLength(pdf));
+  pdf+=(i+1)+' 0 obj\\n'+objects[i]+'\\nendobj\\n';
+ }
+ const xref=Buffer.byteLength(pdf);
+ pdf+='xref\\n0 '+(objects.length+1)+'\\n0000000000 65535 f \\n';
+ for(const off of offsets.slice(1))pdf+=String(off).padStart(10,'0')+' 00000 n \\n';
+ pdf+='trailer\\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\\nstartxref\\n'+xref+'\\n%%EOF';
+ return Buffer.from(pdf);
+}
+test('pdf-parse extracts text on the Node server without DOMMatrix crashes',async()=>{
+ const pdf=makePdf();
+ const text=await readInvoicePdfText(pdf);
+ assert.match(text,/Invoice No\\. 99/);
+ assert.match(text,/2026-10-26/);
 });
