@@ -8,10 +8,12 @@ import InvoiceArchiveList from '@/components/InvoiceArchiveList';
 import {getInvoiceProcessingSettings,listEligibleApprovers} from '@/lib/invoice-processing-settings';
 import {findCrewInvoiceMatch} from '@/lib/crew-invoice-matching';
 import {loadCrewInvoiceComparisons} from '@/lib/invoice-comparison-loader';
+import InvoiceSupplierQuickAdd from '@/components/InvoiceSupplierQuickAdd';
+import type {InvoiceSupplier} from '@/lib/invoice-suppliers';
 
 export const dynamic='force-dynamic';
 const PAGE_SIZE=25;
-const INVOICE_FIELDS='id,crew_member_id,invoice_number,invoice_date,total_amount,status,correction_reason,created_at,updated_at,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at,forward_error,project_numbers,project_lines';
+const INVOICE_FIELDS='id,crew_member_id,supplier_id,cost_category,invoice_number,invoice_date,total_amount,status,correction_reason,created_at,updated_at,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at,forward_error,project_numbers,project_lines';
 const REVIEW_FIELDS='id,message_id,attachment_index,filename,storage_path,status,invoice_number,invoice_date,total_amount,supplier_name,ai_fields,detected_emails,text_preview,processing_provider,processed_at,suggested_crew_member_id,match_strength,match_reason,extraction_notes,linked_invoice_id,project_numbers,project_lines';
 type Query={view?:string;page?:string;inboxPage?:string;q?:string};
 function pager(view:string,page:number,count:number,other:string=''){
@@ -32,15 +34,19 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  const inboxPage=Math.max(1,Math.min(200,Number.parseInt(query.inboxPage||'1',10)||1));
  const search=(query.q||'').replace(/[^\p{L}\p{N}\s._-]/gu,'').trim().slice(0,65);
  const db=createAdminClient();
- const [config,approvers,membersResult,imapResult,openCount,archiveCount,inboxCount]=await Promise.all([
+ const [config,approvers,membersResult,suppliersResult,imapResult,openCount,archiveCount,inboxCount]=await Promise.all([
   getInvoiceProcessingSettings(),listEligibleApprovers(),
   db.from('crew_portal_members').select('id,full_name,email,rentman_email,login_email_override,company_name,company_alias,invoice_email,portal_deleted'),
+  db.from('invoice_suppliers').select('id,company_name,contact_email,default_cost_category').eq('active',true).order('company_name'),
   db.from('invoice_imap_settings').select('username,enabled,tested_at').eq('id',1).maybeSingle(),
   db.from('crew_invoices').select('id',{count:'exact',head:true}).in('status',['received','in_review','correction_sending','correction_needed']),
   db.from('crew_invoices').select('id',{count:'exact',head:true}).in('status',['approved','rejected']),
   db.from('invoice_inbox_messages').select('id',{count:'exact',head:true}).is('archived_at',null)
  ]);
  if(membersResult.error)throw new Error('Crewaccounts konden niet worden geladen.');
+ if(suppliersResult.error)throw new Error('Leveranciers konden niet worden geladen.');
+ const suppliers=(suppliersResult.data||[]) as InvoiceSupplier[];
+ const supplierNames=new Map(suppliers.map(item=>[item.id,item.company_name]));
  const members=(membersResult.data||[]).filter(m=>!m.portal_deleted).map(m=>({
   id:m.id,full_name:m.full_name,company_name:m.company_name||null,
   company_alias:m.company_alias||null,invoice_email:m.invoice_email||null,
@@ -90,7 +96,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  if(invoicesResult.error||inboxResult?.error||archivedEmailsResult?.error)
   throw new Error('Het factuuroverzicht kon niet volledig worden geladen.');
  type RawInvoice={
-  id:string;crew_member_id:string;invoice_number:string;total_amount:number|null;status:string;
+  id:string;crew_member_id:string|null;supplier_id:string|null;cost_category:string|null;invoice_number:string;total_amount:number|null;status:string;
   correction_reason:string|null;created_at:string;updated_at:string;approved_first_by:string|null;approved_second_by:string|null;
   approval_policy_one:string|null;approval_policy_two:string|null;forward_to:string|null;
   forward_attempted_at:string|null;forwarded_at:string|null;forward_error:string|null;
@@ -110,13 +116,14 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  ]);
  if(linkedPdfs.error||openPdfs.error)throw new Error('PDF-koppelingen konden niet worden geladen.');
  const linkedMap=new Map((linkedPdfs.data||[]).map(e=>[e.linked_invoice_id,e.id]));
- const comparisons=await loadCrewInvoiceComparisons(rawInvoices.map(i=>({
-  id:i.id,crew_member_id:i.crew_member_id,project_numbers:i.project_numbers,project_lines:i.project_lines
+ const comparisons=await loadCrewInvoiceComparisons(rawInvoices.filter(i=>i.crew_member_id!==null).map(i=>({
+  id:i.id,crew_member_id:i.crew_member_id!,project_numbers:i.project_numbers,project_lines:i.project_lines
  })));
  const allMapped=rawInvoices.map(inv=>({
   ...inv,project_numbers:inv.project_numbers||[],
   project_lines:Array.isArray(inv.project_lines)?inv.project_lines:[],
-  extraction_id:linkedMap.get(inv.id)||null,name:names.get(inv.crew_member_id)||'Onbekende medewerker'
+  extraction_id:linkedMap.get(inv.id)||null,
+  name:inv.supplier_id?(supplierNames.get(inv.supplier_id)||'Onbekende leverancier'):(names.get(inv.crew_member_id||'')||'Onbekende medewerker')
  }));
  const visibleInvoices=view==='differences'?allMapped.filter(inv=>['difference','missing_report'].includes(comparisons[inv.id]?.status)) :allMapped;
  const filteredInvoices=view==='differences'?visibleInvoices.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE):visibleInvoices;
@@ -133,6 +140,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  });
  const archiveInvoices=allMapped.map(inv=>({
   id:inv.id,invoice_number:inv.invoice_number,name:inv.name,total_amount:inv.total_amount,
+  supplier_id:inv.supplier_id,cost_category:inv.cost_category,
   status:inv.status,correction_reason:inv.correction_reason,updated_at:inv.updated_at,
   forwarded_at:inv.forwarded_at,forward_to:inv.forward_to,extraction_id:inv.extraction_id,
   project_numbers:inv.project_numbers
@@ -141,7 +149,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  return <main className="container invoiceOfficePage">
   <section className="hero"><div>
    <h1>Inkomende facturen</h1>
-   <p>Projectnummers, factuururen en shiftrapporten naast elkaar. Kantoor controleert de verschillen voordat twee accounts goedkeuren.</p>
+   <p>Bartenderfacturen vergelijken we met shiftrapporten; overige leveranciersfacturen controleren we op leverancier, kostensoort en eventueel project. Twee accounts keuren goed.</p>
    <p>Mailbox: <strong>{imapResult.data?.username||'Nog geen mailbox'}</strong> ·
      {imapResult.data?.enabled?' automatisch ophalen actief':' handmatig ophalen'}.</p>
   </div></section>
@@ -155,6 +163,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
    <button className="button secondary" type="submit">Zoeken</button>
    {search&&<Link className="button secondary" href={'/planning/crew-invoices?view='+view}>Wissen</Link>}
   </form>
+  <InvoiceSupplierQuickAdd canManage={canManage}/>
   {view==='archive'?<>
    <div className="invoiceSectionHeader"><h2>Afgehandelde en afgekeurde facturen</h2>
     <span>{invoicesResult.count||0} facturen · 25 per pagina</span></div>
@@ -176,7 +185,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
     <div className="invoiceSectionHeader"><h2>Nog te verwerken e-mails</h2>
      <span>{inboxResult?.count||0} openstaand</span></div>
     <InvoiceInboxReview emails={emailRows.map(m=>({...m,attachments:Array.isArray(m.attachments)?m.attachments as {filename:string;path:string;size:number}[]:[]}))}
-     extractions={extractRows} members={members} canManage={canManage}/>
+     extractions={extractRows} members={members} suppliers={suppliers} canManage={canManage}/>
     {inboxPage>1||((inboxResult?.count||0)>PAGE_SIZE)?<div className="invoicePageNav">
      <span>Pagina {inboxPage} van {Math.ceil((inboxResult?.count||0)/PAGE_SIZE)||1}</span>
      {inboxPage>1&&<Link className="button secondary" href={'?view=open&inboxPage='+(inboxPage-1)}>Vorige e-mails</Link>}
