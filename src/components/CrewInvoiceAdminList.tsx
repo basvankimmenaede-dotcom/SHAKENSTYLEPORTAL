@@ -5,6 +5,7 @@ import {useRouter} from 'next/navigation';
 import {CheckCircle2,Clock3,MailCheck,AlertTriangle} from 'lucide-react';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
 import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
+import {canDeclineInvoice} from '@/lib/invoice-decision';
 
 type Invoice={
  id:string;extraction_id:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
@@ -19,6 +20,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
  configuredOne:string;configuredTwo:string;configuredForwardTo:string;comparisons:Record<string,InvoiceCheck>;
 }){
  const [selected,setSelected]=useState<string|null>(null);
+ const [decision,setDecision]=useState<'reject'|'correct'>('correct');
  const [reason,setReason]=useState('');
  const [error,setError]=useState('');
  const [saving,setSaving]=useState<string|null>(null);
@@ -43,7 +45,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
  const router=useRouter();
  const labels:Record<string,string>={
   received:'Ontvangen',in_review:'In behandeling',correction_sending:'Correctiemail controleren',
-  correction_needed:'Correctie nodig',approved:'Goedgekeurd'
+  correction_needed:'Correctie nodig',rejected:'Afgekeurd',approved:'Goedgekeurd'
  };
  const names=new Map(approvers.map(a=>[a.id,a.full_name]));
  const ready=Boolean(configuredOne&&configuredTwo&&configuredOne!==configuredTwo&&configuredForwardTo);
@@ -56,7 +58,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const contentType=response.headers.get('content-type')||'';
    const result=contentType.includes('application/json')?await response.json():{error:'Er is een serverfout opgetreden. Vernieuw het overzicht.'};
    if(!response.ok)throw Error(result.error||'Verzenden mislukt.');
-   setSelected(null);setReason('');setNotice(result.message||'Verwerkt.');router.refresh();
+   setSelected(null);setReason('');setDecision('correct');setNotice(result.message||'Verwerkt.');router.refresh();
   }catch(e){setError(e instanceof Error?e.message:'Actie mislukt.');}
   finally{setSaving(null);}
  }
@@ -69,6 +71,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const approverIds=[inv.approval_policy_one||configuredOne,inv.approval_policy_two||configuredTwo];
    const allowed=canManage&&ready&&approverIds.includes(currentUserId)&&currentUserId!==first&&!second&&!inv.forward_attempted_at
      &&['received','in_review'].includes(inv.status);
+   const canDecline=canDeclineInvoice(inv,currentUserId,canManage,configuredOne,configuredTwo);
    const forwarding=Boolean(second&&!inv.forwarded_at);
    const approved=inv.status==='approved'&&Boolean(inv.forwarded_at);
    const review=comparisons[inv.id]||{status:'unverified' as const,projects:[]};
@@ -78,7 +81,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
      <div><strong>{inv.name}</strong>
       <span>{inv.invoice_number} · {inv.total_amount===null?'Bedrag onbekend':Number(inv.total_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}</span>
       <span className="invoiceNumberList">{(inv.project_numbers||[]).length?(inv.project_numbers||[]).map(n=>'#'+n).join(' · '):'Nog geen projectnummer'}</span>
-     </div><span className={'invoiceReviewStatus '+(approved?'linked':forwarding?'warning':'')}>{forwarding?'Doorsturen controleren':labels[inv.status]||'In behandeling'}</span>
+     </div><span className={'invoiceReviewStatus '+(approved?'linked':inv.status==='rejected'?'rejected':forwarding?'warning':'')}>{forwarding?'Doorsturen controleren':labels[inv.status]||'In behandeling'}</span>
     </div>
     {inv.correction_reason&&<p className="muted">Correctiereden: {inv.correction_reason}</p>}
     <InvoiceShiftComparison comparison={review}/>
@@ -127,15 +130,28 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
       }}>
       {saving===inv.id?'Verwerken…':first?'Tweede akkoord & doorsturen':'Factuur goedkeuren (1/2)'}
      </button>}
-     {canManage&&['received','in_review'].includes(inv.status)&&!first&&
-      (selected===inv.id?<div className="invoiceApprovalCorrection">
-       <label htmlFor={'reason-'+inv.id}>Wat moet de bartender aanpassen?</label>
+     {canDecline&&(selected===inv.id?<div className="invoiceApprovalCorrection">
+       <strong>{decision==='reject'?'Factuur afkeuren':'Correctie aanvragen bij de bartender'}</strong>
+       <label htmlFor={'reason-'+inv.id}>{decision==='reject'?'Waarom keur je deze factuur af?':'Wat moet de bartender aanpassen?'}</label>
        <textarea id={'reason-'+inv.id} className="input" rows={3} maxLength={1500} value={reason}
-        onChange={e=>setReason(e.target.value)} placeholder="Beschrijf het verschil met het shiftrapport."/>
-       <div><button className="button secondary" type="button" disabled={Boolean(saving)||reason.trim().length<8}
-        onClick={()=>post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/request-correction',{reason:reason.trim()})}>Correctiemail versturen</button>
-       <button className="button secondary" type="button" disabled={Boolean(saving)} onClick={()=>{setSelected(null);setReason('');setError('')}}>Annuleren</button></div>
-      </div>:<button className="button secondary" type="button" onClick={()=>{setSelected(inv.id);setReason('');setError('')}}>Correctie aanvragen</button>)}
+        onChange={e=>setReason(e.target.value)} placeholder="Bijvoorbeeld: op de factuur staat 5,5 uur, het shiftrapport vermeldt 5,75 uur."/>
+       <p className="muted">{decision==='reject'
+        ?'Afkeuren verplaatst de factuur naar het archief. Er gaat geen e-mail uit; het eerste akkoord vervalt.'
+        :'De bartender ontvangt een correctiemail. Het eerste akkoord vervalt; de nieuwe PDF moet opnieuw worden gecontroleerd.'}</p>
+       <div><button className={decision==='reject'?'button secondary':'button orange'} type="button"
+        disabled={Boolean(saving)||reason.trim().length<8}
+        onClick={()=>{
+         if(decision==='reject'&&!window.confirm('Factuur afkeuren en niet doorsturen naar de boekhouding?'))return;
+         void post(inv.id,'/api/crew/admin/invoices/'+inv.id+(decision==='reject'?'/reject':'/request-correction'),{reason:reason.trim()});
+        }}>{saving===inv.id?'Verwerken…':decision==='reject'?'Afkeuring bevestigen':'Correctiemail versturen'}</button>
+       <button className="button secondary" type="button" disabled={Boolean(saving)}
+        onClick={()=>{setSelected(null);setReason('');setError('')}}>Annuleren</button></div>
+      </div>:<div className="invoiceDeclineActions">
+       <button className="button secondary" type="button" disabled={Boolean(saving)}
+        onClick={()=>{setSelected(inv.id);setDecision('reject');setReason('');setError('')}}>Afkeuren</button>
+       <button className="button secondary" type="button" disabled={Boolean(saving)}
+        onClick={()=>{setSelected(inv.id);setDecision('correct');setReason('');setError('')}}>Correctie aanvragen</button>
+      </div>)}
     </div>
    </section>;
   })}

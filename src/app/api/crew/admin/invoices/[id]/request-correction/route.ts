@@ -3,11 +3,16 @@ import nodemailer from 'nodemailer';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getUserPermissionLevel, permissionAtLeast } from '@/lib/auth';
+import {getInvoiceProcessingSettings} from '@/lib/invoice-processing-settings';
+import {canDeclineInvoice} from '@/lib/invoice-decision';
 
 export const runtime='nodejs';
 const escapeHtml=(v:string)=>v.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));
 const isUuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(v);
 export async function POST(request:NextRequest,context:{params:Promise<{id:string}>}){
+  let validOrigin=false;
+  try{const origin=new URL(request.headers.get('origin')||'invalid');validOrigin=origin.protocol==='https:'&&origin.host===request.headers.get('host');}catch{}
+  if(!validOrigin)return NextResponse.json({error:'Ongeldige herkomst.'},{status:403});
   const supabase=await createClient();
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)return NextResponse.json({error:'Niet ingelogd'},{status:401});
@@ -30,11 +35,11 @@ export async function POST(request:NextRequest,context:{params:Promise<{id:strin
 
   const admin=createAdminClient();
   const {data:invoice,error:invoiceError}=await admin.from('crew_invoices')
-    .select('id,crew_member_id,invoice_number,status,correction_reason,approved_first_by').eq('id',id).maybeSingle();
+    .select('id,crew_member_id,invoice_number,status,correction_reason,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_attempted_at,forwarded_at').eq('id',id).maybeSingle();
   if(invoiceError||!invoice)return NextResponse.json({error:'Factuur niet gevonden'},{status:404});
-  if(invoice.approved_first_by)return NextResponse.json({error:'De factuur heeft al een eerste goedkeuring. Pas deze factuur niet meer via een correctiemail aan.'},{status:409});
-  if(!['received','in_review'].includes(invoice.status))
-    return NextResponse.json({error:'Voor deze factuur kan geen nieuw correctieverzoek worden verzonden.'},{status:409});
+  const config=await getInvoiceProcessingSettings();
+  if(!canDeclineInvoice(invoice,user.id,true,config.approver_one,config.approver_two))
+    return NextResponse.json({error:'Alleen een bevoegde goedkeurder mag een nog niet doorgestuurde factuur terugsturen.'},{status:403});
 
   const {data:member}=await admin.from('crew_portal_members')
     .select('full_name,email,rentman_email,invoice_email,login_email_override').eq('id',invoice.crew_member_id).maybeSingle();
@@ -44,9 +49,12 @@ export async function POST(request:NextRequest,context:{params:Promise<{id:strin
     return NextResponse.json({error:'Er is geen geldig factuur- of contact-e-mailadres voor deze bartender bekend.'},{status:409});
 
   // Compare-and-set is a lock against duplicate requests from separate administrators.
-  const {data:claimed,error:lockError}=await admin.from('crew_invoices')
-    .update({status:'correction_sending',correction_reason:reason,updated_at:new Date().toISOString()})
-    .eq('id',id).eq('status',invoice.status).select('id').maybeSingle();
+  let lock=admin.from('crew_invoices')
+    .update({status:'correction_sending',correction_reason:reason,approved_first_by:null,updated_at:new Date().toISOString()})
+    .eq('id',id).eq('status',invoice.status).is('approved_second_by',null)
+    .is('forward_attempted_at',null).is('forwarded_at',null);
+  lock=invoice.approved_first_by?lock.eq('approved_first_by',invoice.approved_first_by):lock.is('approved_first_by',null);
+  const {data:claimed,error:lockError}=await lock.select('id').maybeSingle();
   if(lockError||!claimed)return NextResponse.json({error:'De factuur wordt al verwerkt. Vernieuw het overzicht.'},{status:409});
 
   const firstName=(member.full_name||'collega').trim().split(/\s+/)[0];
@@ -69,5 +77,10 @@ export async function POST(request:NextRequest,context:{params:Promise<{id:strin
     console.error('Correctiemail verzonden maar status bijwerken mislukt',finishError.message);
     return NextResponse.json({error:'E-mail is verzonden, maar de factuurstatus kon niet worden bijgewerkt. Beheer moet dit controleren.'},{status:502});
   }
-  return NextResponse.json({ok:true});
+  const {error:auditError}=await admin.from('invoice_approval_audit').insert({
+    invoice_id:id,actor_id:user.id,action:'correction_requested',
+    description:'Correctie gevraagd; eerder eerste akkoord ingetrokken. Reden: '+reason
+  });
+  if(auditError)console.error('Invoice correction audit failed',auditError.message);
+  return NextResponse.json({ok:true,message:'Correctieverzoek verstuurd. Het eerdere akkoord is ingetrokken.'});
 }
