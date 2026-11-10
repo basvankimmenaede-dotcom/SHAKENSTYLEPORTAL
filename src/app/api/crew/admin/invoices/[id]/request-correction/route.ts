@@ -35,18 +35,21 @@ export async function POST(request:NextRequest,context:{params:Promise<{id:strin
 
   const admin=createAdminClient();
   const {data:invoice,error:invoiceError}=await admin.from('crew_invoices')
-    .select('id,crew_member_id,invoice_number,status,correction_reason,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_attempted_at,forwarded_at').eq('id',id).maybeSingle();
+    .select('id,crew_member_id,supplier_id,invoice_number,status,correction_reason,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_attempted_at,forwarded_at').eq('id',id).maybeSingle();
   if(invoiceError||!invoice)return NextResponse.json({error:'Factuur niet gevonden'},{status:404});
   const config=await getInvoiceProcessingSettings();
   if(!canDeclineInvoice(invoice,user.id,true,config.approver_one,config.approver_two))
     return NextResponse.json({error:'Alleen een bevoegde goedkeurder mag een nog niet doorgestuurde factuur terugsturen.'},{status:403});
 
-  const {data:member}=await admin.from('crew_portal_members')
-    .select('full_name,email,rentman_email,invoice_email,login_email_override').eq('id',invoice.crew_member_id).maybeSingle();
-  // Accounting communications are independent of Rentman planning status and portal sign-in access.
-  const recipient=String(member?.invoice_email||member?.login_email_override||member?.email||member?.rentman_email||'').trim().toLowerCase();
-  if(!member||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))
-    return NextResponse.json({error:'Er is geen geldig factuur- of contact-e-mailadres voor deze bartender bekend.'},{status:409});
+  const {data:member}=invoice.crew_member_id?await admin.from('crew_portal_members')
+    .select('full_name,email,rentman_email,invoice_email,login_email_override').eq('id',invoice.crew_member_id).maybeSingle():{data:null};
+  const {data:supplier}=invoice.supplier_id?await admin.from('invoice_suppliers')
+    .select('company_name,contact_email').eq('id',invoice.supplier_id).maybeSingle():{data:null};
+  // A supplier receives the correction at its configured invoice mailbox, never the crew portal.
+  const recipient=String(invoice.supplier_id?supplier?.contact_email:
+    member?.invoice_email||member?.login_email_override||member?.email||member?.rentman_email||'').trim().toLowerCase();
+  if((invoice.supplier_id?!supplier:!member)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))
+    return NextResponse.json({error:'Er is geen geldig factuur- of contact-e-mailadres voor deze afzender bekend.'},{status:409});
 
   // Compare-and-set is a lock against duplicate requests from separate administrators.
   let lock=admin.from('crew_invoices')
@@ -57,14 +60,15 @@ export async function POST(request:NextRequest,context:{params:Promise<{id:strin
   const {data:claimed,error:lockError}=await lock.select('id').maybeSingle();
   if(lockError||!claimed)return NextResponse.json({error:'De factuur wordt al verwerkt. Vernieuw het overzicht.'},{status:409});
 
-  const firstName=(member.full_name||'collega').trim().split(/\s+/)[0];
-  const html='<div style="max-width:620px;font-family:Arial,sans-serif;color:#222;margin:auto"><div style="background:#191919;color:#fff;padding:22px;font-size:21px;font-weight:bold;letter-spacing:3px">SHAKENSTYLE</div><div style="padding:24px"><p>Hi '+escapeHtml(firstName)+',</p><p>We hebben je factuur <strong>'+escapeHtml(invoice.invoice_number)+'</strong> ontvangen, maar deze moet worden aangepast.</p><p><strong>Wat moet worden aangepast?</strong></p><div style="white-space:pre-wrap;background:#fff1e7;padding:15px;border-radius:10px">'+escapeHtml(reason)+'</div><p>Stuur de aangepaste factuur opnieuw per e-mail naar het gebruikelijke factuuradres.</p><p>Je ziet dezelfde toelichting in je SHAKENSTYLE Crew Portal.</p><p>Bedankt!<br>Team SHAKENSTYLE</p></div></div>';
+  const firstName=invoice.supplier_id?'':String(member?.full_name||'collega').trim().split(/\s+/)[0];
+  const greeting=invoice.supplier_id?'Hi,':'Hi '+escapeHtml(firstName)+',';
+  const html='<div style="max-width:620px;font-family:Arial,sans-serif;color:#222;margin:auto"><div style="background:#191919;color:#fff;padding:22px;font-size:21px;font-weight:bold;letter-spacing:3px">SHAKENSTYLE</div><div style="padding:24px"><p>'+greeting+'</p><p>We hebben je factuur <strong>'+escapeHtml(invoice.invoice_number)+'</strong> ontvangen, maar deze moet worden aangepast.</p><p><strong>Wat moet worden aangepast?</strong></p><div style="white-space:pre-wrap;background:#fff1e7;padding:15px;border-radius:10px">'+escapeHtml(reason)+'</div><p>Stuur de aangepaste factuur opnieuw per e-mail naar het gebruikelijke factuuradres.</p>'+(invoice.supplier_id?'':'<p>Je ziet dezelfde toelichting in je SHAKENSTYLE Crew Portal.</p>')+'<p>Bedankt!<br>Team SHAKENSTYLE</p></div></div>';
   try{
     const transport=nodemailer.createTransport({host,port,secure:port===465,auth:{user:username,pass:password}});
-    await transport.sendMail({from:{name:'SHAKENSTYLE Crew',address:'crew@shakenstyle.com'},
+    await transport.sendMail({from:invoice.supplier_id?{name:'SHAKENSTYLE Facturen',address:username}:{name:'SHAKENSTYLE Crew',address:'crew@shakenstyle.com'},
       to:recipient,
       subject:'Correctie nodig - Factuur '+invoice.invoice_number+' | SHAKENSTYLE',
-      html,text:'Hi '+firstName+',\n\nJe factuur '+invoice.invoice_number+' moet worden aangepast.\n\nReden:\n'+reason+'\n\nStuur je aangepaste factuur opnieuw per e-mail naar het gebruikelijke factuuradres.\n\nTeam SHAKENSTYLE'});
+      html,text:(invoice.supplier_id?'Hi,':'Hi '+firstName+',')+'\n\nJe factuur '+invoice.invoice_number+' moet worden aangepast.\n\nReden:\n'+reason+'\n\nStuur je aangepaste factuur opnieuw per e-mail naar het gebruikelijke factuuradres.\n\nTeam SHAKENSTYLE'});
   }catch(error){
     console.error('Correctiemail versturen mislukt',error instanceof Error?error.message:'onbekend');
     // Keep correction_sending when mail delivery is uncertain: never risk duplicate automated mail.

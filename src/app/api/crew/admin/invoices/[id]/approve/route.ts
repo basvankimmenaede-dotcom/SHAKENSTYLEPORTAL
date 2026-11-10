@@ -35,7 +35,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  if(!settings.approver_one||!settings.approver_two||settings.approver_one===settings.approver_two||!invoiceEmailPattern.test(settings.forward_email))
   return NextResponse.json({error:'Stel eerst twee verschillende goedkeurders en een boekhoudadres in bij Factuurverwerking.'},{status:409});
  const {data:invoice,error:loadError}=await admin.from('crew_invoices')
-  .select('id,crew_member_id,invoice_number,invoice_date,total_amount,status,document_path,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at')
+  .select('id,crew_member_id,supplier_id,cost_category,invoice_number,invoice_date,total_amount,status,document_path,approved_first_by,approved_second_by,approval_policy_one,approval_policy_two,forward_to,forward_attempted_at,forwarded_at')
   .eq('id',id).maybeSingle();
  if(loadError||!invoice)return NextResponse.json({error:'Factuur niet gevonden.'},{status:404});
  if(invoice.status==='approved')return NextResponse.json({error:'Deze factuur is al goedgekeurd en doorgestuurd.'},{status:409});
@@ -75,7 +75,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  const attachment=Buffer.from(await file.arrayBuffer());
  if(attachment.length>15*1024*1024||attachment.subarray(0,5).toString()!=='%PDF-')
   return NextResponse.json({error:'De originele PDF is te groot of beschadigd.'},{status:503});
- const {data:member}=await admin.from('crew_portal_members').select('full_name').eq('id',invoice.crew_member_id).maybeSingle();
+ const {data:member}=invoice.crew_member_id?await admin.from('crew_portal_members').select('full_name').eq('id',invoice.crew_member_id).maybeSingle():{data:null};
+ const {data:supplier}=invoice.supplier_id?await admin.from('invoice_suppliers').select('company_name').eq('id',invoice.supplier_id).maybeSingle():{data:null};
+ if(invoice.supplier_id&&!supplier)return NextResponse.json({error:'Leverancier kon niet worden geladen.'},{status:409});
  const {data:linkedPdf}=await admin.from('invoice_pdf_extractions').select('filename').eq('linked_invoice_id',id).limit(1).maybeSingle();
  const filename=(String(linkedPdf?.filename||'Factuur-'+invoice.invoice_number+'.pdf')).replace(/[^\w. -]/g,'_').slice(0,100);
  // Conditional update prevents another server invocation sending twice. In ambiguous SMTP failures,
@@ -88,9 +90,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  if(lockError||!locked)return NextResponse.json({error:'De tweede goedkeuring is al in behandeling.'},{status:409});
  await logEvent(id,user.id,'second_approved','Tweede akkoord; originele PDF wordt doorgestuurd.');
  const messageId='<invoice-'+createHash('sha256').update(id).digest('hex').slice(0,28)+'@shakenstyle.com>';
- const name=String(member?.full_name||'Crewlid');
+ const name=String(supplier?.company_name||member?.full_name||'Onbekende afzender');
  const subject='Goedgekeurde factuur '+invoice.invoice_number+' | SHAKENSTYLE';
- const description='Factuur: '+invoice.invoice_number+'\nCrewlid: '+name+'\nBedrag: '+Number(invoice.total_amount||0).toFixed(2)+' EUR\nGoedkeuringen: 2\n\nOriginele factuur als PDF bijgevoegd.';
+ const description='Factuur: '+invoice.invoice_number+'\nAfzender: '+name+'\nBedrag: '+Number(invoice.total_amount||0).toFixed(2)+' EUR\nGoedkeuringen: 2\n\nOriginele factuur als PDF bijgevoegd.';
  try{
   const smtp=nodemailer.createTransport({host,port,secure:port===465,auth:{user:username,pass:password},
    connectionTimeout:15000,greetingTimeout:15000,socketTimeout:25000});
