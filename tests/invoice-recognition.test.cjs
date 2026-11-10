@@ -237,3 +237,18 @@ test('Office can request corrections before first approval, but not after forwar
  assert.equal(canDeclineInvoice(inv,'office',true,null,null),true);
  assert.equal(canDeclineInvoice({...inv,forward_attempted_at:'pending'},'office',true,null,null),false);
 });
+
+
+// New supply-side invoice identity rules are tested without touching live data.
+const {isSupplierInvoice,isValidSupplierEmail,INVOICE_SUPPLIER_CATEGORIES}=loadTypeScriptModule('src/lib/invoice-suppliers.ts');
+test('Only a general supplier invoice is not subject to crew shift comparisons',()=>{
+ assert.equal(isSupplierInvoice(null,'supplier-id'),true);
+ assert.equal(isSupplierInvoice('crew-id',null),false);
+ assert.equal(isSupplierInvoice(null,null),false);
+});
+test('Supplier e-mail validation and categories are strict',()=>{
+ assert.equal(isValidSupplierEmail('accounts@example.com'),true);
+ assert.equal(isValidSupplierEmail('bad@x'),false);
+ assert.equal(isValidSupplierEmail('name <a@example.com>'),false);
+ assert.ok(INVOICE_SUPPLIER_CATEGORIES.includes('algemeen'));
+});
