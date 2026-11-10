@@ -53,7 +53,7 @@ export default function InvoiceEmailSettings({email,imap}:{email:string;imap:Sta
    </div>
    <div style={{borderTop:'1px solid var(--border,#ddd)',paddingTop:18,display:'grid',gap:12}}>
     <label style={{display:'flex',gap:10,alignItems:'center',fontWeight:650}}><input type="checkbox" checked={s.enabled} disabled={busy||!tested} onChange={e=>submit('toggle',e.target.checked)}/> Automatisch ophalen</label>
-    <p className="muted" style={{margin:0}}>Als dit aan staat, controleert de portal ieder uur de mailbox. Handmatig synchroniseren kan ook.</p>
+    <p className="muted" style={{margin:0}}>Als dit aan staat, controleert de portal dagelijks om 06:00 UTC de mailbox. Handmatig synchroniseren kan ook.</p>
     <div style={{display:'flex',gap:16,justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
      <div><div><strong>Laatste controle:</strong> {format(s.lastSyncAt)}</div>{s.lastSyncResult&&<div className="muted">{s.lastSyncResult}</div>}</div>
      <button type="button" className="button secondary" disabled={busy||!tested} onClick={()=>submit('sync')}>Nu synchroniseren</button>
