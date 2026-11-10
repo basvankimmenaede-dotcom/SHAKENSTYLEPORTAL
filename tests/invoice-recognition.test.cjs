@@ -78,18 +78,18 @@ function makePdf(){
   '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
   '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
   '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-  '<< /Length '+Buffer.byteLength(text)+' >>\\nstream\\n'+text+'\\nendstream'
+  '<< /Length '+Buffer.byteLength(text)+' >>\nstream\n'+text+'\nendstream'
  ];
- let pdf='%PDF-1.4\\n';
+ let pdf='%PDF-1.4\n';
  const offsets=[0];
  for(let i=0;i<objects.length;i++){
   offsets.push(Buffer.byteLength(pdf));
-  pdf+=(i+1)+' 0 obj\\n'+objects[i]+'\\nendobj\\n';
+  pdf+=(i+1)+' 0 obj\n'+objects[i]+'\nendobj\n';
  }
  const xref=Buffer.byteLength(pdf);
- pdf+='xref\\n0 '+(objects.length+1)+'\\n0000000000 65535 f \\n';
- for(const off of offsets.slice(1))pdf+=String(off).padStart(10,'0')+' 00000 n \\n';
- pdf+='trailer\\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\\nstartxref\\n'+xref+'\\n%%EOF';
+ pdf+='xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n';
+ for(const off of offsets.slice(1))pdf+=String(off).padStart(10,'0')+' 00000 n \n';
+ pdf+='trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
  return Buffer.from(pdf);
 }
 test('pdf-parse extracts text on the Node server without DOMMatrix crashes',async()=>{
