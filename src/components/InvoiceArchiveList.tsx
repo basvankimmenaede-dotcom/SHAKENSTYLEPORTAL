@@ -5,7 +5,7 @@ import {FileText,Mail,ArchiveRestore} from 'lucide-react';
 import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
 type ArchivedInvoice={
- id:string;invoice_number:string;name:string;total_amount:number|null;
+ id:string;invoice_number:string;name:string;total_amount:number|null;billing_item_id:string|null;
  supplier_id:string|null;cost_category:string|null;
  status:string;correction_reason:string|null;updated_at:string;
  forwarded_at:string|null;forward_to:string|null;extraction_id:string|null;
@@ -50,6 +50,10 @@ export default function InvoiceArchiveList({invoices,emails,comparisons,canManag
      <p>Goedgekeurd door twee accounts en verzonden via SMTP naar {inv.forward_to||'het boekhoudadres'} op {date(inv.forwarded_at)}. Ontvangst door de boekhouding is niet afzonderlijk bevestigd.</p>}
     {inv.extraction_id&&<a className="button secondary" href={'/api/crew/admin/invoice-extraction/'+inv.extraction_id+'/pdf'}
       target="_blank" rel="noopener noreferrer">Originele PDF bekijken</a>}
+    {canManage&&inv.supplier_id&&!rejected&&<a className="button secondary"
+      href={inv.billing_item_id?'/planning/billing':'/planning/billing?supplierInvoice='+encodeURIComponent(inv.id)}>
+      {inv.billing_item_id?'Gekoppeld aan facturatie':'Koppelen aan handmatige factuur'}
+    </a>}
     {comparisons[inv.id]&&comparisons[inv.id].projects.length>0&&<InvoiceShiftComparison comparison={comparisons[inv.id]}/>}
    </div>
   </details>;})}
