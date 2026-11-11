@@ -9,7 +9,7 @@ import {canDeclineInvoice} from '@/lib/invoice-decision';
 import {INVOICE_COST_CATEGORY_LABELS,type InvoiceCostCategory} from '@/lib/invoice-suppliers';
 
 type Invoice={
- id:string;extraction_id:string|null;supplier_id:string|null;cost_category:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
+ id:string;extraction_id:string|null;supplier_id:string|null;billing_item_id:string|null;cost_category:string|null;invoice_number:string;name:string;total_amount:number|null;status:string;
  correction_reason:string|null;created_at:string;approved_first_by:string|null;approved_second_by:string|null;
  project_numbers:string[];project_lines:{project_number:string;work_hours:number|null;travel_hours:number|null;expenses_amount:number|null}[];
  approval_policy_one:string|null;approval_policy_two:string|null;forward_to:string|null;
@@ -153,6 +153,10 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
     {approved&&<p className="invoiceApprovalForward"><MailCheck size={16}/> PDF doorgestuurd naar {inv.forward_to}.</p>}
     <div className="invoiceApprovalActions">
      {inv.extraction_id&&<button className="button secondary" type="button" onClick={()=>setPreview({id:inv.extraction_id!,number:inv.invoice_number})}>PDF bekijken</button>}
+     {supplierInvoice&&canManage&&<Link className="button secondary"
+      href={inv.billing_item_id?'/planning/billing':'/planning/billing?supplierInvoice='+encodeURIComponent(inv.id)}>
+      {inv.billing_item_id?'Gekoppeld aan facturatie':'Koppelen aan handmatige factuur'}
+     </Link>}
      {allowed&&<button className="button orange" type="button" disabled={Boolean(saving)}
       onClick={()=>{
        if(['difference','missing_report'].includes(review.status)&&
