@@ -107,16 +107,20 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  const emailRows=(inboxResult?.data||[]) as {id:string;sender:string|null;subject:string|null;received_at:string|null;status:string;attachments:unknown;error_message:string|null}[];
  const invoiceIds=rawInvoices.map(i=>i.id);
  const emailIds=emailRows.map(m=>m.id);
- const [linkedPdfs,openPdfs]=await Promise.all([
+ const [linkedPdfs,openPdfs,billingLinks]=await Promise.all([
   invoiceIds.length?db.from('invoice_pdf_extractions')
    .select('id,linked_invoice_id').in('linked_invoice_id',invoiceIds).limit(400):
    Promise.resolve({data:[],error:null}),
   emailIds.length?db.from('invoice_pdf_extractions').select(REVIEW_FIELDS)
    .in('message_id',emailIds).order('created_at',{ascending:false}).limit(300):
+   Promise.resolve({data:[],error:null}),
+  invoiceIds.length?db.from('billing_items').select('id,supplier_invoice_id')
+   .in('supplier_invoice_id',invoiceIds):
    Promise.resolve({data:[],error:null})
  ]);
- if(linkedPdfs.error||openPdfs.error)throw new Error('PDF-koppelingen konden niet worden geladen.');
+ if(linkedPdfs.error||openPdfs.error||billingLinks.error)throw new Error('Factuurkoppelingen konden niet worden geladen.');
  const linkedMap=new Map((linkedPdfs.data||[]).map(e=>[e.linked_invoice_id,e.id]));
+ const billingMap=new Map((billingLinks.data||[]).map(e=>[e.supplier_invoice_id,e.id]));
  const comparisons=await loadCrewInvoiceComparisons(rawInvoices.filter(i=>i.crew_member_id!==null).map(i=>({
   id:i.id,crew_member_id:i.crew_member_id!,project_numbers:i.project_numbers,project_lines:i.project_lines
  })));
@@ -124,6 +128,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
   ...inv,project_numbers:inv.project_numbers||[],
   project_lines:Array.isArray(inv.project_lines)?inv.project_lines:[],
   extraction_id:linkedMap.get(inv.id)||null,
+  billing_item_id:billingMap.get(inv.id)||null,
   name:inv.supplier_id?(supplierNames.get(inv.supplier_id)||'Onbekende leverancier'):(names.get(inv.crew_member_id||'')||'Onbekende medewerker')
  }));
  const visibleInvoices=view==='differences'?allMapped.filter(inv=>['difference','missing_report'].includes(comparisons[inv.id]?.status)) :allMapped;
@@ -141,7 +146,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  });
  const archiveInvoices=allMapped.map(inv=>({
   id:inv.id,invoice_number:inv.invoice_number,name:inv.name,total_amount:inv.total_amount,
-  supplier_id:inv.supplier_id,cost_category:inv.cost_category,
+  supplier_id:inv.supplier_id,billing_item_id:inv.billing_item_id,cost_category:inv.cost_category,
   status:inv.status,correction_reason:inv.correction_reason,updated_at:inv.updated_at,
   forwarded_at:inv.forwarded_at,forward_to:inv.forward_to,extraction_id:inv.extraction_id,
   project_numbers:inv.project_numbers
