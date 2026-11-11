@@ -15,7 +15,7 @@ export async function addManualBillingItem(formData: FormData) {
   if (!projectName || projectName.length > 180 || customerName.length > 180 || note.length > 1500) {
     throw new Error('Controleer de omschrijving, klant en notitie.');
   }
-  if (projectInput && !/^\\d{4,8}$/.test(projectInput)) {
+  if (projectInput && !/^\d{4,8}$/.test(projectInput)) {
     throw new Error('Gebruik een geldig Rentman-projectnummer.');
   }
   let sourceNumber: string | null = null;
@@ -37,7 +37,7 @@ export async function addManualBillingItem(formData: FormData) {
     sourceNumber = invoice.invoice_number;
     if (!projectNumber && Array.isArray(invoice.project_numbers) && invoice.project_numbers.length === 1) {
       const candidate = String(invoice.project_numbers[0]);
-      if (/^\\d{4,8}$/.test(candidate)) projectNumber = candidate;
+      if (/^\d{4,8}$/.test(candidate)) projectNumber = candidate;
     }
   }
   const { error } = await supabase.from('billing_items').insert({
