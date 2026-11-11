@@ -9,7 +9,7 @@
     "lint": "next lint",
     "test:auth": "node --test tests/email-code.test.cjs",
     "test:invoice": "node --test tests/invoice-recognition.test.cjs tests/receipt-recognition.test.cjs",
-    "prebuild": "npm run test:invoice && node scripts/export-lock.cjs"
+    "prebuild": "npm run test:invoice"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
