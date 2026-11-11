@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {CheckCircle2,Clock3,MailCheck,AlertTriangle,ChevronDown} from 'lucide-react';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
@@ -27,6 +27,11 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
  const [error,setError]=useState('');
  const [saving,setSaving]=useState<string|null>(null);
  const [notice,setNotice]=useState('');
+ useEffect(()=>{
+  if(!notice)return;
+  const timer=window.setTimeout(()=>setNotice(''),5000);
+  return ()=>window.clearTimeout(timer);
+ },[notice]);
  const [preview,setPreview]=useState<{id:string;number:string}|null>(null);
  const [editId,setEditId]=useState<string|null>(null);
  const [editProjects,setEditProjects]=useState('');
@@ -70,7 +75,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
   }catch(e){setError(e instanceof Error?e.message:'Actie mislukt.');}
   finally{setSaving(null);}
  }
- if(invoices.length===0)return <div className="notice">Nog geen facturen aan een bartender gekoppeld. Controleer hierboven de ontvangen PDF’s en koppel ze na beoordeling.</div>;
+ if(invoices.length===0)return <p className="invoiceQueueEmpty">Geen openstaande facturen</p>;
  return <div className="stack">
   {(error||notice)&&<p className={'invoiceProcessMessage '+(error?'error':'success')} role={error?'alert':'status'}>{error||notice}</p>}
   {!ready&&<div className="notice">Stel eerst twee goedkeurders en het boekhoudadres in bij <Link href="/planning/instellingen/factuurverwerking">Factuurverwerking</Link>.</div>}
