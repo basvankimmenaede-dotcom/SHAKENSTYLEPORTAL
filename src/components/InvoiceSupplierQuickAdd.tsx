@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {INVOICE_SUPPLIER_CATEGORIES,INVOICE_COST_CATEGORY_LABELS} from '@/lib/invoice-suppliers';
 export default function InvoiceSupplierQuickAdd({canManage}:{canManage:boolean}){
@@ -13,6 +13,11 @@ export default function InvoiceSupplierQuickAdd({canManage}:{canManage:boolean})
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
  const [message,setMessage]=useState('');
+ useEffect(()=>{
+  if(!message)return;
+  const timer=window.setTimeout(()=>setMessage(''),5000);
+  return ()=>window.clearTimeout(timer);
+ },[message]);
  if(!canManage)return null;
  async function submit(){
   if(busy||name.trim().length<2)return;
@@ -28,7 +33,7 @@ export default function InvoiceSupplierQuickAdd({canManage}:{canManage:boolean})
   }catch(e){setError(e instanceof Error?e.message:'Opslaan mislukt.');}
   finally{setBusy(false);}
  }
- return <div className="invoiceSupplierAdd">
+ return <div className={"invoiceSupplierAdd"+(open?" open":"")}>
   {message&&<p className="invoiceProcessMessage success" role="status">{message}</p>}
   {error&&<p className="invoiceProcessMessage error" role="alert">{error}</p>}
   {!open?<button className="button secondary" type="button" onClick={()=>setOpen(true)}>+ Leverancier toevoegen</button>:
