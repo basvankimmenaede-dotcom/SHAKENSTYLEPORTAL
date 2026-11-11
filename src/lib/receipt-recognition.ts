@@ -95,7 +95,7 @@ export function recognizeReceiptText(raw:string):ReceiptSuggestion{
  const fallback=firstLines.find(x=>/^[\p{L}][\p{L}\p{N} \-&.]{2,45}$/u.test(x)&&
   !/^(kassabon|factuur|ticket|www|totaal|datum|belasting|btw|welkom|bedankt)/i.test(x))||null;
  const lines=text.split(/\r?\n/);
- const vatLines=lines.filter(line=>/\b(?:BTW|VAT)\b/i.test(line)&&/\b(?:9\s*%|21\s*%|0\s*%)\b/.test(line)).slice(0,5);
+ const vatLines=lines.filter(line=>/\b(?:BTW|VAT)\b/i.test(line)&&/(?:^|\s)(?:9|21|0)\s*%/.test(line)).slice(0,5);
  return {
   supplierName:shop?.[1]||fallback,
   date:dateInText(text),
