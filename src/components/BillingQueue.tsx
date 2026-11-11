@@ -9,6 +9,10 @@ type Filter = BillingStatus | 'all';
 export type BillingQueueItem = {
   id: string;
   source_type: 'rentman' | 'manual';
+  supplier_invoice_id?: string | null;
+  linked_supplier_invoice?: {
+    id: string; invoice_number: string; supplier_name: string; total_amount: number | null; status: string
+  } | null;
   rentman_project_number?: string | null;
   project_name: string;
   customer_name?: string | null;
@@ -138,6 +142,14 @@ export default function BillingQueue({
                   {item.usage_end ? ` · geëindigd ${formatDate(item.usage_end)}` : ''}
                 </span>
                 {item.note ? <small>{item.note}</small> : null}
+                {item.linked_supplier_invoice&&
+                  <a className="billingSupplierLink"
+                    href={'/planning/crew-invoices?view='+
+                      (item.linked_supplier_invoice.status==='approved'?'archive':'open')+
+                      '&q='+encodeURIComponent(item.linked_supplier_invoice.invoice_number)}>
+                    Inkoopfactuur: {item.linked_supplier_invoice.supplier_name} · {item.linked_supplier_invoice.invoice_number} ·
+                    {' '}{Number(item.linked_supplier_invoice.total_amount||0).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})}
+                  </a>}
               </div>
               <div className="billingState">
                 {item.status === 'invoiced' ? <span className="billingDone">Gefactureerd {formatDate(item.completed_at)}</span> : null}
