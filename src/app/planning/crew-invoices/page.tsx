@@ -9,6 +9,7 @@ import {getInvoiceProcessingSettings,listEligibleApprovers} from '@/lib/invoice-
 import {findCrewInvoiceMatch} from '@/lib/crew-invoice-matching';
 import {loadCrewInvoiceComparisons} from '@/lib/invoice-comparison-loader';
 import InvoiceSupplierQuickAdd from '@/components/InvoiceSupplierQuickAdd';
+import InvoiceManualSupplierAdd from '@/components/InvoiceManualSupplierAdd';
 import type {InvoiceSupplier} from '@/lib/invoice-suppliers';
 
 export const dynamic='force-dynamic';
@@ -163,7 +164,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
    <button className="button secondary" type="submit">Zoeken</button>
    {search&&<Link className="button secondary" href={'/planning/crew-invoices?view='+view}>Wissen</Link>}
   </form>
-  <InvoiceSupplierQuickAdd canManage={canManage}/>
+  <div className="invoiceManualActions"><InvoiceSupplierQuickAdd canManage={canManage}/><InvoiceManualSupplierAdd suppliers={suppliers} canManage={canManage}/></div>
   {view==='archive'?<>
    <div className="invoiceSectionHeader"><h2>Afgehandelde en afgekeurde facturen</h2>
     <span>{invoicesResult.count||0} facturen · 25 per pagina</span></div>
