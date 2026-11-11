@@ -29,6 +29,8 @@ export async function POST(request:NextRequest){
  if(!await canManage(request))return NextResponse.json({error:'Geen toestemming.'},{status:403});
  const body=await request.json().catch(()=>null);
  const action=body?.action;
+ const receipt=body?.sourceType==='receipt';
+ const ocrText=typeof body?.ocrText==='string'?body.ocrText.trim().slice(0,10000):'';
  const db=createAdminClient();
  if(action==='prepare'){
   const uploadId=randomUUID();
@@ -48,6 +50,7 @@ export async function POST(request:NextRequest){
  if(!UUID.test(uploadId)||!UUID.test(supplierId)||
   !INVOICE_SUPPLIER_CATEGORIES.includes(category as typeof INVOICE_SUPPLIER_CATEGORIES[number])||
   !/^[A-Za-z0-9][A-Za-z0-9_/.-]{0,63}$/.test(number)||
+  (receipt&&!date)||
   (date&&(!/^20\d{2}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date))))||
   !Number.isFinite(amount)||amount<0||amount>99999999||
   (project&&!/^\d{4,8}$/.test(project)))
@@ -58,7 +61,19 @@ export async function POST(request:NextRequest){
  const {data:existing,error:duplicateError}=await db.from('crew_invoices')
   .select('id,invoice_number').eq('supplier_id',supplierId).ilike('invoice_number',number).limit(1).maybeSingle();
  if(duplicateError)return NextResponse.json({error:'Dubbele factuurcontrole niet beschikbaar.'},{status:503});
- if(existing)return NextResponse.json({error:'Dit factuurnummer is al geregistreerd voor deze leverancier.'},{status:409});
+ if(existing)return NextResponse.json({error:'Dit factuurnummer of deze bon is al geregistreerd voor deze leverancier.'},{status:409});
+ // Camera photos of the same printed receipt produce different file hashes.
+ // Flag matching date + total as a possible duplicate, but allow an explicit override.
+ if(receipt&&date&&!body.allowSimilarReceipt){
+  const {data:similar,error:similarError}=await db.from('crew_invoices')
+   .select('id').eq('supplier_id',supplierId).eq('invoice_date',date)
+   .eq('total_amount',amount).limit(1).maybeSingle();
+  if(similarError)return NextResponse.json({error:'De controle op dubbele bonnen is tijdelijk niet beschikbaar.'},{status:503});
+  if(similar)return NextResponse.json({
+   error:'Er staat al een bon of factuur van deze leverancier met dezelfde datum en hetzelfde bedrag. Controleer of het echt een andere aankoop is.',
+   code:'POSSIBLE_DUPLICATE'
+  },{status:409});
+ }
  const path=pathFor(uploadId);
  const {data:file,error:fileError}=await db.storage.from('incoming-invoices').download(path);
  if(fileError||!file)return NextResponse.json({error:'De PDF is nog niet geüpload.'},{status:400});
@@ -78,7 +93,7 @@ export async function POST(request:NextRequest){
   console.error('Manual supplier invoice create',invoiceError?.message);
   return NextResponse.json({error:'Handmatige factuur opslaan is mislukt.'},{status:500});
  }
- const filename='Factuur-'+number.replace(/[^A-Za-z0-9_.-]/g,'_')+'.pdf';
+ const filename=(receipt?'Bon-':'Factuur-')+number.replace(/[^A-Za-z0-9_.-]/g,'_')+'.pdf';
  const now=new Date().toISOString();
  const {error:messageError}=await db.from('invoice_inbox_messages').insert({
   id:uploadId,mailbox_key:'manual',uid_validity:'manual',imap_uid:Date.now()*1000+Math.floor(Math.random()*1000),
@@ -94,10 +109,11 @@ export async function POST(request:NextRequest){
  }
  const {error:extractionError}=await db.from('invoice_pdf_extractions').insert({
   message_id:uploadId,attachment_index:0,filename,storage_path:path,status:'linked',
-  processing_provider:'manual',invoice_number:number,invoice_date:date||null,total_amount:amount,
+  processing_provider:receipt?(ocrText?'receipt_ocr':'manual_receipt'):'manual',
+  text_preview:ocrText||null,invoice_number:number,invoice_date:date||null,total_amount:amount,
   supplier_name:supplier.company_name,linked_invoice_id:invoice.id,
   project_numbers:project?[project]:[],project_lines:[],reviewed_at:now,
-  match_strength:'none',match_reason:'Handmatig toegevoegd door kantoor.'
+  match_strength:'none',match_reason:receipt?'Kassabon: handmatige verificatie door kantoor vereist.':'Handmatig toegevoegd door kantoor.'
  });
  if(extractionError){
   console.error('Manual supplier invoice extraction',extractionError.message);
@@ -105,5 +121,5 @@ export async function POST(request:NextRequest){
   await db.from('crew_invoices').delete().eq('id',invoice.id);
   return NextResponse.json({error:'Factuurregistratie kon niet worden afgerond.'},{status:500});
  }
- return NextResponse.json({ok:true,message:'Handmatige leveranciersfactuur toegevoegd. De factuur staat klaar voor dubbele goedkeuring.'});
+ return NextResponse.json({ok:true,message:receipt?'Bon toegevoegd. De originele foto is als PDF bewaard; controle en dubbele goedkeuring zijn vereist.':'Handmatige leveranciersfactuur toegevoegd. De factuur staat klaar voor dubbele goedkeuring.'});
 }
