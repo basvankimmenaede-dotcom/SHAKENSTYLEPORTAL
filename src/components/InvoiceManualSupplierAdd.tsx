@@ -116,7 +116,7 @@ export default function InvoiceManualSupplierAdd({suppliers,canManage}:Props){
   if(photo){setDate('');setAmount('');setNumber('');void analyzePhoto(selected,id);}
  }
  async function save(){
-  if(busy||!file||ocrStatus==='reading')return;
+  if(busy||!file)return;
   setError('');setNotice('');setBusy(true);
   try{
    if(file.size>MAX_BYTES||file.size<10)throw new Error('Kies een bestand kleiner dan 15 MB.');
@@ -197,6 +197,8 @@ export default function InvoiceManualSupplierAdd({suppliers,canManage}:Props){
       'Foto uitgelezen'+(ocrConfidence!==null?' (herkenningszekerheid '+ocrConfidence+'%)':'')+
        '. Controleer winkel, datum, bedrag en het originele bonnetje.'}
     </p>}
+    {ocrStatus==='reading'&&<button type="button" className="button secondary" disabled={busy}
+     onClick={()=>{latestScan.current++;setOcrStatus('failed');}}>Handmatig invullen (herkenning overslaan)</button>}
     {ocrStatus==='ready'&&<div className="invoiceManualOcrSummary">
       {detectedSupplier&&<span>Herkenning: {detectedSupplier}{!supplierId?' · Kies of voeg de leverancier hierboven toe':''}</span>}
       {detectedReceiptNumber&&<span>Bonnummer op foto: {detectedReceiptNumber}</span>}
@@ -204,8 +206,8 @@ export default function InvoiceManualSupplierAdd({suppliers,canManage}:Props){
      </div>}
     {receiptMode&&<p className="invoiceManualHint">Zonder bonreferentie gebruiken we een unieke foto-ID. Bij een vergelijkbare aankoop op dezelfde datum waarschuwt het systeem voor mogelijke dubbele invoer.</p>}
     <div className="invoiceSupplierActions">
-     <button className="button orange" type="button" disabled={busy||ocrStatus==='reading'||!file||!supplierId||(!receiptMode&&!number.trim())||!amount.trim()||receiptMode&&!date}
-      onClick={()=>void save()}>{busy?'Opslaan…':ocrStatus==='reading'?'Foto uitlezen…':'Toevoegen aan controle'}</button>
+     <button className="button orange" type="button" disabled={busy||!file||!supplierId||(!receiptMode&&!number.trim())||!amount.trim()||(receiptMode&&!date)}
+      onClick={()=>void save()}>{busy?'Opslaan…':'Toevoegen aan controle'}</button>
      <button className="button secondary" type="button" disabled={busy} onClick={()=>{latestScan.current++;setOpen(false);setError('');}}>Annuleren</button>
     </div>
    </div>}
