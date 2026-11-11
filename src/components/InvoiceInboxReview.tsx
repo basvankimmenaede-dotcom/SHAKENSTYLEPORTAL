@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {FileText,RefreshCw,AlertCircle,Link2} from 'lucide-react';
 import {INVOICE_SUPPLIER_CATEGORIES,INVOICE_COST_CATEGORY_LABELS,type InvoiceCostCategory,type InvoiceSupplier} from '@/lib/invoice-suppliers';
@@ -130,6 +130,11 @@ export default function InvoiceInboxReview({emails,extractions,members,suppliers
  const [busy,setBusy]=useState<string|null>(null);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ useEffect(()=>{
+  if(!notice)return;
+  const timer=window.setTimeout(()=>setNotice(''),5000);
+  return ()=>window.clearTimeout(timer);
+ },[notice]);
  const [expanded,setExpanded]=useState<string|null>(emails.length===1?emails[0].id:null);
  const [preview,setPreview]=useState<{id:string;index:number;filename:string}|null>(null);
  const openPdf=(id:string,index:number,filename:string)=>setPreview({id,index,filename});
@@ -154,7 +159,7 @@ export default function InvoiceInboxReview({emails,extractions,members,suppliers
    <span className="invoiceReviewCounter">{emails.length} e-mails</span>
   </div>
   {(error||notice)&&<p className={'invoiceReviewMessage '+(error?'error':'success')} role={error?'alert':'status'}>{error||notice}</p>}
-  {!emails.length?<div className="notice">Er zijn nog geen e-mails gesynchroniseerd.</div>:
+  {!emails.length?<p className="invoiceReviewEmpty">Geen openstaande facturen</p>:
    <div className="invoiceReviewList">{emails.map(mail=>{
     const documents=extractions.filter(x=>x.message_id===mail.id);
     const hasPdf=Array.isArray(mail.attachments)&&mail.attachments.length>0;
