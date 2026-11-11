@@ -46,6 +46,7 @@ export default async function BillingPage({searchParams}:{searchParams:Promise<{
           <Link href="/planning" className="billingBack">← Terug naar planning</Link>
           <h1>Facturatie</h1>
           <p>Blijvende werkvoorraad. Regels verdwijnen pas uit Open wanneer je ze zelf afhandelt.</p>
+          <p><Link href="/planning/crew-invoices?view=open">Leveranciersfactuur handmatig toevoegen of ontvangen facturen controleren</Link></p>
         </div>
         <div className="billingHeroMetric">
           <strong>{openCount}</strong>
