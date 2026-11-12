@@ -619,6 +619,7 @@ export type RentmanPlanningProjectVehicle = {
     usageperiod_end?: string | null;
     travel_time_before?: number | null;
     travel_time_after?: number | null;
+    distance?: number | null;
     twoway?: boolean | null;
     type?: string | null;
     group?: {
