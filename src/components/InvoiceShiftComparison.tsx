@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
 export const checkLabels={
  match:'Uren & kosten komen overeen',
@@ -40,11 +39,7 @@ export default function InvoiceShiftComparison({comparison}:{comparison:InvoiceC
       {item.expensesDifference!==null&&Math.abs(item.expensesDifference)>0.01?' · verschil '+euro(item.expensesDifference):''}</span>:null}
    </div>}
    <p className="invoiceCompareNote">{item.note}</p>
-   <div className="invoiceComparisonProjectLinks">
-     <span>Facturatie: {item.billingStatus==='invoiced'?'Gefactureerd':item.billingStatus==='open'?'Open':
-      item.billingStatus==='skip'?'Niet factureren':'Niet in werkvoorraad'}</span>
-     <Link href={'/planning/billing?project='+encodeURIComponent(item.projectNumber)}>Open facturatie</Link>
-   </div>
+   <p className="invoiceComparisonNote">Controle van de ontvangen bartenderfactuur tegenover het shiftrapport; onafhankelijk van de uitgaande klantfacturatie.</p>
   </div>)}
   <p className="invoiceComparisonDisclaimer">Uurtarieven en het volledige factuurtotaal worden nog niet automatisch geverifieerd. De controle vergelijkt alleen daadwerkelijk beschikbare gegevens.</p>
  </div>;

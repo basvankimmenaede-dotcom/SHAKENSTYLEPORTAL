@@ -5,6 +5,7 @@ import {useRouter} from 'next/navigation';
 import {CheckCircle2,Clock3,MailCheck,AlertTriangle,ChevronDown} from 'lucide-react';
 import InvoiceShiftComparison from '@/components/InvoiceShiftComparison';
 import type {InvoiceCheck} from '@/lib/invoice-shift-comparison';
+import {crewInvoiceHoursBlockReason} from '@/lib/invoice-shift-comparison';
 import {canDeclineInvoice} from '@/lib/invoice-decision';
 import {INVOICE_COST_CATEGORY_LABELS,type InvoiceCostCategory} from '@/lib/invoice-suppliers';
 
@@ -89,6 +90,7 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
    const approved=inv.status==='approved'&&Boolean(inv.forwarded_at);
    const supplierInvoice=Boolean(inv.supplier_id);
    const review=comparisons[inv.id]||{status:'unverified' as const,projects:[]};
+   const shiftHoursBlock=supplierInvoice?null:crewInvoiceHoursBlockReason(review);
    const canEdit=canManage&&['received','in_review'].includes(inv.status)&&!first&&!second&&!inv.forward_attempted_at;
    const needsAttention=!supplierInvoice&&['difference','missing_report'].includes(review.status);
    const comparisonLabel=supplierInvoice?'Leverancier':review.status==='difference'?'Afwijking':review.status==='missing_report'?'Rapport ontbreekt':review.status==='match'?'Uren kloppen':'Controle nodig';
@@ -157,12 +159,9 @@ export default function CrewInvoiceAdminList({invoices,canManage,currentUserId,a
       href={inv.billing_item_id?'/planning/billing':'/planning/billing?supplierInvoice='+encodeURIComponent(inv.id)}>
       {inv.billing_item_id?'Gekoppeld aan facturatie':'Koppelen aan handmatige factuur'}
      </Link>}
-     {allowed&&<button className="button orange" type="button" disabled={Boolean(saving)}
-      onClick={()=>{
-       if(['difference','missing_report'].includes(review.status)&&
-         !window.confirm('Er is een afwijking of een ontbrekend shiftrapport. Wil je deze factuur toch goedkeuren?'))return;
-       void post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/approve');
-      }}>
+     {allowed&&shiftHoursBlock&&<p className="invoiceApprovalWarning"><AlertTriangle size={17}/> {shiftHoursBlock}</p>}
+     {allowed&&<button className="button orange" type="button" disabled={Boolean(saving)||Boolean(shiftHoursBlock)}
+      onClick={()=>void post(inv.id,'/api/crew/admin/invoices/'+inv.id+'/approve')}>
       {saving===inv.id?'Verwerken…':first?'Tweede akkoord & doorsturen':'Factuur goedkeuren (1/2)'}
      </button>}
      {canDecline&&(selected===inv.id?<div className="invoiceApprovalCorrection">
