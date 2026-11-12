@@ -297,3 +297,25 @@ test('Do not silently allocate a standalone hourly line to several suggested pro
  assert.equal(parsed.lines.find(p=>p.project_number==='11077').work_hours,null);
  assert.match(parsed.notes.join(' '),/zonder bevestigd projectnummer/i);
 });
+
+
+const {normalizeRentmanCrew}=loadTypeScriptModule('src/lib/crew/rentman-member-data.ts');
+test('Import an inactive Rentman crew member without e-mail',()=>{
+ const row=normalizeRentmanCrew({id:427,firstname:'Iván ',lastname:'Gachassin',email:'',active:false});
+ assert.equal(row.rentman_crew_id,427);
+ assert.equal(row.full_name,'Iván Gachassin');
+ assert.equal(row.rentman_email,null);
+ assert.equal(row.active,false);
+});
+test('Reject invalid IDs and e-mail without inventing a login',()=>{
+ assert.equal(normalizeRentmanCrew({id:0,firstname:'Example',lastname:'Person',email:'',active:true}),null);
+ const row=normalizeRentmanCrew({id:428,firstname:' Example ',lastname:'Person',email:'bad-email',active:true});
+ assert.equal(row.full_name,'Example Person');
+ assert.equal(row.rentman_email,null);
+ assert.equal(row.active,true);
+});
+test('Rentman e-mail is a contact field, not automatic portal permission',()=>{
+ const row=normalizeRentmanCrew({id:429,firstname:'Alex',lastname:'Example',email:' INFO@EXAMPLE.COM ',active:true});
+ assert.equal(row.rentman_email,'info@example.com');
+ assert.equal(Object.prototype.hasOwnProperty.call(row,'portal_enabled'),false);
+});

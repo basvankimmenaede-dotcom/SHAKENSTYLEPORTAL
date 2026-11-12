@@ -2,6 +2,7 @@
 import {revalidatePath} from 'next/cache';
 import {requireAdmin} from '@/lib/auth';
 import {createAdminClient} from '@/lib/supabase/admin';
+import {synchronizeRentmanCrewMembers} from '@/lib/crew/synchronize-members';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export async function saveCrewInvoiceIdentity(data:FormData){
@@ -47,4 +48,19 @@ export async function setCrewPortalAccess(crewMemberId:string,enabled:boolean){
  revalidatePath('/admin/personeel');
  revalidatePath('/admin/accounts');
  return {ok:true,message:enabled?'Portaaltoegang ingeschakeld.':'Portaaltoegang uitgeschakeld.'};
+}
+
+
+/** Manual roster refresh for admins, independent of crew portal permissions. */
+export async function syncCrewFromRentman(){
+ await requireAdmin();
+ try{
+  const result=await synchronizeRentmanCrewMembers();
+  revalidatePath('/admin/users/crew');
+  revalidatePath('/planning/crew-invoices');
+  return {ok:true,message:'Rentman bijgewerkt: '+result.created+' nieuw, '+result.updated+' gewijzigd.',...result};
+ }catch(error){
+  console.error('Manual Rentman crew sync failed',error instanceof Error?error.message:'unknown');
+  return {ok:false,message:'Crewleden synchroniseren mislukt. Controleer de serverlogs.'};
+ }
 }

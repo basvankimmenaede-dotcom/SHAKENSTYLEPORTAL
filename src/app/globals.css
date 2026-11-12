@@ -6943,3 +6943,9 @@ table td{font-size:12px}
 .billingSupplierLink{color:#98602f;font-size:12px;font-weight:650;line-height:1.4;text-decoration:underline;text-underline-offset:2px}
 .billingSupplierLink:hover{color:#cf5b1e}
 @media(max-width:820px){.billingManualSupplierSelect{max-width:none}}
+
+
+/* Staff directory: manual Rentman synchronization with independent access control. */
+.crewProfileSyncTools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 12px}
+.crewProfileSyncTools .button{font-size:11px}
+.crewProfileSyncTools p{font-size:11px;margin:0}

@@ -1,7 +1,7 @@
 'use client';
 import {useMemo,useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
-import {saveCrewInvoiceIdentity,setCrewPortalAccess} from '@/app/admin/crew-actions';
+import {saveCrewInvoiceIdentity,setCrewPortalAccess,syncCrewFromRentman} from '@/app/admin/crew-actions';
 import {Search,Building2} from 'lucide-react';
 
 type Member={
@@ -78,6 +78,9 @@ function CrewEditor({member}:{member:Member}){
  </form>;
 }
 export default function CrewProfilesManager({members}:{members:Member[]}){
+ const router=useRouter();
+ const [syncing,startSync]=useTransition();
+ const [syncMessage,setSyncMessage]=useState<{ok:boolean;message:string}|null>(null);
  const [query,setQuery]=useState('');
  const [filter,setFilter]=useState<'active'|'all'>('active');
  const [selectedId,setSelectedId]=useState(members.find(m=>m.portal_enabled&&!m.portal_deleted)?.id||members[0]?.id||'');
@@ -92,6 +95,19 @@ export default function CrewProfilesManager({members}:{members:Member[]}){
  return <div className="crewProfilesWorkspace">
   <aside className="crewProfileList">
    <header><h2>Bartenders</h2><span>{members.filter(m=>m.portal_enabled&&!m.portal_deleted&&!m.manual_disabled).length} actief</span></header>
+   <div className="crewProfileSyncTools">
+    <button type="button" className="button secondary" disabled={syncing} onClick={()=>{
+     startSync(async()=>{
+      setSyncMessage(null);
+      try{
+       const result=await syncCrewFromRentman();
+       setSyncMessage(result);
+       if(result.ok)router.refresh();
+      }catch{setSyncMessage({ok:false,message:'Crewleden ophalen mislukt.'});}
+     });
+    }}>{syncing?'Rentman ophalen…':'Crewleden ophalen uit Rentman'}</button>
+    {syncMessage&&<p className={syncMessage.ok?'good':'error'} role={syncMessage.ok?'status':'alert'}>{syncMessage.message}</p>}
+   </div>
    <div className="crewProfileFilters">
     <div className="crewProfileSearch"><Search size={15}/><input type="search" placeholder="Naam, bedrijf of e-mail…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
     <div className="crewProfileToggle"><button type="button" className={filter==='active'?'active':''} onClick={()=>setFilter('active')}>Portaal actief</button><button type="button" className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Alles</button></div>
