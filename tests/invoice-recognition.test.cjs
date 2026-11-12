@@ -319,3 +319,33 @@ test('Rentman e-mail is a contact field, not automatic portal permission',()=>{
  assert.equal(row.rentman_email,'info@example.com');
  assert.equal(Object.prototype.hasOwnProperty.call(row,'portal_enabled'),false);
 });
+
+
+const {crewInvoiceHoursBlockReason}=loadTypeScriptModule('src/lib/invoice-shift-comparison.ts');
+function sampleShiftCheck(o={}) {return Object.assign({
+ projectNumber:'11059',projectId:123,projectName:'Example',status:'match',
+ plannedShifts:1,submittedShifts:1,plannedHours:6,reportedHours:6,
+ invoicedHours:6,differenceHours:0,reportedTravelHours:0,
+ invoicedTravelHours:null,travelDifferenceHours:null,reportedExpenses:0,
+ invoicedExpenses:null,expensesDifference:null,billingStatus:null,billingItemId:null,note:''
+ },o);}
+test('Crew invoice: matching submitted shift hours can be approved',()=>{
+ assert.equal(crewInvoiceHoursBlockReason({status:'match',projects:[sampleShiftCheck()]}),null);
+});
+test('Crew invoice: more or less claimed work hours need correction',()=>{
+ assert.match(crewInvoiceHoursBlockReason({status:'difference',projects:[sampleShiftCheck({invoicedHours:6.5,differenceHours:0.5})]}),/wijken af/);
+ assert.match(crewInvoiceHoursBlockReason({status:'difference',projects:[sampleShiftCheck({invoicedHours:5.5,differenceHours:-0.5})]}),/wijken af/);
+});
+test('Crew invoice: missing report and missing invoice hours block approval',()=>{
+ assert.match(crewInvoiceHoursBlockReason({status:'missing_report',projects:[sampleShiftCheck({submittedShifts:0})]}),/ontbreken/);
+ assert.match(crewInvoiceHoursBlockReason({status:'unverified',projects:[sampleShiftCheck({invoicedHours:null,differenceHours:null})]}),/Vul de factuururen/);
+ assert.match(crewInvoiceHoursBlockReason({status:'unverified',projects:[]}),/Koppel het project/);
+});
+test('Outgoing customer hours do not read crew invoices',()=>{
+ const sidebar=fs.readFileSync(path.join(__dirname,'../src/components/UnifiedSidebar.tsx'),'utf8');
+ const outbound=fs.readFileSync(path.join(__dirname,'../src/components/BillingHours.tsx'),'utf8');
+ assert.match(sidebar,/label:'Inkomende facturen'/);
+ assert.match(sidebar,/label:'Uitgaande facturen'/);
+ assert.match(outbound,/sheet.status==='submitted'/);
+ assert.ok(!outbound.includes('crew_invoices'));
+});

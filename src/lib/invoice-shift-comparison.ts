@@ -69,3 +69,24 @@ export function compareInvoiceToShiftReports(input:{
   checks.length>0&&checks.every(c=>c.status==='match')?'match':'unverified';
  return {status,projects:checks};
 }
+
+/** Only submitted shift-report hours determine whether a crew invoice can be approved.
+ * This check does not read outgoing customer billings or their charge rates.
+ */
+export function crewInvoiceHoursBlockReason(check:InvoiceCheck):string|null{
+ if(!check.projects.length)return 'Koppel het project en vul de factuururen in voor de shiftrapportcontrole.';
+ for(const p of check.projects){
+  if(p.projectId===null||p.status==='unknown_project')
+   return 'Project #'+p.projectNumber+' is niet gekoppeld aan Rentman.';
+  if(p.status==='missing_assignment'||p.plannedShifts===0)
+   return 'Er zijn geen gekoppelde diensten voor project #'+p.projectNumber+'.';
+  if(p.submittedShifts===0||p.submittedShifts<p.plannedShifts)
+   return 'Er ontbreken nog ingediende shiftrapporten voor project #'+p.projectNumber+'.';
+  if(p.invoicedHours===null||p.differenceHours===null)
+   return 'Vul de factuururen voor project #'+p.projectNumber+' in voordat je de factuur goedkeurt.';
+  if(Math.abs(p.differenceHours)>0.05)
+   return 'De factuururen voor #'+p.projectNumber+' wijken af van het shiftrapport ('+
+    p.invoicedHours+' uur tegenover '+p.reportedHours+' uur). Vraag een correctie aan.';
+ }
+ return null;
+}
