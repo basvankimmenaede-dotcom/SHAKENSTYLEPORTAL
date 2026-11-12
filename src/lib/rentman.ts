@@ -821,3 +821,14 @@ export async function getPlanningEquipmentCatalog() {
     '/equipment?fields=id,name,code,current_quantity&sort=+name&limit=1500',
   );
 }
+
+
+/** Full Rentman crew directory including inactive members and members without email. */
+export async function listRentmanCrewMembers(){
+ const {normalizeRentmanCrew}=await import('./crew/rentman-member-data');
+ const members=await rentmanFetchAll<import('./crew/rentman-member-data').RentmanCrewRaw>(
+  '/crew?fields=id,firstname,lastname,email,active&limit=1500'
+ );
+ if(!members.length)throw new Error('Rentman gaf geen crewleden terug.');
+ return members.map(normalizeRentmanCrew);
+}
