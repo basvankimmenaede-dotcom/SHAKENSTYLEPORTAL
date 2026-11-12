@@ -83,9 +83,9 @@ export default async function BillingPage({searchParams}:{searchParams:Promise<{
       <section className="hero billingHero">
         <div>
           <Link href="/planning" className="billingBack">← Terug naar planning</Link>
-          <h1>Facturatie</h1>
-          <p>Blijvende werkvoorraad. Regels verdwijnen pas uit Open wanneer je ze zelf afhandelt.</p>
-          <p><Link href="/planning/crew-invoices?view=open">Leveranciersfactuur handmatig toevoegen of ontvangen facturen controleren</Link></p>
+          <h1>Uitgaande facturen</h1>
+          <p>Facturen voor klanten opmaken per Rentman-project: de geregistreerde uren uit shiftrapporten zijn de basis, de planning dient als vergelijking.</p>
+          <p>De bedragen en uurtarieven van inkomende bartenderfacturen spelen bij onze klantcalculatie geen rol.</p>
         </div>
         <div className="billingHeroMetric">
           <strong>{openCount}</strong>
@@ -107,7 +107,7 @@ export default async function BillingPage({searchParams}:{searchParams:Promise<{
                     {invoice.supplier_name} · {invoice.invoice_number} · {Number(invoice.total_amount||0).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})} · {invoice.status==='approved'?'goedgekeurd':'wacht op goedkeuring'}
                   </option>)}
                 </select>
-                <small>De leverancier wordt gekoppeld als inkoopdocument, niet automatisch doorbelast.</small>
+                <small>Een leveranciersfactuur is hier alleen een inkoopdocument en wordt niet automatisch doorbelast. Bartenderfacturen staan hier los van.</small>
               </div>
               <div className="field">
                 <label htmlFor="project_name">Omschrijving</label>

@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 type BillingStatus = 'open' | 'invoiced' | 'skip';
@@ -133,10 +134,10 @@ export default function BillingQueue({
                 </span>
               </div>
               <div className="billingMain">
-                <strong>
+                <strong><Link href={'/planning/billing/'+encodeURIComponent(item.id)}>
                   {item.rentman_project_number ? `#${item.rentman_project_number} · ` : ''}
                   {item.project_name}
-                </strong>
+                </Link></strong>
                 <span>
                   {item.customer_name || 'Geen klant'}
                   {item.usage_end ? ` · geëindigd ${formatDate(item.usage_end)}` : ''}
@@ -152,6 +153,7 @@ export default function BillingQueue({
                   </a>}
               </div>
               <div className="billingState">
+                <Link href={'/planning/billing/'+encodeURIComponent(item.id)} className="button secondary">Open project</Link>
                 {item.status === 'invoiced' ? <span className="billingDone">Gefactureerd {formatDate(item.completed_at)}</span> : null}
                 {item.status === 'skip' ? <span className="billingSkipped">Niet factureren</span> : null}
                 {canManage ? (

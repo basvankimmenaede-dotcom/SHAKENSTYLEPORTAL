@@ -37,9 +37,9 @@ export default function UnifiedSidebar({
   ];
   const groups:NavGroup[]=[
     ...(planning.length?[{key:'planning',label:'Planning',icon:CalendarDays,items:planning}]:[]),
-    ...(canViewBilling||admin?[{key:'finance',label:'Financiën',icon:BadgeEuro,items:[
-      {href:'/planning/billing',label:'Facturatie',icon:BadgeEuro},
-      {href:'/planning/crew-invoices',label:'Inkomende facturen',icon:ReceiptText}
+    ...(canViewBilling||admin?[{key:'finance',label:'Facturatie',icon:BadgeEuro,items:[
+      {href:'/planning/crew-invoices',label:'Inkomende facturen',icon:ReceiptText},
+      {href:'/planning/billing',label:'Uitgaande facturen',icon:BadgeEuro}
     ]}]:[]),
     ...(admin?[{
       key:'personnel',label:'Personeel',icon:Users,items:[

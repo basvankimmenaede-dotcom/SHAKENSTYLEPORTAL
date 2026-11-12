@@ -691,6 +691,13 @@ export type RentmanPlanningProjectFunction = {
   usageperiod_start?: string | null;
   usageperiod_end?: string | null;
   amount?: number | null;
+  price_rate?: string | null;
+  price_travel?: number | null;
+  price_other?: number | null;
+  travel_time_before?: number | null;
+  travel_time_after?: number | null;
+  distance?: number | null;
+  twoway?: boolean | null;
 };
 
 export async function getPlanningProjectFunctions() {
@@ -701,7 +708,7 @@ export async function getPlanningProjectFunctions() {
 
 export async function getPlanningProjectFunctionsForProject(projectId: number) {
   return rentmanPlanningFetchAll<RentmanPlanningProjectFunction>(
-    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount&expand=group&limit=300`,
+    `/projects/${projectId}/projectfunctions?fields=id,name,displayname,type,project,subproject,group,planperiod_start,planperiod_end,usageperiod_start,usageperiod_end,amount,price_rate,price_travel,price_other,travel_time_before,travel_time_after,distance,twoway&expand=group&limit=300`,
   );
 }
 
@@ -831,4 +838,25 @@ export async function listRentmanCrewMembers(){
  );
  if(!members.length)throw new Error('Rentman gaf geen crewleden terug.');
  return members.map(normalizeRentmanCrew);
+}
+
+export async function getPlanningCrewAssignmentsForProject(projectId: number) {
+  const params = new URLSearchParams({
+    fields: 'id,function,crewmember,transport',
+    expand: 'function,crewmember',
+    limit: '1500',
+  });
+  const assignments = await rentmanPlanningFetchAll<RentmanPlanningCrewAssignment>(
+    `/projectcrew?${params.toString()}`,
+  );
+  const refId = (ref: unknown): number | null => {
+    if (typeof ref === 'number') return ref;
+    if (typeof ref === 'string') {
+      const match = ref.match(/(\\d+)$/);
+      return match ? Number(match[1]) : null;
+    }
+    if (ref && typeof ref === 'object' && 'id' in ref) return Number((ref as { id: unknown }).id);
+    return null;
+  };
+  return assignments.filter(a => refId(a.function?.project) === projectId);
 }
