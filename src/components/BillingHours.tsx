@@ -26,18 +26,20 @@ export default function BillingHours({id,lines,canManage,onChange}:{id:string;li
   const personnel = rows.filter(row => row.type !== 'vehicle_function' && row.type !== 'transport_function' && !/^(bakwagen|bestelbus|bestelauto|transport bestelbus|transport bakwagen|vrachtwagen|auto\\b)/i.test(row.name));
   const planned = personnel.reduce((sum,row)=>sum+(row.plannedHours || 0),0);
   const travel = personnel.reduce((sum,row)=>sum+row.plannedTravelOutHours+row.plannedTravelBackHours,0);
-  const registered = recorded.reduce((sum,row)=>sum+(row.hours || 0),0);
-  const mapped = recorded.filter(sheet=>sheet.functionId !== null && personnel.some(row=>row.id===sheet.functionId));
-  const unlinked = recorded.filter(sheet=>!personnel.some(row=>row.id===sheet.functionId));
+  const accepted=recorded.filter(sheet=>sheet.status==='submitted');
+  const registered=accepted.reduce((sum,row)=>sum+(row.hours||0),0);
+  const mapped=accepted.filter(sheet=>sheet.functionId!==null&&personnel.some(row=>row.id===sheet.functionId));
+  const unlinked=accepted.filter(sheet=>!personnel.some(row=>row.id===sheet.functionId));
   const groups: [string,HourRow[]][] = [['Alle functies',personnel]];
-  const complete = assignedCount > 0 && recorded.length >= assignedCount && unlinked.length === 0 && recorded.every(sheet=>sheet.hours !== null);
+  const complete = assignedCount > 0 && accepted.length >= assignedCount && unlinked.length === 0 && accepted.every(sheet=>sheet.hours !== null);
   const columns = 'minmax(110px,1.5fr) 40px 85px 70px 70px 70px 65px 85px 90px';
   const rateKey=(id:number)=>'Rentman personeel #'+id;
   const getRate=(row:HourRow)=>lines.find(line=>line.description===rateKey(row.id))?.unitPrice ?? hourly(row.priceRate?.name);
   const travelKey=(id:number)=>'Rentman personeel reis #'+id;
   const workLine=(row:HourRow)=>lines.find(line=>line.description===rateKey(row.id));
   const travelLine=(row:HourRow)=>lines.find(line=>line.description===travelKey(row.id));
-  const workHours=(row:HourRow)=>workLine(row)?.quantity ?? row.plannedHours ?? 0;
+  const workHours=(row:HourRow)=>workLine(row)?.quantity ??
+    Math.round(mapped.filter(sheet=>sheet.functionId===row.id).reduce((sum,sheet)=>sum+(sheet.hours||0),0)*100)/100;
   const travelHours=(row:HourRow)=>travelLine(row)?.quantity ?? (row.plannedTravelOutHours+row.plannedTravelBackHours);
   const edit=(row:HourRow,part:'work'|'travel'|'rate',value:number)=>{
     const rate=getRate(row)??0;
@@ -54,10 +56,11 @@ export default function BillingHours({id,lines,canManage,onChange}:{id:string;li
     </button>
     {expanded && <div style={{marginTop:12}}>
       {status && <p role="status" style={{fontSize:13,color:'var(--muted)'}}>{status}</p>}
+      <p style={{fontSize:12,color:'var(--muted)',margin:'0 0 12px'}}>Voor klantfacturatie zijn de geregistreerde uren uit ingediende shiftrapporten de basis. Rentman toont de planning ter vergelijking. Zonder rapport worden geen uren automatisch berekend; je kunt klanturen handmatig aanpassen. Inkomende bartenderfacturen wijzigen onze klantcalculatie nooit.</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8,marginBottom:14}}>
-        {([{label:'Gepland werk',value:fmt(planned)},{label:'Geplande reistijd',value:fmt(travel)},{label:'Geregistreerd',value:recorded.length?fmt(registered):'Geen sheets'}]).map(item=><div key={item.label} style={{padding:10,border:'1px solid var(--border,#ddd)',borderRadius:8,minWidth:0}}><div style={{fontSize:11,color:'var(--muted)'}}>{item.label}</div><strong style={{fontSize:15}}>{item.value}</strong></div>)}
+        {([{label:'Gepland werk',value:fmt(planned)},{label:'Geplande reistijd',value:fmt(travel)},{label:'Geregistreerd',value:accepted.length?fmt(registered):'Geen sheets'}]).map(item=><div key={item.label} style={{padding:10,border:'1px solid var(--border,#ddd)',borderRadius:8,minWidth:0}}><div style={{fontSize:11,color:'var(--muted)'}}>{item.label}</div><strong style={{fontSize:15}}>{item.value}</strong></div>)}
       </div>
-      <p style={{fontSize:12,color:'var(--muted)',margin:'0 0 12px'}}>{recorded.length} van {assignedCount} gekoppelde diensten met een sheet{complete ? ' · Verschil werk: '+fmt(registered-planned) : ' · Verschil pas definitief na alle sheets'}.</p>
+      <p style={{fontSize:12,color:'var(--muted)',margin:'0 0 12px'}}>{accepted.length} van {assignedCount} gekoppelde diensten met een sheet{complete ? ' · Verschil werk: '+fmt(registered-planned) : ' · Verschil pas definitief na alle sheets'}.</p>
       {groups.map(([group,items])=><div key={group} style={{marginTop:14}}>
         <strong style={{display:'block',marginBottom:8,fontSize:13}}>{group}</strong>
         <div style={{overflowX:'auto',maxWidth:'100%'}}>

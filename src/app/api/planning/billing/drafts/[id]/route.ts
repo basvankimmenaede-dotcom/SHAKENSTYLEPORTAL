@@ -37,6 +37,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const quantity = Number(raw?.quantity);
     const unitPrice = Number(raw?.unitPrice);
     const vatRate = Number(raw?.vatRate);
+    // An empty optional manual line is not required for saving customer billing drafts.
+    if (!description && quantity === 1 && unitPrice === 0 && vatRate === 21) continue;
     if (!description || description.length > 500 || !Number.isFinite(quantity) || quantity < 0 || quantity > 1000000 ||
       !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 100000000 || ![0, 9, 21].includes(vatRate)) {
       return NextResponse.json({ error: 'Controleer de omschrijving, aantallen, prijzen en btw van iedere regel.' }, { status: 400 });

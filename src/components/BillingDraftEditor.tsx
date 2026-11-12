@@ -32,7 +32,8 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       const rows=hours.rows||[];
       const isVehicle=(r:{type?:string;name:string})=>r.type==='vehicle_function'||/bakwagen|bestelbus|bestelauto|vrachtwagen|transport/i.test(r.name);
       setSummary({
-        hours:rows.filter((r:{type?:string;name:string})=>!isVehicle(r)).reduce((s:number,r:{plannedHours?:number})=>s+(r.plannedHours||0),0),
+        hours:(hours.recorded||[]).filter((r:{status?:string})=>r.status==='submitted')
+          .reduce((sum:number,r:{hours?:number|null})=>sum+(r.hours||0),0),
         functions:rows.filter((r:{type?:string;name:string})=>!isVehicle(r)).length,
         kilometers:(hours.vehicleTrips||[]).reduce((s:number,r:{kilometers?:number})=>s+(r.kilometers||0),0),
         vehicles:rows.filter(isVehicle).length,
@@ -118,7 +119,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     finally { setSaving(false); }
   }
   return <main className="container" style={{ maxWidth: 1180, paddingBottom: 60, width: '100%', minWidth: 0, marginInline: 'auto' }}>
-    <Link href="/planning/billing">← Terug naar facturatie</Link>
+    <Link href="/planning/billing">← Terug naar uitgaande facturen</Link>
     <h1 style={{ fontSize: 32, margin: '12px 0' }}>Projectafrekening</h1>
     {item && <p><strong>{item.rentman_project_number ? '#' + item.rentman_project_number + ' · ' : ''}{item.project_name}</strong> · {item.status === 'invoiced' ? 'Gefactureerd (vergrendeld)' : 'Concept'}</p>}
     {!item ? <p role="status">{state}</p> : <>
@@ -128,7 +129,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
       </nav>
       <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(250px, 290px)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
       <div id="billing-overzicht" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(165px,1fr))',gap:12,marginBottom:16}}>
-       {([{label:'Personeel',value:summary.hours.toLocaleString('nl-NL',{maximumFractionDigits:2})+' u',detail:summary.functions+' functies',tab:'personeel'},{label:'Transport',value:summary.kilometers.toLocaleString('nl-NL')+' km',detail:summary.vehicles+' voertuigen',tab:'transport'},{label:'Materiaal',value:money(summary.productTotal),detail:summary.products+' artikelen',tab:'materiaal'},{label:'Factuurregels',value:money(totals.net),detail:'Overige regels excl. btw',tab:'overig'}]).map(card=><button key={card.tab} type="button" className="card" onClick={()=>navigate(card.tab)} style={{padding:16,textAlign:'left',cursor:'pointer',minWidth:0}}><span style={{fontSize:12,color:'var(--muted)',display:'block',marginBottom:10}}>{card.label} ↗</span><strong style={{fontSize:21,display:'block'}}>{card.value}</strong><span style={{fontSize:12,color:'var(--muted)',display:'block',marginTop:5}}>{card.detail}</span></button>)}
+       {([{label:'Personeel',value:summary.hours.toLocaleString('nl-NL',{maximumFractionDigits:2})+' u',detail:'Geregistreerd · '+summary.functions+' functies',tab:'personeel'},{label:'Transport',value:summary.kilometers.toLocaleString('nl-NL')+' km',detail:summary.vehicles+' voertuigen',tab:'transport'},{label:'Materiaal',value:money(summary.productTotal),detail:summary.products+' artikelen',tab:'materiaal'},{label:'Factuurregels',value:money(totals.net),detail:'Overige regels excl. btw',tab:'overig'}]).map(card=><button key={card.tab} type="button" className="card" onClick={()=>navigate(card.tab)} style={{padding:16,textAlign:'left',cursor:'pointer',minWidth:0}}><span style={{fontSize:12,color:'var(--muted)',display:'block',marginBottom:10}}>{card.label} ↗</span><strong style={{fontSize:21,display:'block'}}>{card.value}</strong><span style={{fontSize:12,color:'var(--muted)',display:'block',marginTop:5}}>{card.detail}</span></button>)}
       </div>
       <div id="billing-personeel"><BillingHours id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} /></div>
       <div id="billing-transport"><BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} /></div>
