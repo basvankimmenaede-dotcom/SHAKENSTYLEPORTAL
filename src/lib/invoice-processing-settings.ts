@@ -1,7 +1,7 @@
 import 'server-only';
 import {createAdminClient} from '@/lib/supabase/admin';
 export type InvoiceProcessingSettings={
- id:number;approver_one:string|null;approver_two:string|null;forward_email:string;
+ id:number;approver_one:string|null;approver_two:string|null;forward_email:string;forward_sender_email:string;
  google_project_id:string;google_processor_id:string;google_location:'eu'|'us';
  google_service_account_encrypted:string|null;google_tested_at:string|null;google_test_message:string|null;
 };
@@ -29,6 +29,7 @@ export async function listEligibleApprovers():Promise<EligibleApprover[]>{
 export function publicProcessingSettings(row:InvoiceProcessingSettings){
  return {
   approverOne:row.approver_one||'',approverTwo:row.approver_two||'',forwardEmail:row.forward_email,
+  forwardSenderEmail:row.forward_sender_email||'',
   googleProjectId:row.google_project_id,googleProcessorId:row.google_processor_id,
   googleLocation:row.google_location,googleHasKey:Boolean(row.google_service_account_encrypted),
   googleTestedAt:row.google_tested_at,googleTestMessage:row.google_test_message

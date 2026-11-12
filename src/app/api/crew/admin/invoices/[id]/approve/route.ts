@@ -69,6 +69,10 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  const port=Number(process.env.CREW_SMTP_PORT||465);
  if(!host||!username||!password||!Number.isInteger(port)||port<1||port>65535)
   return NextResponse.json({error:'De SMTP-instellingen zijn niet compleet.'},{status:503});
+ // Only approved purchase invoices use this optional From address; all other portal email keeps its own sender.
+ const senderAddress=(settings.forward_sender_email||'').trim()||username;
+ if(senderAddress.length>254||!invoiceEmailPattern.test(senderAddress))
+  return NextResponse.json({error:'Het afzenderadres is ongeldig. Controleer Factuurverwerking.'},{status:409});
  // Validate file and load it before marking this second approval as a one-shot sending attempt.
  const {data:file,error:fileError}=await admin.storage.from('incoming-invoices').download(invoice.document_path);
  if(fileError||!file)return NextResponse.json({error:'De originele PDF kan niet worden geladen.'},{status:503});
@@ -97,7 +101,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   const smtp=nodemailer.createTransport({host,port,secure:port===465,auth:{user:username,pass:password},
    connectionTimeout:15000,greetingTimeout:15000,socketTimeout:25000});
   const receipt=await smtp.sendMail({
-   from:{name:'SHAKENSTYLE Facturen',address:username},to:invoice.forward_to,
+   from:{name:'SHAKENSTYLE Facturen',address:senderAddress},to:invoice.forward_to,
    messageId,subject,text:description,
    html:'<div style="font-family:Arial,sans-serif;line-height:1.6"><h2>Goedgekeurde factuur</h2><p>Factuur <strong>'+
     escapeHtml(invoice.invoice_number)+'</strong> van '+escapeHtml(name)+' is door twee accounts goedgekeurd.</p>'+

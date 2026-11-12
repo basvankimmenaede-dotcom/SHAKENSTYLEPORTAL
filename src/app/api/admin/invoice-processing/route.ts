@@ -21,11 +21,14 @@ export async function POST(request:NextRequest){
  const approverOne=typeof data.approverOne==='string'?data.approverOne.trim():'';
  const approverTwo=typeof data.approverTwo==='string'?data.approverTwo.trim():'';
  const forwardEmail=typeof data.forwardEmail==='string'?data.forwardEmail.trim().toLowerCase():'';
+ const forwardSenderEmail=typeof data.forwardSenderEmail==='string'?data.forwardSenderEmail.trim().toLowerCase():'';
  if((approverOne&&!uuidPattern.test(approverOne))||(approverTwo&&!uuidPattern.test(approverTwo))||
    (approverOne&&approverTwo&&approverOne===approverTwo))
   return NextResponse.json({error:'Selecteer twee verschillende geldige accounts.'},{status:400});
  if(forwardEmail&&(!invoiceEmailPattern.test(forwardEmail)||forwardEmail.length>254))
   return NextResponse.json({error:'Vul een geldig doorstuuradres in.'},{status:400});
+ if(forwardSenderEmail&&(!invoiceEmailPattern.test(forwardSenderEmail)||forwardSenderEmail.length>254))
+  return NextResponse.json({error:'Vul een geldig afzenderadres in.'},{status:400});
  const eligible=await listEligibleApprovers();
  const allowed=new Set(eligible.map(a=>a.id));
  if((approverOne&&!allowed.has(approverOne))||(approverTwo&&!allowed.has(approverTwo)))
@@ -33,12 +36,14 @@ export async function POST(request:NextRequest){
  const admin=createAdminClient();
  const now=new Date().toISOString();
  const {error}=await admin.from('invoice_processing_settings').update({
-  approver_one:approverOne||null,approver_two:approverTwo||null,forward_email:forwardEmail,
+  approver_one:approverOne||null,approver_two:approverTwo||null,
+  forward_email:forwardEmail,forward_sender_email:forwardSenderEmail,
   updated_at:now,updated_by:user.id
  }).eq('id',1);
  if(error)return NextResponse.json({error:'Instellingen konden niet worden opgeslagen.'},{status:500});
  // Existing Google columns remain unused in the database for backward compatibility.
  const next=await getInvoiceProcessingSettings();
  return NextResponse.json({ok:true,message:'Factuurinstellingen opgeslagen.',
-  settings:{approverOne:next.approver_one||'',approverTwo:next.approver_two||'',forwardEmail:next.forward_email}});
+  settings:{approverOne:next.approver_one||'',approverTwo:next.approver_two||'',
+   forwardEmail:next.forward_email,forwardSenderEmail:next.forward_sender_email||''}});
 }

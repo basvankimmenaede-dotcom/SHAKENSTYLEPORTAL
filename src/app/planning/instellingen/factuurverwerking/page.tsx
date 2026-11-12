@@ -7,7 +7,7 @@ export default async function InvoiceProcessingSettingsPage(){
  await requireAdmin();
  const [settings,accounts]=await Promise.all([getInvoiceProcessingSettings(),listEligibleApprovers()]);
  return <SettingsWorkspace active="invoice-processing" title="Factuurworkflow"
-  description="Beheer de twee goedkeurders, het boekhoudadres en bekijk de eigen PDF-herkenning.">
+  description="Beheer de goedkeurders, het boekhoudadres en de afzender van goedgekeurde facturen.">
    <InvoiceProcessingSettings initial={publicProcessingSettings(settings)} accounts={accounts}/>
  </SettingsWorkspace>;
 }

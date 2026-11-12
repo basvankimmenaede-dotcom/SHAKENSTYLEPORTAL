@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {CheckCheck,MailCheck,ShieldCheck,FileSearch,Clock3} from 'lucide-react';
-type Settings={approverOne:string;approverTwo:string;forwardEmail:string};
+type Settings={approverOne:string;approverTwo:string;forwardEmail:string;forwardSenderEmail:string};
 type Account={id:string;full_name:string};
 export default function InvoiceProcessingSettings({initial,accounts}:{initial:Settings;accounts:Account[]}){
  const [settings,setSettings]=useState(initial);
@@ -53,9 +53,13 @@ export default function InvoiceProcessingSettings({initial,accounts}:{initial:Se
     <p>Na twee goedkeuringen wordt de originele PDF doorgestuurd.</p>
    </div></header>
    <div className="invoiceProcessBody">
-    <label className="invoiceProcessWide"><span>Doorsturen naar</span><input type="email" className="input" value={settings.forwardEmail}
-      onChange={e=>set('forwardEmail',e.target.value)} placeholder="boekhouding@voorbeeld.nl" autoComplete="off"/></label>
-    <p className="invoiceProcessNote">Verzending gebruikt de bestaande SHAKENSTYLE SMTP-verbinding; de ontvangst in het boekhoudpakket is een aparte stap.</p>
+    <div className="invoiceProcessGrid">
+     <label><span>Doorsturen naar</span><input type="email" className="input" value={settings.forwardEmail}
+       onChange={e=>set('forwardEmail',e.target.value)} placeholder="boekhouding@voorbeeld.nl" autoComplete="off" maxLength={254}/></label>
+     <label><span>Verzenden vanaf (optioneel)</span><input type="email" className="input" value={settings.forwardSenderEmail}
+       onChange={e=>set('forwardSenderEmail',e.target.value)} placeholder="facturen@shakenstyle.com" autoComplete="off" maxLength={254}/></label>
+    </div>
+    <p className="invoiceProcessNote">Leeg laten gebruikt het huidige SMTP-mailadres. Een afwijkend afzenderadres moet door de SHAKENSTYLE mailserver zijn toegestaan. Andere portaalmails veranderen niet.</p>
    </div>
   </section>
   <section className="settingsPanel invoiceProcessPanel">
