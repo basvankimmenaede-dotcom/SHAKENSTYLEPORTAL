@@ -252,3 +252,48 @@ test('Supplier e-mail validation and categories are strict',()=>{
  assert.equal(isValidSupplierEmail('name <a@example.com>'),false);
  assert.ok(INVOICE_SUPPLIER_CATEGORIES.includes('algemeen'));
 });
+
+
+// Synthetic two-page bar-service invoice where vendor name precedes a person,
+// and the PDF library emits the service, time range and hourly prices on separate lines.
+const splitServiceInvoice=[
+ 'FACTUUR 11077 5-11 EVENT',
+ 'Example Bar Operations','Alex Example','Voorbeeldstraat 96','1506 DK Zaandam','Nederland',
+ 'KvK-nummer: 12345678','BTW-identificatienummer: NL000000000B01',
+ 'FACTUURGEGEVENS','Factuurnummer 11077','Factuurdatum 08-11-2026',
+ 'OMSCHRIJVING VAN DE DIENSTEN','Omschrijving Aantal Tarief Bedrag',
+ 'Bartending services','– 6-11-2026','(17:00–23:00)','6 uur € 30,00 € 180,00',
+ 'Bedrag','Subtotaal excl. BTW € 180,00','BTW (21%) € 37,80','TOTAAL INCL. BTW € 217,80'
+].join('\n');
+test('Company heading is chosen over a contact person before KvK',()=>{
+ const parsed=recognizeInvoiceText(splitServiceInvoice,'invoice.pdf');
+ assert.equal(parsed.supplier_name,'Example Bar Operations');
+ assert.equal(parsed.invoice_number,'11077');
+ assert.equal(parsed.invoice_date,'2026-11-08');
+ assert.equal(parsed.total_amount,217.8);
+});
+test('Recognize split hourly-service table only if time, quantity and price agree',()=>{
+ const parsed=recognizeInvoiceProjects(splitServiceInvoice,'FACTUUR 11077 5-11 EVENT.pdf',['11077']);
+ assert.equal(parsed.numbers.join(','),'11077');
+ assert.equal(parsed.lines[0].work_hours,6);
+ assert.match(parsed.notes.join(' '),/Factuurnummer 11077.*projectnummer/i);
+});
+test('Also recognize the one-line visual version of a split-service invoice',()=>{
+ const visual=splitServiceInvoice.replace(
+  'Bartending services\n– 6-11-2026\n(17:00–23:00)\n6 uur € 30,00 € 180,00',
+  'Bartending services 6 uur € 30,00 € 180,00\n– 6-11-2026\n(17:00–23:00)'
+ );
+ assert.equal(recognizeInvoiceProjects(visual,'factuur.pdf',['11077']).lines[0].work_hours,6);
+});
+test('Do not trust service hours when amount or time does not match the quantity',()=>{
+ const invalidAmount=splitServiceInvoice.replace('6 uur € 30,00 € 180,00','6 uur € 30,00 € 200,00');
+ const invalidTime=splitServiceInvoice.replace('17:00–23:00','17:00–22:00');
+ assert.equal(recognizeInvoiceProjects(invalidAmount,'invoice.pdf',['11077']).lines[0].work_hours,null);
+ assert.equal(recognizeInvoiceProjects(invalidTime,'invoice.pdf',['11077']).lines[0].work_hours,null);
+});
+test('Do not silently allocate a standalone hourly line to several suggested projects',()=>{
+ const withSecond=splitServiceInvoice+'\\nProjectnummer 11076';
+ const parsed=recognizeInvoiceProjects(withSecond,'invoice.pdf',['11077','11076']);
+ assert.equal(parsed.lines.find(p=>p.project_number==='11077').work_hours,null);
+ assert.match(parsed.notes.join(' '),/zonder bevestigd projectnummer/i);
+});

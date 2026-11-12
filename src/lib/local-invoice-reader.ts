@@ -118,14 +118,21 @@ function supplierFromLines(lines:string[]):{value:string|null;confidence:number}
  // and a KvK registration, find that heading rather than the customer's address.
  for(let i=0;i<Math.min(lines.length,60);i++){
   if(!/\bkvk\s*[-:]?\s*(?:nummer|nr\.?|number)?\b/i.test(lines[i]))continue;
-  for(let j=i-2;j>=Math.max(0,i-9);j--){
+  // A legal trading name often comes before a person's contact name. Prefer the
+  // earliest credible business heading above the vendor's address, not the closest
+  // name before KvK (which is frequently the contact person).
+  const possibilities:string[]=[];
+  for(let j=Math.max(0,i-9);j<=i-2;j++){
    const candidate=lines[j].trim();
-   const address=lines.slice(j+1,i).some(row=>/\b\d{4}\s?[a-z]{2}\b/i.test(row));
-   if(!address||candidate.length<5||candidate.length>120||/\d|[@:€]/.test(candidate))continue;
+   const following=lines.slice(j+1,i);
+   const hasPostalAddress=following.some(row=>/\b\d{4}\s?[a-z]{2}\b/i.test(row));
+   if(!hasPostalAddress||candidate.length<5||candidate.length>120||/\d|[@:€]/.test(candidate))continue;
    if(/\b(?:factuur|invoice|btw|vat|kvk|iban|telefoon|tel\.?|e-mail|email|t\.a\.v\.|straat|weg)\b/i.test(candidate))continue;
+   if(/^(?:nederland|netherlands|belgium|belgië|duitsland|germany)$/i.test(candidate))continue;
    if(/^SHAKE\s*'?N?\s*STYLE\b/i.test(candidate))continue;
-   return {value:candidate,confidence:0.72};
+   possibilities.push(candidate);
   }
+  if(possibilities.length)return {value:possibilities[0],confidence:0.72};
  }
  return {value:null,confidence:0};
 }

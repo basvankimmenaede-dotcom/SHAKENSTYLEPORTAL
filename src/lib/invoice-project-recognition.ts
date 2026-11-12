@@ -75,6 +75,16 @@ type InvoicedHourRow={line:number;hours:number;projectNumber:string|null;descrip
 const quantityPattern=/^(\d{1,3}(?:[.,]\d{1,2})?)\s+(.+)$/;
 const unitPricePattern=/\b(?:stuksprijs|unit\s*price|prijs\s*per\s*(?:uur|stuk)|uurtarief)\b/i;
 const timeRangePattern=/(?:^|[^\d])([01]?\d|2[0-3])[.:]([0-5]\d)\s*[-–—]\s*([01]?\d|2[0-3])[.:]([0-5]\d)(?!\d)/;
+const hourlyPriceRow=/(?:^|\s)(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:uur|uren|hours?|hrs?)\s*€\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*€\s*(\d{1,7}(?:[.,]\d{1,2})?)/i;
+function euroNumber(token:string):number|null{
+ const decimal=token.lastIndexOf(',')>token.lastIndexOf('.')?',':'.';
+ const separator=token.lastIndexOf(decimal);
+ let normalized=token;
+ if(separator>=0&&token.length-separator-1<=2)normalized=token.slice(0,separator).replace(/[.,]/g,'')+'.'+token.slice(separator+1);
+ else normalized=token.replace(/[.,]/g,'');
+ const n=Number(normalized);
+ return Number.isFinite(n)&&n>=0?n:null;
+}
 /**
  * Recognize billed *hours*, not arbitrary item quantities: the table must contain an
  * explicit quantity, a unit price and a clock range confirming that quantity.
@@ -82,10 +92,10 @@ const timeRangePattern=/(?:^|[^\d])([01]?\d|2[0-3])[.:]([0-5]\d)\s*[-–—]\s*(
  */
 function findInvoicedHourRows(lines:string[],confirmedProjects:string[]):InvoicedHourRow[]{
  const header=lines.findIndex((row,i)=>/\baantal\b/i.test(row)
-  &&lines.slice(i,i+3).some(value=>/\bbeschrijving\b/i.test(value)));
+  &&lines.slice(i,i+3).some(value=>/\b(?:beschrijving|omschrijving)\b/i.test(value)));
  if(header<0)return [];
  const total=lines.findIndex((row,i)=>i>header
-  &&/\b(?:totaalbedrag|subtotal|grand\s*total|btw\s+hoog)\b/i.test(row));
+  &&/\b(?:totaalbedrag|subtotal|subtotaal|grand\s*total|totaal\s*(?:incl|excl)|btw\s+hoog)\b/i.test(row));
  const end=total>header?total:Math.min(lines.length,header+150);
  const verified=new Set(confirmedProjects);
  const found:InvoicedHourRow[]=[];
@@ -104,6 +114,31 @@ function findInvoicedHourRows(lines:string[],confirmedProjects:string[]):Invoice
   if(Math.abs(clockHours-hours)>0.05)continue;
   const ref=description.match(/^\s*(?:project(?:nummer)?\s*[:#-]?\s*)?(\d{4,8})(?=\s*(?:[|:;\-]|$))/i)?.[1];
   found.push({line:i,hours,projectNumber:ref&&verified.has(ref)?ref:null,description:description.slice(0,180)});
+ }
+ // In some PDF table layouts, the description and clock range occupy separate
+ // lines and the hourly quantity/price/total is placed *after* them.
+ // Corroborate all three values before treating an "x uur" as billable work.
+ for(let i=header+1;i<end;i++){
+  const m=lines[i].match(hourlyPriceRow);
+  if(!m)continue;
+  const qty=asHours(m[1]),rate=euroNumber(m[2]),totalAmount=euroNumber(m[3]);
+  if(qty===null||qty<=0||qty>24||rate===null||rate<=0||rate>1000||totalAmount===null)continue;
+  if(Math.abs(qty*rate-totalAmount)>0.03)continue;
+  const nearby=lines.slice(Math.max(header+1,i-3),Math.min(end,i+4));
+  const context=nearby.join(' ');
+  if(!/\b(?:bartend\w*|cocktail\w*|catering|bar\s*service|horeca|dienst\w*|service\w*|gewerkt)\b/i.test(context))continue;
+  const times=context.match(timeRangePattern);
+  if(!times)continue;
+  const begin=Number(times[1])*60+Number(times[2]);
+  const finish=Number(times[3])*60+Number(times[4]);
+  const expected=((finish-begin+1440)%1440)/60;
+  if(Math.abs(expected-qty)>0.05)continue;
+  const explicit=context.match(/\b(?:project(?:nummer)?|opdracht(?:nummer)?)\s*[:#-]?\s*(\d{4,8})\b/i)?.[1];
+  const linked=explicit&&verified.has(explicit)?explicit:verified.size===1?[...verified][0]:null;
+  found.push({
+   line:i,hours:qty,projectNumber:linked,
+   description:nearby.join(' ').slice(0,180)
+  });
  }
  return found;
 }
@@ -166,5 +201,10 @@ export function recognizeInvoiceProjects(text:string,filename:string,knownNumber
  if(sorted.length===0)notes.push('Geen projectnummer herkend. Controleer of het projectnummer op de PDF staat.');
  if(sorted.length>1)notes.push('Meerdere projectnummers gevonden. Controleer de uren per project voordat je koppelt.');
  if(sorted.some(n=>!known.includes(n)))notes.push('Een projectnummer staat nog niet in de projectcatalogus. Controleer de koppeling met Rentman.');
+ // A vendor may reuse a Rentman project number as its invoice number. The header
+ // alone does not establish that the billed work occurred on that project/date.
+ const invoiceId=raw.match(/\bfactuurnummer\s*[:#-]?\s*(\d{4,8})\b/i)?.[1];
+ if(invoiceId&&sorted.includes(invoiceId)&&!new RegExp('\\b(?:project(?:nummer)?|opdracht(?:nummer)?)\\s*[:#-]?\\s*'+invoiceId+'\\b','i').test(raw))
+  notes.push('Factuurnummer '+invoiceId+' is ook een bekend Rentman-projectnummer. Controleer expliciet het project en de gewerkte datum.');
  return {numbers:sorted,lines:linesOut,notes};
 }
