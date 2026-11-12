@@ -667,10 +667,10 @@ export default async function PlanningPage() {
         </div>
         {profile.role === 'admin' ? <PersonnelHoursCard /> : null}
         {canSeeBilling ? (
-          <a className="planningMetricCard" href="/planning/billing">
+          <Link className="planningMetricCard" href="/planning/billing">
             <span className="planningMetricIcon billing">€</span>
-            <div><small>Facturatie</small><strong>{openBillingItems.length}</strong><em>{openBillingItems.length ? 'openstaand' : 'bijgewerkt'}</em></div>
-          </a>
+            <div><small>Uitgaande facturen</small><strong>{openBillingItems.length}</strong><em>{openBillingItems.length ? 'openstaand' : 'bijgewerkt'}</em></div>
+          </Link>
         ) : null}
         {closingRequired ? (
           <a className="planningMetricCard" href="/planning/afsluitlijst">
