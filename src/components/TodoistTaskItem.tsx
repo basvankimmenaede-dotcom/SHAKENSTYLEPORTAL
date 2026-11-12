@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import PlanningAssigneePicker from '@/components/PlanningAssigneePicker';
 
 type AssigneeOption = {
   id: string;
@@ -29,7 +30,7 @@ export default function TodoistTaskItem({
   labels = [],
   urgent = false,
   assignees = [],
-  assigneeProfileId = '',
+  assigneeProfileIds = [],
   currentUserId,
 }: {
   id: string;
@@ -44,7 +45,7 @@ export default function TodoistTaskItem({
   labels?: string[];
   urgent?: boolean;
   assignees?: AssigneeOption[];
-  assigneeProfileId?: string | null;
+  assigneeProfileIds?: string[];
   currentUserId: string;
 }) {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function TodoistTaskItem({
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState('');
   const [assignmentSaving, setAssignmentSaving] = useState(false);
-  const [assignedTo, setAssignedTo] = useState(assigneeProfileId ?? '');
+  const [assignedTo, setAssignedTo] = useState<string[]>(assigneeProfileIds);
   const [editing, setEditing] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState(content);
@@ -108,10 +109,10 @@ export default function TodoistTaskItem({
     window.dispatchEvent(new Event('planning-task-state-changed'));
   }
 
-  async function assignTask(nextAssignee: string) {
+  async function assignTask(nextAssignees: string[]) {
     if (assignmentSaving) return;
     const previous = assignedTo;
-    setAssignedTo(nextAssignee);
+    setAssignedTo(nextAssignees);
     setAssignmentSaving(true);
     setError('');
 
@@ -120,7 +121,7 @@ export default function TodoistTaskItem({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         taskId: id,
-        assigneeProfileId: nextAssignee || null,
+        assigneeProfileIds: nextAssignees,
       }),
     });
 
@@ -187,7 +188,7 @@ export default function TodoistTaskItem({
     return (
       <div
         className="todoistTask todoistTaskCompleted"
-        data-task-mine={assignedTo === currentUserId ? 'true' : 'false'}
+        data-task-mine={assignedTo.includes(currentUserId) ? 'true' : 'false'}
         data-task-area={taskArea}
       >
         <span className="todoistCheck todoistCheckDone">✓</span>
@@ -202,7 +203,7 @@ export default function TodoistTaskItem({
   return (
     <div
       className={urgent ? 'todoistTask todoistTaskUrgent' : 'todoistTask'}
-      data-task-mine={assignedTo === currentUserId ? 'true' : 'false'}
+      data-task-mine={assignedTo.includes(currentUserId) ? 'true' : 'false'}
       data-task-area={taskArea}
       draggable={!editing}
       onDragStart={startDrag}
@@ -241,16 +242,7 @@ export default function TodoistTaskItem({
         {assignees.length ? (
           <div className="todoistAssignee">
             <span>Toegewezen aan</span>
-            <select
-              value={assignedTo}
-              onChange={(event) => assignTask(event.target.value)}
-              disabled={assignmentSaving}
-            >
-              <option value="">Niemand</option>
-              {visibleAssignees.map((assignee) => (
-                <option value={assignee.id} key={assignee.id}>{assignee.name}</option>
-              ))}
-            </select>
+            <PlanningAssigneePicker options={visibleAssignees} selectedIds={assignedTo} onChange={assignTask} disabled={assignmentSaving} compact />
           </div>
         ) : null}
 
@@ -340,8 +332,7 @@ export default function TodoistTaskItem({
                           : 'office';
                       setEditArea(next);
                       if (next === 'office') {
-                        const selected = assignees.find((assignee) => assignee.id === assignedTo);
-                        if (selected?.role === 'warehouse') setAssignedTo('');
+                        setAssignedTo((ids) => ids.filter((id) => assignees.some((person) => person.id === id && person.role === 'admin')));
                       }
                     }}
                     disabled={editSaving}
