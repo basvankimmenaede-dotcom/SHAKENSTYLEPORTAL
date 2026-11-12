@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import PlanningAssigneePicker from '@/components/PlanningAssigneePicker';
 
 type ProjectOption = {
   number: string;
@@ -28,7 +29,7 @@ export default function PlanningTaskCreateButton({
   const [content, setContent] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [projectNumber, setProjectNumber] = useState('');
-  const [assigneeProfileId, setAssigneeProfileId] = useState('');
+  const [assigneeProfileIds, setAssigneeProfileIds] = useState<string[]>([]);
   const [taskArea, setTaskArea] = useState<'office' | 'warehouse' | 'both'>(canChooseOffice ? 'office' : 'warehouse');
   const [priority, setPriority] = useState('1');
   const [saving, setSaving] = useState(false);
@@ -61,7 +62,7 @@ export default function PlanningTaskCreateButton({
         dueDate: dueDate || null,
         projectNumber: projectNumber || null,
         projectName: selectedProject?.name || null,
-        assigneeProfileId: assigneeProfileId || null,
+        assigneeProfileIds,
         taskArea,
         priority: Number(priority),
       }),
@@ -77,7 +78,7 @@ export default function PlanningTaskCreateButton({
     setContent('');
     setDueDate('');
     setProjectNumber('');
-    setAssigneeProfileId('');
+    setAssigneeProfileIds([]);
     setTaskArea(canChooseOffice ? 'office' : 'warehouse');
     setPriority('1');
     setSaving(false);
@@ -163,8 +164,7 @@ export default function PlanningTaskCreateButton({
                       const nextArea = event.target.value === 'warehouse' ? 'warehouse' : event.target.value === 'both' ? 'both' : 'office';
                       setTaskArea(nextArea);
                       if (nextArea === 'office') {
-                        const selected = assignees.find((assignee) => assignee.id === assigneeProfileId);
-                        if (selected?.role === 'warehouse') setAssigneeProfileId('');
+                        setAssigneeProfileIds((ids) => ids.filter((id) => assignees.some((person) => person.id === id && person.role === 'admin')));
                       }
                     }}
                   >
@@ -185,15 +185,10 @@ export default function PlanningTaskCreateButton({
               </label>
             </div>
 
-            <label className="planningTaskAssigneeField">
-              <span>Toewijzen aan</span>
-              <select value={assigneeProfileId} onChange={(event) => setAssigneeProfileId(event.target.value)}>
-                <option value="">Niemand</option>
-                {visibleAssignees.map((assignee) => (
-                  <option value={assignee.id} key={assignee.id}>{assignee.name}</option>
-                ))}
-              </select>
-            </label>
+            <div className="planningTaskAssigneeField">
+              <span className="planningAssigneeFieldLabel">Toewijzen aan</span>
+              <PlanningAssigneePicker options={visibleAssignees} selectedIds={assigneeProfileIds} onChange={setAssigneeProfileIds} disabled={saving} />
+            </div>
 
             <div className="planningTaskCreateActions">
               {error ? <small>{error}</small> : <span />}
