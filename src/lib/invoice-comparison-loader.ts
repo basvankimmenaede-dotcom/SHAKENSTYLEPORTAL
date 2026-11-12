@@ -3,7 +3,7 @@ import {createAdminClient} from '@/lib/supabase/admin';
 import type {InvoiceProjectLine} from '@/lib/invoice-project-recognition';
 import {
  compareInvoiceToShiftReports,type InvoiceCheck,
- type InvoiceProjectRef,type InvoiceAssignment,type InvoiceShiftReport,type InvoiceBillingItem
+ type InvoiceProjectRef,type InvoiceAssignment,type InvoiceShiftReport
 } from '@/lib/invoice-shift-comparison';
 
 export type ReviewInvoiceInput={id:string;crew_member_id:string;project_numbers:string[]|null;project_lines:unknown};
@@ -22,18 +22,14 @@ export async function loadCrewInvoiceComparisons(invoices:ReviewInvoiceInput[]):
  const catalog=(directory||[]) as InvoiceProjectRef[];
  const projectIds=[...new Set(catalog.map(p=>p.rentman_project_id))];
  const crewIds=[...new Set(invoices.map(inv=>inv.crew_member_id))];
- let assignments:InvoiceAssignment[]=[],billing:InvoiceBillingItem[]=[];
+ let assignments:InvoiceAssignment[]=[];
  const reports:InvoiceShiftReport[]=[];
  if(projectIds.length){
-  const [assignmentResult,billingResult]=await Promise.all([
-   db.from('crew_portal_assignments')
+  const assignmentResult=await db.from('crew_portal_assignments')
     .select('id,crew_member_id,rentman_project_id,starts_at,ends_at')
-    .in('rentman_project_id',projectIds).in('crew_member_id',crewIds).limit(3500),
-   db.from('billing_items').select('id,rentman_project_id,status').in('rentman_project_id',projectIds).limit(2000)
-  ]);
-  if(assignmentResult.error||billingResult.error)throw new Error('Shifts of facturatieprojecten konden niet worden geladen.');
+    .in('rentman_project_id',projectIds).in('crew_member_id',crewIds).limit(3500);
+  if(assignmentResult.error)throw new Error('Shifts konden niet worden geladen.');
   assignments=(assignmentResult.data||[]) as InvoiceAssignment[];
-  billing=(billingResult.data||[]) as InvoiceBillingItem[];
   const assignmentIds=assignments.map(a=>a.id);
   for(let i=0;i<assignmentIds.length;i+=180){
    const {data,error}=await db.from('crew_shift_reports')
@@ -48,7 +44,7 @@ export async function loadCrewInvoiceComparisons(invoices:ReviewInvoiceInput[]):
   const lines=(Array.isArray(inv.project_lines)?inv.project_lines:[]) as InvoiceProjectLine[];
   initial[inv.id]=compareInvoiceToShiftReports({
    crewMemberId:inv.crew_member_id,projectNumbers:valid,projectLines:lines,
-   catalog,assignments,reports,billing
+   catalog,assignments,reports,billing:[]
   });
  }
  return initial;
