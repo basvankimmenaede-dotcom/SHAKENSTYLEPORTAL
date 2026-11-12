@@ -319,3 +319,43 @@ test('Rentman e-mail is a contact field, not automatic portal permission',()=>{
  assert.equal(row.rentman_email,'info@example.com');
  assert.equal(Object.prototype.hasOwnProperty.call(row,'portal_enabled'),false);
 });
+
+
+const monamInvoiceText=[
+ 'Omschrijving Bedrag Totaal Btw',
+ '06:00 Gewerkte uren','Datum: 6 november 2026','€ 30,00 € 180,00 21%',
+ '05:30 Gewerkte uren','Datum: 7 november 2026','€ 30,00 € 165,00 21%',
+ '140 x Kilometervergoeding','€ 0,23 € 32,20 21%',
+ '70 x Kilometervergoeding','€ 0,23 € 16,10 21%',
+ '1 x Aardbeien Nederland','€ 10,43 € 10,43 9%',
+ 'Subtotaal € 403,73','21% btw over € 393,30 € 82,59',
+ '9% btw over € 10,43 € 0,94','Totaal € 487,26',
+ "SHAKE 'N STYLE B.V.",'T.a.v. Michael Goossens','Schipholweg 947',
+ '2143CE Boesingheliede','MONAM','Rombout Hogerbeetsstraat 80 1',
+ '1052XH Amsterdam','info@monam.nl','KVK: 94710562',
+ 'Kenmerk: 11059 | 06.11 & 07.11 | Macallan | Bentley',
+ 'Factuurdatum: 09-11-2026','Vervaldatum: 23-11-2026',
+ 'Factuur 202611093070',
+ 'Gelieve het factuurbedrag van € 487,26 over te maken vóór 23-11-2026.'
+].join('\n');
+
+test('MONAM PDF: select invoice amount rather than trailing 2026 from payment due date',()=>{
+ const result=recognizeInvoiceText(monamInvoiceText,'202611093070.pdf');
+ assert.equal(result.invoice_number,'202611093070');
+ assert.equal(result.total_amount,487.26);
+ assert.equal(result.invoice_date,'2026-11-09');
+});
+test('MONAM PDF: the supplier is MONAM, not recipient Michael Goossens',()=>{
+ const result=recognizeInvoiceText(monamInvoiceText,'202611093070.pdf');
+ assert.equal(result.supplier_name,'MONAM');
+});
+test('MONAM split duration and rate rows: six plus five and a half hours',()=>{
+ const parsed=recognizeInvoiceProjects(monamInvoiceText,'202611093070.pdf',['11059']);
+ assert.equal(parsed.numbers.join(','),'11059');
+ assert.equal(parsed.lines.find(x=>x.project_number==='11059').work_hours,11.5);
+});
+test('MONAM duration rows require corroborating hourly rates and invoice line amounts',()=>{
+ const invalid=monamInvoiceText.replace('€ 30,00 € 165,00','€ 30,00 € 175,00');
+ const parsed=recognizeInvoiceProjects(invalid,'202611093070.pdf',['11059']);
+ assert.equal(parsed.lines.find(x=>x.project_number==='11059').work_hours,6);
+});

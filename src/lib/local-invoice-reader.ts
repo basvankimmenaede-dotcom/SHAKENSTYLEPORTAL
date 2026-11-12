@@ -44,6 +44,14 @@ function euroValue(raw:string):number|null{
  return Number.isFinite(parsed)&&parsed>=0&&parsed<1e8?Math.round(parsed*100)/100:null;
 }
 function priceOnLine(line:string):number|null{
+ // The last numeral may be a due date: "factuurbedrag € 487,26 ... 23-11-2026".
+ // Prefer amounts explicitly accompanied by a currency sign over year/date fragments.
+ const euroPrefixed=[...line.matchAll(/€\s*(\d[\d.,\s]*\d|\d)/g)]
+  .map(match=>euroValue(match[1])).filter((n):n is number=>n!==null);
+ if(euroPrefixed.length)return euroPrefixed[euroPrefixed.length-1];
+ const euroSuffixed=[...line.matchAll(/(\d[\d.,\s]*\d|\d)\s*€/g)]
+  .map(match=>euroValue(match[1])).filter((n):n is number=>n!==null);
+ if(euroSuffixed.length)return euroSuffixed[euroSuffixed.length-1];
  // Ignore accidental numerals elsewhere in a PDF; only use totals in explicitly labelled rows.
  const fragments=[...line.matchAll(/(?:€\s*)?\b\d{1,8}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?\b\s*€?/g)]
   .filter(match=>!line.slice((match.index||0)+match[0].length).trimStart().startsWith('%'))
@@ -127,7 +135,8 @@ function supplierFromLines(lines:string[]):{value:string|null;confidence:number}
    const following=lines.slice(j+1,i);
    const hasPostalAddress=following.some(row=>/\b\d{4}\s?[a-z]{2}\b/i.test(row));
    if(!hasPostalAddress||candidate.length<5||candidate.length>120||/\d|[@:€]/.test(candidate))continue;
-   if(/\b(?:factuur|invoice|btw|vat|kvk|iban|telefoon|tel\.?|e-mail|email|t\.a\.v\.|straat|weg)\b/i.test(candidate))continue;
+   if(/^\s*(?:t\.?\s*a\.?\s*v\.?|attn\.?|ter\s+attentie\s+van)(?:\s|:|$)/i.test(candidate))continue;
+   if(/\b(?:factuur|invoice|btw|vat|kvk|iban|telefoon|tel\.?|e-mail|email|straat|weg)\b/i.test(candidate))continue;
    if(/^(?:nederland|netherlands|belgium|belgië|duitsland|germany)$/i.test(candidate))continue;
    if(/^SHAKE\s*'?N?\s*STYLE\b/i.test(candidate))continue;
    possibilities.push(candidate);

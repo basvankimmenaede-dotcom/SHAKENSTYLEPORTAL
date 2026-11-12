@@ -163,17 +163,25 @@ export default function InvoiceInboxReview({emails,extractions,members,suppliers
    <div className="invoiceReviewList">{emails.map(mail=>{
     const documents=extractions.filter(x=>x.message_id===mail.id);
     const hasPdf=Array.isArray(mail.attachments)&&mail.attachments.length>0;
+    const totalPdfs=(mail.attachments||[]).filter(x=>x.path?.toLowerCase().endsWith('.pdf')).length;
+    const linkedPdfs=documents.filter(x=>x.status==='linked'||Boolean(x.linked_invoice_id)).length;
+    const mailProgress=linkedPdfs>0&&linkedPdfs<totalPdfs
+      ?linkedPdfs+' van '+totalPdfs+' PDF’s gekoppeld'
+      :linkedPdfs>0&&linkedPdfs===totalPdfs?'Alles gekoppeld'
+      :documents.length?(documents.every(x=>x.status==='failed')?'Controle nodig':'Uitgelezen'):statusLabel(mail.status);
     const isExpanded=expanded===mail.id;
     return <article className="invoiceReviewItem" key={mail.id}>
       <button type="button" className="invoiceReviewItemHeader" onClick={()=>setExpanded(isExpanded?null:mail.id)} aria-expanded={isExpanded}>
        <span className="invoiceReviewItemSubject"><strong>{mail.subject||'Zonder onderwerp'}</strong><small>{mail.sender||'Afzender onbekend'}</small></span>
        <span className="invoiceReviewItemMeta">{displayDate(mail.received_at)}</span>
        <span className="invoiceReviewItemMeta">{mail.attachments?.length||0} PDF</span>
-       <span className={'invoiceReviewStatus '+(documents.some(x=>x.status==='linked')?'linked':'')}>{documents.length?documents.some(x=>x.status==='linked')?'Gekoppeld':documents.every(x=>x.status==='failed')?'Controle nodig':'Uitgelezen':statusLabel(mail.status)}</span>
+       <span className={'invoiceReviewStatus '+(linkedPdfs===totalPdfs&&linkedPdfs>0?'linked':'')}>{mailProgress}</span>
        <span className="invoiceReviewChevron">{isExpanded?'−':'+'}</span>
       </button>
       {isExpanded&&<div className="invoiceReviewExpanded">
        {mail.error_message&&<p className="invoiceReviewHint">{mail.error_message}</p>}
+       {linkedPdfs>0&&linkedPdfs<totalPdfs&&
+        <p className="invoiceReviewHint"><AlertCircle size={16}/> Deze e-mail blijft in de werkvoorraad omdat nog {totalPdfs-linkedPdfs} PDF-bijlage(n) niet zijn verwerkt. Controleer ook de overige bijlagen of archiveer de e-mail handmatig.</p>}
        {!hasPdf?<p className="muted">Geen bruikbare PDF-bijlage gevonden.</p>:<>
         {!documents.length&&<div className="invoiceReviewUnprocessed">
          <span>Deze PDF is ontvangen. Herken de gegevens automatisch uit de PDF of vul ze handmatig in.</span>

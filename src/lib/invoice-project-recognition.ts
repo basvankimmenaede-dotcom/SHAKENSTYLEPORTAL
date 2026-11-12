@@ -76,6 +76,8 @@ const quantityPattern=/^(\d{1,3}(?:[.,]\d{1,2})?)\s+(.+)$/;
 const unitPricePattern=/\b(?:stuksprijs|unit\s*price|prijs\s*per\s*(?:uur|stuk)|uurtarief)\b/i;
 const timeRangePattern=/(?:^|[^\d])([01]?\d|2[0-3])[.:]([0-5]\d)\s*[-–—]\s*([01]?\d|2[0-3])[.:]([0-5]\d)(?!\d)/;
 const hourlyPriceRow=/(?:^|\s)(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:uur|uren|hours?|hrs?)\s*€\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*€\s*(\d{1,7}(?:[.,]\d{1,2})?)/i;
+const durationHoursRow=/^(\d{1,2})[:.]([0-5]\d)\s+(?:gewerkte\s+uren|worked\s+hours)\b/i;
+const twoEuroAmounts=/€\s*(\d[\d.,]*)\s+€\s*(\d[\d.,]*)/;
 function euroNumber(token:string):number|null{
  const decimal=token.lastIndexOf(',')>token.lastIndexOf('.')?',':'.';
  const separator=token.lastIndexOf(decimal);
@@ -142,6 +144,41 @@ function findInvoicedHourRows(lines:string[],confirmedProjects:string[]):Invoice
  }
  return found;
 }
+/**
+ * Another common invoice layout uses HH:MM as the billed duration and places
+ * the rate and line total on a later PDF text line:
+ * 06:00 Gewerkte uren / Datum ... / € 30,00 € 180,00 21%.
+ * Only accept a duration when the monetary multiplication confirms the hours.
+ */
+function findDurationBilledRows(lines:string[],projects:string[]):InvoicedHourRow[]{
+ const header=lines.findIndex(row=>/\b(?:omschrijving|description)\b/i.test(row)&&/\b(?:bedrag|total|totaal|prijs|price)\b/i.test(row));
+ if(header<0)return [];
+ const footer=lines.findIndex((row,i)=>i>header&&/^(?:subtotaal|subtotal|btw\s|vat\s|totaal|total)/i.test(row));
+ const end=footer>=0?footer:Math.min(lines.length,header+120);
+ const verified=new Set(projects),found:InvoicedHourRow[]=[];
+ for(let i=header+1;i<end;i++){
+  const m=lines[i].match(durationHoursRow);
+  if(!m)continue;
+  const hours=Number(m[1])+Number(m[2])/60;
+  if(hours<=0||hours>24)continue;
+  // Do not read the next separate work row's price if this one lacks a price.
+  let priceLine:string|null=null;
+  for(let j=i+1;j<Math.min(i+4,end);j++){
+   if(durationHoursRow.test(lines[j]))break;
+   if(twoEuroAmounts.test(lines[j])){priceLine=lines[j];break;}
+  }
+  if(!priceLine)continue;
+  const amounts=priceLine.match(twoEuroAmounts);
+  if(!amounts)continue;
+  const rate=euroNumber(amounts[1]),total=euroNumber(amounts[2]);
+  if(rate===null||total===null||rate<=0||rate>1000||Math.abs(rate*hours-total)>0.03)continue;
+  const nearby=lines.slice(Math.max(header+1,i-2),Math.min(end,i+4)).join(' ');
+  const explicit=nearby.match(/\b(?:project(?:nummer)?|opdracht(?:nummer)?)\s*[:#-]?\s*(\d{4,8})\b/i)?.[1];
+  const linked=explicit&&verified.has(explicit)?explicit:verified.size===1?[...verified][0]:null;
+  found.push({line:i,hours:round(hours),projectNumber:linked,description:lines[i]+' · '+priceLine});
+ }
+ return found;
+}
 
 /**
  * A catalog match is only a suggestion: office must confirm project refs before linking.
@@ -162,7 +199,7 @@ export function recognizeInvoiceProjects(text:string,filename:string,knownNumber
   if(inText(source,n))numbers.add(n);
  }
  const sorted=[...numbers].sort((a,b)=>a.localeCompare(b,'nl'));
- const billedRows=findInvoicedHourRows(lines,sorted);
+ const billedRows=[...findInvoicedHourRows(lines,sorted),...findDurationBilledRows(lines,sorted)];
  const linesOut:InvoiceProjectLine[]=[];
  for(const n of sorted){
   const labeled=new RegExp('\\b(?:project(?:nummer|nr|no|number)?|opdracht(?:nummer|nr)?|job\\s*(?:number|no))\\s*[#:.\\-]?\\s*'+n+'\\b','i');
