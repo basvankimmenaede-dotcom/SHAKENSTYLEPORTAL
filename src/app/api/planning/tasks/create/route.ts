@@ -32,6 +32,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'Vul een taak in.' }, { status: 400 });
     }
 
+    await validateAssigneeProfileIds(assigneeProfileIds, taskArea);
+
     const description = projectNumber
       ? `Aangemaakt vanuit SHAKENSTYLE planning · Rentman project ${projectNumber}${projectName ? ` · ${projectName}` : ''}`
       : 'Aangemaakt vanuit SHAKENSTYLE planning';
@@ -42,8 +44,6 @@ export async function POST(request: Request) {
       description,
       priority,
     });
-
-    await validateAssigneeProfileIds(assigneeProfileIds, taskArea);
 
     const { error: assignmentError } = await supabase
       .from('planning_task_assignments')
