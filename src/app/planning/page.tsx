@@ -243,7 +243,7 @@ export default async function PlanningPage() {
       .order('full_name'),
     supabase
       .from('planning_task_assignments')
-      .select('todoist_task_id,assignee_profile_id,task_area'),
+      .select('todoist_task_id,assignee_profile_id,assignee_profile_ids,task_area'),
     supabase
       .from('planning_settings')
       .select('fuel_card_distance_km,recurring_tasks')
@@ -420,7 +420,7 @@ export default async function PlanningPage() {
   const taskAssigneeById = new Map(
     (taskAssignmentsResult.data ?? []).map((row) => [
       String(row.todoist_task_id),
-      row.assignee_profile_id ? String(row.assignee_profile_id) : null,
+      row.assignee_profile_ids?.length ? row.assignee_profile_ids.map(String) : row.assignee_profile_id ? [String(row.assignee_profile_id)] : [],
     ]),
   );
   const taskAreaById = new Map(
@@ -808,7 +808,7 @@ export default async function PlanningPage() {
                           : meta.text}
                         labels={task.labels}
                         assignees={assignees}
-                        assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                        assigneeProfileIds={taskAssigneeById.get(task.id) ?? []}
                         currentUserId={user.id}
                         priority={task.priority ?? 1}
                         taskArea={taskAreaById.get(task.id) ?? 'office'}
@@ -847,7 +847,7 @@ export default async function PlanningPage() {
                               : meta.text}
                             labels={task.labels}
                             assignees={assignees}
-                            assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                            assigneeProfileIds={taskAssigneeById.get(task.id) ?? []}
                             currentUserId={user.id}
                         priority={task.priority ?? 1}
                         taskArea={taskAreaById.get(task.id) ?? 'office'}
@@ -886,7 +886,7 @@ export default async function PlanningPage() {
                           : 'Geen deadline'}
                         labels={task.labels}
                         assignees={assignees}
-                        assigneeProfileId={taskAssigneeById.get(task.id) ?? ''}
+                        assigneeProfileIds={taskAssigneeById.get(task.id) ?? []}
                         currentUserId={user.id}
                         priority={task.priority ?? 1}
                         taskArea={taskAreaById.get(task.id) ?? 'office'}

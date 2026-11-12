@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requirePlanningUser } from '@/lib/auth';
 import { updatePlanningTodoistTask } from '@/lib/todoist';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { validateAssigneeProfileIds, storedAssigneeIds, PlanningTaskAssigneeError } from '@/lib/planningTaskAssignees';
 
 function normalizePriority(value: unknown) {
   const priority = Number(value);
@@ -36,7 +36,7 @@ export async function PATCH(
 
     const { data: existing } = await supabase
       .from('planning_task_assignments')
-      .select('assignee_profile_id,task_area')
+      .select('assignee_profile_id,assignee_profile_ids,task_area')
       .eq('todoist_task_id', id)
       .maybeSingle();
 
@@ -44,21 +44,7 @@ export async function PATCH(
       return NextResponse.json({ ok: false, error: 'Geen toegang tot deze kantoortaak.' }, { status: 403 });
     }
 
-    if (taskArea === 'office' && existing?.assignee_profile_id) {
-      const admin = createAdminClient();
-      const { data: assignee } = await admin
-        .from('profiles')
-        .select('role')
-        .eq('id', existing.assignee_profile_id)
-        .maybeSingle();
-
-      if (assignee?.role === 'warehouse') {
-        return NextResponse.json({
-          ok: false,
-          error: 'Deze taak staat nog op een magazijngebruiker. Wijzig eerst de toewijzing.',
-        }, { status: 400 });
-      }
-    }
+    if (taskArea === 'office') await validateAssigneeProfileIds(storedAssigneeIds(existing), taskArea);
 
     const task = await updatePlanningTodoistTask({
       taskId: id,
@@ -81,6 +67,6 @@ export async function PATCH(
     return NextResponse.json({ ok: true, task, taskArea });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Taak kon niet worden gewijzigd.';
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return NextResponse.json({ ok: false, error: message }, { status: error instanceof PlanningTaskAssigneeError ? 400 : 500 });
   }
 }

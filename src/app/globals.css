@@ -6450,3 +6450,44 @@ table td{font-size:12px}
     min-height: 32px;
   }
 }
+
+/* Multiple task assignees, shared by task creation and quick editing. */
+.planningAssigneePicker { position: relative; min-width: 0; width: 100%; }
+.planningAssigneePicker details { position: relative; }
+.planningAssigneePicker summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  box-sizing: border-box; height: 44px; width: 100%; padding: 0 11px;
+  border: 1px solid #ddd7cf; border-radius: 10px; background: #fff; color: var(--ink);
+  font-size: 12px; cursor: pointer; list-style: none;
+}
+.planningAssigneePicker summary::-webkit-details-marker { display: none; }
+.planningAssigneePicker summary > span:first-child {
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0;
+}
+.planningAssigneePicker summary:focus-visible { outline: 2px solid #ef642f; outline-offset: 2px; }
+.planningAssigneePickerChevron { color: var(--muted); flex-shrink: 0; }
+.planningAssigneePicker details[open] .planningAssigneePickerChevron { transform: rotate(180deg); }
+.planningAssigneePickerMenu {
+  position: absolute; z-index: 35; left: 0; right: 0; top: calc(100% + 4px);
+  max-height: 220px; min-width: 205px; overflow-y: auto; padding: 5px;
+  background: #fff; border: 1px solid #ddd7cf; border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(23, 21, 19, .17);
+}
+.planningAssigneePicker .planningAssigneePickerOption,
+.planningTaskCreateModal .planningAssigneePicker .planningAssigneePickerOption {
+  display: flex; flex-direction: row; align-items: center; gap: 9px;
+  padding: 8px; margin: 0; border-radius: 7px; cursor: pointer;
+  color: var(--ink); font-size: 12px; font-weight: 500;
+}
+.planningAssigneePickerOption:hover { background: #faf5f0; }
+.planningAssigneePicker .planningAssigneePickerOption input,
+.planningTaskCreateModal .planningAssigneePicker .planningAssigneePickerOption input {
+  width: 15px; height: 15px; min-width: 15px; margin: 0; accent-color: #e46b36;
+}
+.planningAssigneePickerEmpty { display: block; padding: 9px; color: var(--muted); font-size: 12px; }
+.planningAssigneePicker.compact { width: min(215px, 100%); }
+.planningAssigneePicker.compact summary { height: 26px; border-radius: 7px; padding: 0 8px; font-size: 10px; }
+.planningAssigneePicker.compact .planningAssigneePickerMenu { min-width: 190px; }
+@media (max-width: 600px) { .planningAssigneePicker.compact { width: 100%; } }
+
+.planningAssigneeFieldLabel{display:block;font-size:9px;font-weight:900;margin-bottom:6px}
