@@ -4,6 +4,7 @@ import BillingProductUsage, { type BillingProductUsageHandle } from './BillingPr
 import BillingChecks from './BillingChecks';
 import BillingHours from './BillingHours';
 import BillingTransport from './BillingTransport';
+import BillingReceiptReview,{type ReceiptCharge} from './BillingReceiptReview';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Line = { description: string; quantity: number; unitPrice: number; vatRate: number };
@@ -20,6 +21,7 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
   const [saving, setSaving] = useState(false);
   const [activeTab,setActiveTab] = useState('overzicht');
   const [summary,setSummary] = useState({hours:0,functions:0,kilometers:0,vehicles:0,products:0,productTotal:0});
+  const [receipts,setReceipts]=useState<ReceiptCharge[]>([]);
   useEffect(()=>{
     let active=true;
     Promise.allSettled([
@@ -64,6 +66,11 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     const vat = Math.round(net * (Number(l.vatRate) || 0)) / 100;
     return { net: a.net + net, vat: a.vat + vat };
   }, { net: 0, vat: 0 }), [draft.lines]);
+  const receiptTotals=useMemo(()=>receipts.reduce((acc,row)=>{
+    const net=Number(row.sale_price||0);
+    const vat=Math.round(net*Number(row.sale_vat_rate||0))/100;
+    return {net:acc.net+net,vat:acc.vat+vat};
+  },{net:0,vat:0}),[receipts]);
   function change(key: keyof Omit<Draft, 'lines'>, value: string) {
     setDraft(d => ({ ...d, [key]: value })); setState('Niet-opgeslagen wijzigingen');
   }
@@ -80,13 +87,18 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     const escapeHtml = (value:unknown) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] || ch));
     const table = (headings:string[], entries:string[][]) => '<table><thead><tr>' + headings.map(h=>'<th>'+escapeHtml(h)+'</th>').join('') + '</tr></thead><tbody>' + entries.map(entry=>'<tr>'+entry.map(cell=>'<td>'+escapeHtml(cell)+'</td>').join('')+'</tr>').join('') + '</tbody></table>';
     try {
-      const [productsResponse,hoursResponse] = await Promise.all([
+      const [productsResponse,hoursResponse,receiptResponse] = await Promise.all([
         fetch('/api/planning/billing/products/'+encodeURIComponent(id)),
-        fetch('/api/planning/billing/hours/'+encodeURIComponent(id))
+        fetch('/api/planning/billing/hours/'+encodeURIComponent(id)),
+        fetch('/api/planning/billing/receipt-costs/'+encodeURIComponent(id),{cache:'no-store'})
       ]);
-      if(!productsResponse.ok || !hoursResponse.ok) throw new Error('Projectgegevens ophalen mislukt');
+      if(!productsResponse.ok || !hoursResponse.ok || !receiptResponse.ok) throw new Error('Projectgegevens of bonnetjes ophalen mislukt');
       const productsData=await productsResponse.json();
       const hoursData=await hoursResponse.json();
+      const receiptData=await receiptResponse.json();
+      const includedReceipts=(receiptData.receipts||[]).filter((r:{billing_status:string})=>r.billing_status==='included') as ReceiptCharge[];
+      const receiptRows=includedReceipts.map(r=>[r.sale_description||r.merchant||r.filename,
+        money(Number(r.sale_price||0)),String(r.sale_vat_rate??0)+'%']);
       const products = (productsData.products || []).filter((p:{excluded?:boolean})=>!p.excluded) as {section:string;category:string;name:string;quantity:number;unit:string;unitPrice:number|null;factor?:number;discount?:number}[];
       const personnel = (hoursData.rows || []) as {id:number;name:string;amount:number;plannedHours:number|null;plannedTravelOutHours:number;plannedTravelBackHours:number;type:string|null}[];
       const submitted=(hoursData.recorded||[]) as {functionId:number|null;hours:number|null;status:string}[];
@@ -103,7 +115,8 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
         return '<h2>'+escapeHtml(label)+'</h2>'+table(['Map','Artikel','Aantal','Prijs/st.','Totaal'],items.map(p=>[p.category,p.name, String(p.quantity)+' '+p.unit,p.unitPrice===null?'Niet ingevuld':money(p.unitPrice),p.unitPrice===null?'—':money(p.quantity*p.unitPrice*(p.factor??1)*(1-(p.discount??0)/100))]));
       }).join('');
       const otherLines=draft.lines.filter(l=>l.description.trim()&&!l.description.startsWith('[Transport] '));
-      const html='<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Projectafrekening '+escapeHtml(item?.rentman_project_number||id)+'</title><style>@page{size:A4;margin:16mm}body{font-family:Arial,sans-serif;color:#202020;font-size:11px}h1{font-size:24px;margin:0 0 8px}h2{font-size:15px;margin:25px 0 9px;border-bottom:1px solid #bbb;padding-bottom:5px}p{line-height:1.5}table{width:100%;border-collapse:collapse;margin-bottom:14px}th{text-align:left;background:#f1f1f1}th,td{padding:7px 6px;border-bottom:1px solid #ddd;vertical-align:top}tr{break-inside:avoid}th:nth-last-child(-n+2),td:nth-last-child(-n+2){text-align:right}.muted{color:#777}.total{text-align:right;font-size:16px;font-weight:bold}.actions{margin-bottom:20px}@media print{.actions{display:none}body{print-color-adjust:exact}}</style></head><body><div class="actions"><button onclick="window.print()">Opslaan als PDF / Afdrukken</button></div><h1>Projectafrekening</h1><p><strong>#'+escapeHtml(item?.rentman_project_number||id)+' · '+escapeHtml(item?.project_name)+'</strong><br>'+escapeHtml(draft.customer_name||item?.customer_name)+'<br>'+escapeHtml(draft.customer_address).replace(/\\n/g,'<br>')+'</p><p class="muted">Conceptoverzicht · bedragen excl. btw tenzij anders vermeld</p><h2>Personeel & uren</h2>'+table(['Functie','Aantal','Werk klant','Rentman gepland','Reistijd klant'],personnelRows)+'<h2>Transport & logistiek</h2>'+table(['Voertuig','Aantal'],personnel.filter(p=>p.type==='vehicle_function'||/bakwagen|bestelbus|vrachtwagen/i.test(p.name)).map(p=>[p.name,String(p.amount)])) +productSections+(otherLines.length?'<h2>Factuurregels (personeel, transport en overig)</h2>'+table(['Omschrijving','Aantal','Prijs/st.','Totaal'],otherLines.map(l=>[l.description,String(l.quantity),money(l.unitPrice),money(l.quantity*l.unitPrice)])):'')+'<p class="total">Producten & verbruik: '+money(products.reduce((sum,p)=>sum+p.quantity*(p.unitPrice||0)*(p.factor??1)*(1-(p.discount??0)/100),0))+'</p><p class="muted">Dit is een projectafrekening ter controle, geen definitieve factuur. Klanturen komen uit ingediende shiftrapporten plus handmatige correcties; nooit uit de factuur van de bartender. Niet-opgeslagen wijzigingen worden niet meegenomen.</p></body></html>';
+      const receiptNet=includedReceipts.reduce((sum,r)=>sum+Number(r.sale_price||0),0);
+      const html='<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Projectafrekening '+escapeHtml(item?.rentman_project_number||id)+'</title><style>@page{size:A4;margin:16mm}body{font-family:Arial,sans-serif;color:#202020;font-size:11px}h1{font-size:24px;margin:0 0 8px}h2{font-size:15px;margin:25px 0 9px;border-bottom:1px solid #bbb;padding-bottom:5px}p{line-height:1.5}table{width:100%;border-collapse:collapse;margin-bottom:14px}th{text-align:left;background:#f1f1f1}th,td{padding:7px 6px;border-bottom:1px solid #ddd;vertical-align:top}tr{break-inside:avoid}th:nth-last-child(-n+2),td:nth-last-child(-n+2){text-align:right}.muted{color:#777}.total{text-align:right;font-size:16px;font-weight:bold}.actions{margin-bottom:20px}@media print{.actions{display:none}body{print-color-adjust:exact}}</style></head><body><div class="actions"><button onclick="window.print()">Opslaan als PDF / Afdrukken</button></div><h1>Projectafrekening</h1><p><strong>#'+escapeHtml(item?.rentman_project_number||id)+' · '+escapeHtml(item?.project_name)+'</strong><br>'+escapeHtml(draft.customer_name||item?.customer_name)+'<br>'+escapeHtml(draft.customer_address).replace(/\\n/g,'<br>')+'</p><p class="muted">Conceptoverzicht · bedragen excl. btw tenzij anders vermeld</p><h2>Personeel & uren</h2>'+table(['Functie','Aantal','Werk klant','Rentman gepland','Reistijd klant'],personnelRows)+'<h2>Transport & logistiek</h2>'+table(['Voertuig','Aantal'],personnel.filter(p=>p.type==='vehicle_function'||/bakwagen|bestelbus|vrachtwagen/i.test(p.name)).map(p=>[p.name,String(p.amount)])) +productSections+(receiptRows.length?'<h2>Bonnetjes doorbelast aan klant</h2>'+table(['Omschrijving','Verkoopprijs excl. btw','Btw'],receiptRows)+'<p>Bonnetjes excl. btw: '+money(receiptNet)+'</p>':'')+(otherLines.length?'<h2>Factuurregels (personeel, transport en overig)</h2>'+table(['Omschrijving','Aantal','Prijs/st.','Totaal'],otherLines.map(l=>[l.description,String(l.quantity),money(l.unitPrice),money(l.quantity*l.unitPrice)])):'')+'<p class="total">Producten & verbruik: '+money(products.reduce((sum,p)=>sum+p.quantity*(p.unitPrice||0)*(p.factor??1)*(1-(p.discount??0)/100),0))+'</p><p class="muted">Dit is een projectafrekening ter controle, geen definitieve factuur. Klanturen komen uit ingediende shiftrapporten plus handmatige correcties; nooit uit de factuur van de bartender. Niet-opgeslagen wijzigingen worden niet meegenomen.</p></body></html>';
       report.document.open();
       report.document.write(html);
       report.document.close();
@@ -132,15 +145,16 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
     {!item ? <p role="status">{state}</p> : <>
       <div style={{display:'flex',justifyContent:'flex-end',marginTop:-44,marginBottom:16}}><button type="button" className="button secondary" onClick={exportPdf}>PDF downloaden / afdrukken</button></div>
       <nav aria-label="Projectafrekening navigatie" style={{display:'flex',flexWrap:'wrap',width:'fit-content',margin:'20px 0',border:'1px solid var(--border,#ddd)',borderRadius:10,overflow:'hidden'}}>
-       {([{id:'overzicht',label:'Overzicht'},{id:'personeel',label:'Personeel'},{id:'transport',label:'Transport'},{id:'materiaal',label:'Materiaal'},{id:'overig',label:'Overig'}]).map(tab=><button key={tab.id} type="button" onClick={()=>navigate(tab.id)} style={{padding:'11px 18px',border:0,borderRight:'1px solid var(--border,#ddd)',background:activeTab===tab.id?'#262626':'transparent',color:activeTab===tab.id?'#fff':'inherit',cursor:'pointer',fontSize:13}}>{tab.label}</button>)}
+       {([{id:'overzicht',label:'Overzicht'},{id:'personeel',label:'Personeel'},{id:'transport',label:'Transport'},{id:'materiaal',label:'Materiaal'},{id:'bonnetjes',label:'Bonnetjes'},{id:'overig',label:'Overig'}]).map(tab=><button key={tab.id} type="button" onClick={()=>navigate(tab.id)} style={{padding:'11px 18px',border:0,borderRight:'1px solid var(--border,#ddd)',background:activeTab===tab.id?'#262626':'transparent',color:activeTab===tab.id?'#fff':'inherit',cursor:'pointer',fontSize:13}}>{tab.label}</button>)}
       </nav>
       <div className="billing-draft-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(250px, 290px)', gap: 16, alignItems: 'start' }}><div style={{ minWidth: 0 }}>
       <div id="billing-overzicht" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(165px,1fr))',gap:12,marginBottom:16}}>
-       {([{label:'Personeel',value:summary.hours.toLocaleString('nl-NL',{maximumFractionDigits:2})+' u',detail:'Geregistreerd · '+summary.functions+' functies',tab:'personeel'},{label:'Transport',value:summary.kilometers.toLocaleString('nl-NL')+' km',detail:summary.vehicles+' voertuigen',tab:'transport'},{label:'Materiaal',value:money(summary.productTotal),detail:summary.products+' artikelen',tab:'materiaal'},{label:'Factuurregels',value:money(totals.net),detail:'Overige regels excl. btw',tab:'overig'}]).map(card=><button key={card.tab} type="button" className="card" onClick={()=>navigate(card.tab)} style={{padding:16,textAlign:'left',cursor:'pointer',minWidth:0}}><span style={{fontSize:12,color:'var(--muted)',display:'block',marginBottom:10}}>{card.label} ↗</span><strong style={{fontSize:21,display:'block'}}>{card.value}</strong><span style={{fontSize:12,color:'var(--muted)',display:'block',marginTop:5}}>{card.detail}</span></button>)}
+       {([{label:'Personeel',value:summary.hours.toLocaleString('nl-NL',{maximumFractionDigits:2})+' u',detail:'Geregistreerd · '+summary.functions+' functies',tab:'personeel'},{label:'Transport',value:summary.kilometers.toLocaleString('nl-NL')+' km',detail:summary.vehicles+' voertuigen',tab:'transport'},{label:'Materiaal',value:money(summary.productTotal),detail:summary.products+' artikelen',tab:'materiaal'},{label:'Bonnetjes',value:money(receiptTotals.net),detail:receipts.length+' doorbelast · excl. btw',tab:'bonnetjes'},{label:'Factuurregels',value:money(totals.net+receiptTotals.net),detail:'Incl. bonregels excl. btw',tab:'overig'}]).map(card=><button key={card.tab} type="button" className="card" onClick={()=>navigate(card.tab)} style={{padding:16,textAlign:'left',cursor:'pointer',minWidth:0}}><span style={{fontSize:12,color:'var(--muted)',display:'block',marginBottom:10}}>{card.label} ↗</span><strong style={{fontSize:21,display:'block'}}>{card.value}</strong><span style={{fontSize:12,color:'var(--muted)',display:'block',marginTop:5}}>{card.detail}</span></button>)}
       </div>
       <div id="billing-personeel"><BillingHours id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} /></div>
       <div id="billing-transport"><BillingTransport id={id} lines={draft.lines} canManage={canManage && item.status !== 'invoiced'} onChange={lines => {setDraft(d => ({...d,lines}));setState('Niet-opgeslagen wijzigingen');}} /></div>
       <div id="billing-materiaal"><BillingProductUsage ref={productRef} id={id} canManage={canManage} locked={item.status === 'invoiced'} /></div>
+      <div id="billing-bonnetjes"><BillingReceiptReview id={id} canManage={canManage && item.status !== 'invoiced'} onChange={setReceipts}/></div>
       <section id="billing-overig" className="card" style={{ padding: 16, marginBottom: 12 }}>
         <details><summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14, padding: "4px 0" }}>Overige factuurregels ({draft.lines.filter(l => l.description.trim() && !l.description.startsWith('[Transport] ')).length})</summary>
         {draft.lines.map((line, i) => line.description.startsWith('[Transport] ') ? null : <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 3fr) 85px 110px 95px auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
@@ -151,9 +165,10 @@ export default function BillingDraftEditor({ id, canManage }: { id: string; canM
           <button type="button" className="button secondary" disabled={!canManage || item.status === 'invoiced' || draft.lines.length === 1} onClick={() => { setDraft(d => ({ ...d, lines: d.lines.filter((_, n) => n !== i) })); setState('Niet-opgeslagen wijzigingen'); }}>×</button>
         </div>)}
         <button type="button" className="button secondary" disabled={!canManage || item.status === 'invoiced'} onClick={() => { setDraft(d => ({ ...d, lines: [...d.lines, blank()] })); setState('Niet-opgeslagen wijzigingen'); }}>+ Factuurregel</button>
-        <p style={{ textAlign: 'right' }}>Excl. btw: <strong>{money(totals.net)}</strong></p>
-        <p style={{ textAlign: 'right' }}>Btw: <strong>{money(totals.vat)}</strong></p>
-        <p style={{ textAlign: 'right', fontSize: 14 }}>Totaal incl. btw: <strong>{money(totals.net + totals.vat)}</strong></p>
+        <p style={{ textAlign: 'right' }}>Handmatige regels excl. btw: <strong>{money(totals.net)}</strong></p>
+        <p style={{ textAlign: 'right' }}>Bonnetjes excl. btw: <strong>{money(receiptTotals.net)}</strong></p>
+        <p style={{ textAlign: 'right' }}>Btw op deze regels: <strong>{money(totals.vat+receiptTotals.vat)}</strong></p>
+        <p style={{ textAlign: 'right', fontSize: 14 }}>Totaal regels incl. btw: <strong>{money(totals.net+receiptTotals.net+totals.vat+receiptTotals.vat)}</strong></p>
         </details>
       </section>
       <section className="card" style={{ padding: 12, marginBottom: 10 }}>
