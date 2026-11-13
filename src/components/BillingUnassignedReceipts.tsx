@@ -6,7 +6,7 @@ import {useRouter} from 'next/navigation';
 
 type Receipt={id:string;merchant:string|null;cost_amount:number|null;document_date:string|null;
  message_id:string;attachment_index:number;project_number:string|null};
-type Project={id:string;project_name:string;rentman_project_number:string|null;status:string};
+type Project={id:string;project_name:string;rentman_project_number?:string|null;status:string};
 export default function BillingUnassignedReceipts({receipts,projects,canManage}:{receipts:Receipt[];projects:Project[];canManage:boolean}){
  const [chosen,setChosen]=useState<Record<string,string>>({});
  const [busy,setBusy]=useState<string|null>(null);
@@ -32,7 +32,8 @@ export default function BillingUnassignedReceipts({receipts,projects,canManage}:
   {error&&<p className="error" role="alert">{error}</p>}
   {receipts.map(row=><div key={row.id} style={{display:'flex',gap:12,justifyContent:'space-between',alignItems:'end',flexWrap:'wrap',borderTop:'1px solid var(--border,#ddd)',padding:'10px 0'}}>
    <div><strong>{row.merchant||'Bonnetje'}</strong><div style={{fontSize:12,color:'var(--muted)'}}>{row.document_date||'Geen datum'} · {row.cost_amount===null?'Bedrag onbekend':Number(row.cost_amount).toLocaleString('nl-NL',{style:'currency',currency:'EUR'})} {row.project_number?'· voorgesteld #'+row.project_number:''}</div>
-    <Link href={'/planning/crew-invoices?view=archive'} style={{fontSize:12}}>Inkomende administratie</Link>
+    <a href={'/api/crew/admin/invoice-messages/'+row.message_id+'/pdf/'+row.attachment_index}
+      target="_blank" rel="noopener noreferrer" style={{fontSize:12}}>Origineel bonnetje bekijken</a>
    </div>
    {canManage&&<div style={{display:'flex',gap:8,alignItems:'end',flexWrap:'wrap'}}>
     <label style={{fontSize:11}}>Koppel aan project<select className="select" aria-label={'Project voor bonnetje '+row.id} value={chosen[row.id]||''} onChange={e=>setChosen(x=>({...x,[row.id]:e.target.value}))}>
