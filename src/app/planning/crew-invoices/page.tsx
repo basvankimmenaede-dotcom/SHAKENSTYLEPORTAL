@@ -10,6 +10,7 @@ import {findCrewInvoiceMatch} from '@/lib/crew-invoice-matching';
 import {loadCrewInvoiceComparisons} from '@/lib/invoice-comparison-loader';
 import InvoiceSupplierQuickAdd from '@/components/InvoiceSupplierQuickAdd';
 import InvoiceManualSupplierAdd from '@/components/InvoiceManualSupplierAdd';
+import InvoiceInboxSync from '@/components/InvoiceInboxSync';
 import type {InvoiceSupplier} from '@/lib/invoice-suppliers';
 
 export const dynamic='force-dynamic';
@@ -39,7 +40,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
   getInvoiceProcessingSettings(),listEligibleApprovers(),
   db.from('crew_portal_members').select('id,full_name,email,rentman_email,login_email_override,company_name,company_alias,invoice_email,portal_deleted'),
   db.from('invoice_suppliers').select('id,company_name,contact_email,default_cost_category').eq('active',true).order('company_name'),
-  db.from('invoice_imap_settings').select('username,enabled,tested_at').eq('id',1).maybeSingle(),
+  db.from('invoice_imap_settings').select('username,enabled,tested_at,last_sync_at,last_sync_result').eq('id',1).maybeSingle(),
   db.from('crew_invoices').select('id',{count:'exact',head:true}).in('status',['received','in_review','correction_sending','correction_needed']),
   db.from('crew_invoices').select('id',{count:'exact',head:true}).in('status',['approved','rejected']),
   db.from('invoice_inbox_messages').select('id',{count:'exact',head:true}).is('archived_at',null)
@@ -162,7 +163,11 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
    <p>Bartenderfacturen vergelijken we met shiftrapporten; overige leveranciersfacturen controleren we op leverancier, kostensoort en eventueel project. Twee accounts keuren goed.</p>
    <p>Mailbox: <strong>{imapResult.data?.username||'Nog geen mailbox'}</strong> ·
      {imapResult.data?.enabled?' automatisch ophalen actief':' handmatig ophalen'}.</p>
-  </div></section>
+  </div>
+  <InvoiceInboxSync canSync={canManage} tested={Boolean(imapResult.data?.tested_at)}
+    lastSyncAt={imapResult.data?.last_sync_at||null}
+    lastSyncResult={imapResult.data?.last_sync_result||null}/>
+  </section>
   <InvoiceOfficeTabs active={view} counts={{
    open:(openCount.count||0)+(inboxCount.count||0),archive:archiveCount.count||0,
    differences:view==='differences'?visibleInvoices.length:0

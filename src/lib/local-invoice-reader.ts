@@ -58,6 +58,10 @@ function invoiceNo(lines:string[],filename:string):{value:string|null;confidence
   const match=line.match(invoiceLabel);
   if(!match)continue;
   const value=match[1].replace(/[.;,]$/,'');
+  // Many Dutch KOR invoices contain "Kenmerk: Factuur vrijgesteld van btw".
+  // Free-text words are not invoice IDs; do not take "vrijgesteld" as a number.
+  // Actual numeric or mixed invoice IDs such as 2026-0025 and INV-99 have digits.
+  if(!/\d/.test(value))continue;
   if(!/^(?:datum|date|nr|nummer|number|no|bedrag|total|totaal|btw|incl|excl|van|voor|de)$/i.test(value))
    return {value,confidence:0.9};
  }

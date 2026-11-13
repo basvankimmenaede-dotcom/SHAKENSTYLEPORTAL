@@ -374,3 +374,56 @@ test('Customer receipt costs are opt-in and distinct from incoming crew invoices
  assert.match(sidebar,/label:'Inkomende facturen'/);
  assert.match(sidebar,/label:'Uitgaande facturen'/);
 });
+
+
+test('Kaj KOR invoice number takes precedence over exempt-from-VAT text',()=>{
+ const source=[
+  'Omschrijving Bedrag Totaal Btw',
+  '1 x 11052 | 17.10 - 19.10 | Perrier-Jouët | De Oesterij € 382,50 € 382,50 0%',
+  'Subtotaal € 382,50',
+  '0% btw € 0,00',
+  'Totaal € 382,50',
+  "SHAKE 'N STYLE B.V.",
+  'KJ Langendijk',
+  'Laurens Reaellaan 39',
+  '2024BC Haarlem',
+  'kaj.langendijk@gmail.com',
+  'KVK: 99034409',
+  'Kenmerk: Factuur vrijgesteld van btw op grond van de',
+  'kleineondernemersregeling (KOR).',
+  'Factuurdatum: 20-10-2026',
+  'Vervaldatum: 03-11-2026',
+  'Factuur 2026-0025'
+ ].join('\n');
+ const recognized=recognizeInvoiceText(source,'2026-0025.pdf');
+ assert.equal(recognized.invoice_number,'2026-0025');
+ assert.equal(recognized.invoice_date,'2026-10-20');
+ assert.equal(recognized.total_amount,382.50);
+ assert.equal(recognized.supplier_name,'KJ Langendijk');
+});
+test('Kaj invoice 2026-0027 no longer recognizes vrijgesteld as invoice ID',()=>{
+ const recognized=recognizeInvoiceText(
+  'Kenmerk: Factuur vrijgesteld van btw op grond van de KOR.\nFactuurdatum: 29-10-2026\nFactuur 2026-0027\nTotaal € 120,00',
+  '2026-0027.pdf');
+ assert.equal(recognized.invoice_number,'2026-0027');
+ assert.equal(recognized.invoice_date,'2026-10-29');
+ assert.equal(recognized.total_amount,120);
+});
+test('Kaj invoice name and email propose an existing crew profile rather than guessing',()=>{
+ const result=findCrewInvoiceMatch({
+  supplierName:'KJ Langendijk',supplierEmail:null,
+  detectedEmails:['kaj.langendijk@gmail.com'],
+  documentText:'KJ Langendijk\\nkaj.langendijk@gmail.com\\nKVK: 99034409'
+ },[{id:'kaj',full_name:'Kaj Langendijk',company_name:'KJ Langendijk',
+  company_alias:null,invoice_email:'kaj.langendijk@gmail.com',
+  email:'kaj@shakenstyle.com',rentman_email:null,login_email_override:null}]);
+ assert.equal(result.suggestedCrewMemberId,'kaj');
+});
+test('Invoice overview has its own manual synchronization, separate from settings',()=>{
+ const page=fs.readFileSync(path.join(__dirname,'../src/app/planning/crew-invoices/page.tsx'),'utf8');
+ const route=fs.readFileSync(path.join(__dirname,'../src/app/api/crew/admin/invoice-sync/route.ts'),'utf8');
+ assert.match(page,/InvoiceInboxSync/);
+ assert.match(route,/synchronizeInvoiceInbox\(\{manual:true\}\)/);
+ assert.match(route,/permissionAtLeast\(permission,'manage'\)/);
+ assert.match(route,/Ongeldige herkomst/);
+});
