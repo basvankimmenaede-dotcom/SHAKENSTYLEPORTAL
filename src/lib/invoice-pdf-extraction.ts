@@ -3,6 +3,7 @@ import {createAdminClient} from '@/lib/supabase/admin';
 import {readInvoicePdfText,recognizeInvoiceText} from '@/lib/local-invoice-reader';
 import {recognizeCrewInvoiceProjects} from '@/lib/invoice-project-directory';
 import {findCrewInvoiceMatch} from '@/lib/crew-invoice-matching';
+import {recognizeReceiptText} from '@/lib/receipt-recognition';
 
 type Attachment={path:string;filename:string;size:number};
 type RecognitionOptions={force?:boolean};
@@ -21,9 +22,12 @@ export async function processInvoiceMessage(messageId:string,options:Recognition
  const {data:members,error:membersError}=await admin.from('crew_portal_members')
   .select('id,full_name,email,rentman_email,login_email_override,invoice_email,company_name,company_alias').eq('portal_deleted',false);
  if(membersError)throw new Error('Crewleden konden niet worden geladen.');
+ const {data:reviewed}=await admin.from('invoice_attachment_reviews').select('attachment_index').eq('message_id',messageId);
+ const reviewedIndexes=new Set((reviewed||[]).map(item=>item.attachment_index));
  let processed=0,failed=0,skipped=0;
  for(const [i,attachment] of attachments.slice(0,10).entries()){
   if(!attachment.path?.startsWith('incoming/'+messageId+'/')||!attachment.path.endsWith('.pdf'))continue;
+  if(reviewedIndexes.has(i)){skipped++;continue;}
   const {data:existing,error:lookupError}=await admin.from('invoice_pdf_extractions')
    .select('id,status,linked_invoice_id').eq('message_id',messageId).eq('attachment_index',i).maybeSingle();
   if(lookupError)throw new Error('Factuurverwerking kon niet worden gecontroleerd.');
@@ -39,12 +43,15 @@ export async function processInvoiceMessage(messageId:string,options:Recognition
    if(downloadError||!blob)throw new Error('PDF kon niet worden geladen.');
    const text=await readInvoicePdfText(Buffer.from(await blob.arrayBuffer()));
    const fields=recognizeInvoiceText(text,base.filename);
+   const receipt=recognizeReceiptText(text);
+   const likelyShop=receipt.supplierName&&/^(Lidl|Albert Heijn|Jumbo|Aldi|PLUS|HEMA|Kruidvat|Etos|Hanos|Makro|Dirk|Hoogvliet)$/.test(receipt.supplierName);
    const projects=await recognizeCrewInvoiceProjects(text,base.filename);
    const match=findCrewInvoiceMatch({
     supplierName:fields.supplier_name,supplierEmail:fields.supplier_email,
     detectedEmails:fields.detected_emails,documentText:fields.raw_text
    },members||[]);
    const notes=[
+    likelyShop?'Mogelijke kassabon van '+receipt.supplierName+'. Kies eventueel Bonnetje / projectkosten in plaats van een nieuwe factuur.':null,
     !fields.invoice_number?'Factuurnummer niet gevonden.':null,
     !fields.invoice_date?'Factuurdatum controleren.':null,
     fields.total_amount===null?'Totaalbedrag controleren.':null,
@@ -54,8 +61,9 @@ export async function processInvoiceMessage(messageId:string,options:Recognition
    ].filter(Boolean).join(' ');
    const {error}=await admin.from('invoice_pdf_extractions').upsert({
     ...base,processing_provider:'pdf_text',
-    invoice_number:fields.invoice_number,invoice_date:fields.invoice_date,
-    total_amount:fields.total_amount,supplier_name:fields.supplier_name,
+    invoice_number:fields.invoice_number,invoice_date:fields.invoice_date||receipt.date,
+    total_amount:likelyShop?(receipt.total??fields.total_amount):fields.total_amount,
+    supplier_name:likelyShop?receipt.supplierName:fields.supplier_name,
     detected_emails:fields.detected_emails,ai_fields:fields.ai_fields,
     ai_confidence:null,text_preview:text.slice(0,12000),
     project_numbers:projects.numbers,project_lines:projects.lines,

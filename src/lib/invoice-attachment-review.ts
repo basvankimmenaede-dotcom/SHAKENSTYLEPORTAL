@@ -16,7 +16,8 @@ export async function archiveInvoiceEmailWhenReviewed(messageId:string){
  const completed=allInvoiceAttachmentsReviewed(count,links||[],reviews||[]);
  if(completed&&!message.archived_at){
   const {error}=await db.from('invoice_inbox_messages').update({
-   archived_at:new Date().toISOString(),archive_reason:'all_attachments_reviewed'
+   archived_at:new Date().toISOString(),
+   archive_reason:(links||[]).filter(item=>item.linked_invoice_id).length===count?'linked':'all_attachments_reviewed'
   }).eq('id',messageId).is('archived_at',null);
   if(error)throw new Error('Automatisch archiveren is niet gelukt.');
  }

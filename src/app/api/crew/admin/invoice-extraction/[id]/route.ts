@@ -4,6 +4,7 @@ import {createAdminClient} from '@/lib/supabase/admin';
 import {getUserPermissionLevel,permissionAtLeast} from '@/lib/auth';
 import {processInvoiceMessage} from '@/lib/invoice-pdf-extraction';
 import {INVOICE_SUPPLIER_CATEGORIES} from '@/lib/invoice-suppliers';
+import {archiveInvoiceEmailWhenReviewed} from '@/lib/invoice-attachment-review';
 
 export const runtime='nodejs';
 export const maxDuration=60;
@@ -39,6 +40,10 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   const {data:existing}=await admin.from('invoice_pdf_extractions')
    .select('id,status').eq('message_id',id).eq('attachment_index',index).maybeSingle();
   if(existing?.status==='linked')return NextResponse.json({error:'Deze factuur is al gekoppeld.'},{status:409});
+  if(existing){
+   const {data:review}=await admin.from('invoice_attachment_reviews').select('id').eq('extraction_id',existing.id).maybeSingle();
+   if(review)return NextResponse.json({error:'Deze bijlage is al als bonnetje of bewijsstuk afgehandeld.'},{status:409});
+  }
   if(existing&&existing.status!=='failed')
    return NextResponse.json({ok:true,message:'Deze PDF kan al handmatig worden beoordeeld.'});
   const payload={
@@ -105,6 +110,8 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
   ]);
   if(!extraction||extraction.status==='linked'||extraction.linked_invoice_id)
    return NextResponse.json({error:'Deze bijlage is al gekoppeld of niet gevonden.'},{status:409});
+  const {data:review}=await admin.from('invoice_attachment_reviews').select('id').eq('extraction_id',extractionId).maybeSingle();
+  if(review)return NextResponse.json({error:'Deze bijlage is al als bonnetje, bewijsstuk of niet relevant afgehandeld. Heropen die keuze eerst.'},{status:409});
   // An inactive Rentman planning status must not block accounting for historical or outstanding work.
   // A deleted portal crew profile is not available for new links.
   if(partyType==='crew'&&(!member||member.portal_deleted))
@@ -139,19 +146,11 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
     project_numbers:selectedNumbers,project_lines:partyType==='crew'?chosenLines:[]})
    .eq('id',extractionId).neq('status','linked');
   if(updateError)console.error('PDF linked but extraction update failed',updateError.message);
-  const {data:inbox}=await admin.from('invoice_inbox_messages').select('attachments').eq('id',id).maybeSingle();
-  const {data:allExtractions}=await admin.from('invoice_pdf_extractions')
-   .select('attachment_index,linked_invoice_id').eq('message_id',id);
-  const expected=Array.isArray(inbox?.attachments)?inbox.attachments.length:0;
-  const fullyLinked=expected>0&&Array.from({length:expected},(_,i)=>i).every(i=>
-    (allExtractions||[]).some(e=>e.attachment_index===i&&e.linked_invoice_id));
-  const patch=fullyLinked?{linked_invoice_id:invoice.id,archived_at:new Date().toISOString(),archive_reason:'linked'}:
-    {linked_invoice_id:invoice.id};
-  // Multi-PDF e-mails may already have a linked_invoice_id from the first attachment.
-  // Always archive when the last PDF is linked, without hiding an unlinked attachment.
-  const messageUpdate=admin.from('invoice_inbox_messages').update(patch).eq('id',id);
-  if(fullyLinked)await messageUpdate;
-  else await messageUpdate.is('linked_invoice_id',null);
+  // Close multi-PDF email only after each attachment is linked or reviewed separately.
+  await admin.from('invoice_inbox_messages').update({linked_invoice_id:invoice.id})
+   .eq('id',id).is('linked_invoice_id',null);
+  try{await archiveInvoiceEmailWhenReviewed(id);}
+  catch(error){console.error('Invoice email archive check unavailable',error);}
   return NextResponse.json({ok:true,message:partyType==='crew'?
    'Bartenderfactuur gekoppeld. De shiftrapportvergelijking verschijnt in het controleoverzicht.':
    'Leveranciersfactuur gekoppeld. De controle en dubbele goedkeuring verschijnen in het overzicht.'});
