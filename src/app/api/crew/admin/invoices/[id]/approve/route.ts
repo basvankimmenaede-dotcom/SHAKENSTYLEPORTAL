@@ -97,6 +97,27 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
  if(invoice.supplier_id&&!supplier)return NextResponse.json({error:'Leverancier kon niet worden geladen.'},{status:409});
  const {data:linkedPdf}=await admin.from('invoice_pdf_extractions').select('filename').eq('linked_invoice_id',id).limit(1).maybeSingle();
  const filename=(String(linkedPdf?.filename||'Factuur-'+invoice.invoice_number+'.pdf')).replace(/[^\w. -]/g,'_').slice(0,100);
+ // Fetch linked evidence before recording the second approval or sending mail.
+ const {data:evidenceRows,error:evidenceError}=await admin.from('invoice_attachment_reviews')
+  .select('extraction_id').eq('linked_invoice_id',id).in('classification',['evidence','receipt']).limit(9);
+ if(evidenceError)return NextResponse.json({error:'Bewijsstukken konden niet worden gecontroleerd.'},{status:503});
+ const pdfIds=(evidenceRows||[]).map(row=>row.extraction_id);
+ const {data:evidenceFiles,error:evidenceFilesError}=pdfIds.length?await admin.from('invoice_pdf_extractions')
+  .select('id,filename,storage_path').in('id',pdfIds):{data:[],error:null};
+ if(evidenceFilesError)return NextResponse.json({error:'Bewijsstukken konden niet worden geladen.'},{status:503});
+ const evidenceAttachments:{filename:string;content:Buffer;contentType:string}[]=[];
+ let mailSize=attachment.length;
+ for(const evidence of evidenceFiles||[]){
+  if(!evidence.storage_path?.startsWith('incoming/')||!evidence.storage_path.endsWith('.pdf'))
+   return NextResponse.json({error:'Bijlage heeft geen geldige PDF-locatie.'},{status:409});
+  const {data:pdf,error:pdfError}=await admin.storage.from('incoming-invoices').download(evidence.storage_path);
+  if(pdfError||!pdf)return NextResponse.json({error:'Bijbehorend bewijsstuk kon niet worden geladen.'},{status:503});
+  const content=Buffer.from(await pdf.arrayBuffer());
+  mailSize+=content.length;
+  if(content.subarray(0,5).toString()!=='%PDF-'||mailSize>18*1024*1024)
+   return NextResponse.json({error:'Factuur en bewijsstukken zijn samen te groot of ongeldig. Controleer de bijlagen.'},{status:409});
+  evidenceAttachments.push({filename:String(evidence.filename||'Bewijsstuk.pdf').replace(/[^\w. -]/g,'_').slice(0,100),content,contentType:'application/pdf'});
+ }
  // Conditional update prevents another server invocation sending twice. In ambiguous SMTP failures,
  // never automatically retry because the message may have already been accepted by the mail server.
  const {data:locked,error:lockError}=await admin.from('crew_invoices').update({
@@ -119,7 +140,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{id:stri
    html:'<div style="font-family:Arial,sans-serif;line-height:1.6"><h2>Goedgekeurde factuur</h2><p>Factuur <strong>'+
     escapeHtml(invoice.invoice_number)+'</strong> van '+escapeHtml(name)+' is door twee accounts goedgekeurd.</p>'+
     '<p>De originele factuur is bijgevoegd.</p><p>SHAKENSTYLE</p></div>',
-   attachments:[{filename,content:attachment,contentType:'application/pdf'}]
+   attachments:[{filename,content:attachment,contentType:'application/pdf'},...evidenceAttachments]
   });
   const forwardedAt=new Date().toISOString();
   const {error:updateError}=await admin.from('crew_invoices').update({
