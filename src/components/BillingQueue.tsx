@@ -20,6 +20,7 @@ export type BillingQueueItem = {
   usage_start?: string | null;
   usage_end?: string | null;
   status: BillingStatus;
+  pending_receipts_count?: number;
   note?: string | null;
   created_at: string;
   completed_at?: string | null;
@@ -143,6 +144,9 @@ export default function BillingQueue({
                   {item.usage_end ? ` · geëindigd ${formatDate(item.usage_end)}` : ''}
                 </span>
                 {item.note ? <small>{item.note}</small> : null}
+                {item.pending_receipts_count ? <small style={{fontWeight:700}}>
+                  {item.pending_receipts_count} bonnetje{item.pending_receipts_count!==1?'s':''} ter controle bij de klantcalculatie
+                </small> : null}
                 {item.linked_supplier_invoice&&
                   <a className="billingSupplierLink"
                     href={'/planning/crew-invoices?view='+

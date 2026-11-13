@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { addManualBillingItem } from './actions';
 import BillingQueue, { type BillingQueueItem } from '@/components/BillingQueue';
+import BillingUnassignedReceipts from '@/components/BillingUnassignedReceipts';
 import { requireModulePermission } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { amsterdamBillingDateKey, billingSyncNeeded, syncBillingQueueOncePerDay } from '@/lib/billing';
@@ -72,8 +73,21 @@ export default async function BillingPage({searchParams}:{searchParams:Promise<{
     !linkedIds.has(i.id) && ['received','in_review','approved'].includes(i.status)
   ).sort((a,b)=>(b.invoice_date||'').localeCompare(a.invoice_date||''));
   const selectedInvoice = availableInvoices.find(i=>i.id===requestedInvoice);
+  const {data:pendingReceipts,error:receiptError}=await admin.from('invoice_attachment_reviews')
+    .select('id,message_id,attachment_index,merchant,cost_amount,document_date,project_number')
+    .eq('classification','receipt').eq('billing_status','pending')
+    .order('reviewed_at',{ascending:false}).limit(500);
+  if(receiptError)throw new Error('Projectbonnetjes konden niet worden geladen.');
+  const projectNumbers=new Set(billingItems.map(item=>item.rentman_project_number).filter(Boolean));
+  const unassigned=(pendingReceipts||[]).filter(row=>!row.project_number||!projectNumbers.has(row.project_number));
+  const receiptCounts=new Map<string,number>();
+  for(const receipt of pendingReceipts||[]){
+    if(!receipt.project_number)continue;
+    receiptCounts.set(receipt.project_number,(receiptCounts.get(receipt.project_number)||0)+1);
+  }
   const withLinks = billingItems.map(item=>({
     ...item,
+    pending_receipts_count:item.rentman_project_number?receiptCounts.get(item.rentman_project_number)||0:0,
     linked_supplier_invoice: item.supplier_invoice_id ? supplierInvoices.find(i=>i.id===item.supplier_invoice_id)||null : null
   }));
   const openCount = billingItems.filter((item) => item.status === 'open').length;
@@ -93,6 +107,9 @@ export default async function BillingPage({searchParams}:{searchParams:Promise<{
         </div>
       </section>
 
+      <BillingUnassignedReceipts receipts={unassigned} projects={billingItems.map(item=>({
+        id:item.id,project_name:item.project_name,rentman_project_number:item.rentman_project_number,status:item.status
+       }))} canManage={canManage}/>
       <BillingQueue initialItems={withLinks} canManage={canManage} initialProjectNumber={projectNumber}>
         {canManage ? (
           <details className="card billingManualCard" open={Boolean(selectedInvoice)}>
