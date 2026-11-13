@@ -16,7 +16,7 @@ export default function InvoiceAttachmentDecision({item,review,linkedOptions,can
  const [amount,setAmount]=useState(item.total_amount===null?'':String(item.total_amount));
  const [date,setDate]=useState(item.invoice_date||'');
  const [projectNumber,setProjectNumber]=useState(item.project_numbers?.length===1?item.project_numbers[0]:'');
- const [linkedInvoiceId,setLinkedInvoiceId]=useState(linkedOptions.length===1?linkedOptions[0].id:'');
+ const [linkedInvoiceId,setLinkedInvoiceId]=useState('');
  const [note,setNote]=useState('');
  if(review)return <div className="invoiceReviewHint" style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
   <div><strong>{review.classification==='receipt'?'Bonnetje / mogelijke projectkosten':review.classification==='evidence'?'Bewijsstuk bij factuur':'Niet relevant / duplicaat'}</strong>
