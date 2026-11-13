@@ -107,7 +107,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
  const emailRows=(inboxResult?.data||[]) as {id:string;sender:string|null;subject:string|null;received_at:string|null;status:string;attachments:unknown;error_message:string|null}[];
  const invoiceIds=rawInvoices.map(i=>i.id);
  const emailIds=emailRows.map(m=>m.id);
- const [linkedPdfs,openPdfs,billingLinks]=await Promise.all([
+ const [linkedPdfs,openPdfs,billingLinks,attachmentReviews]=await Promise.all([
   invoiceIds.length?db.from('invoice_pdf_extractions')
    .select('id,linked_invoice_id').in('linked_invoice_id',invoiceIds).limit(400):
    Promise.resolve({data:[],error:null}),
@@ -116,9 +116,13 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
    Promise.resolve({data:[],error:null}),
   invoiceIds.length?db.from('billing_items').select('id,supplier_invoice_id')
    .in('supplier_invoice_id',invoiceIds):
+   Promise.resolve({data:[],error:null}),
+  emailIds.length?db.from('invoice_attachment_reviews')
+   .select('id,extraction_id,message_id,attachment_index,classification,merchant,document_date,cost_amount,project_number,linked_invoice_id,note,billing_status')
+   .in('message_id',emailIds).limit(300):
    Promise.resolve({data:[],error:null})
  ]);
- if(linkedPdfs.error||openPdfs.error||billingLinks.error)throw new Error('Factuurkoppelingen konden niet worden geladen.');
+ if(linkedPdfs.error||openPdfs.error||billingLinks.error||attachmentReviews.error)throw new Error('Factuurkoppelingen konden niet worden geladen.');
  const linkedMap=new Map((linkedPdfs.data||[]).map(e=>[e.linked_invoice_id,e.id]));
  const billingMap=new Map((billingLinks.data||[]).map(e=>[e.supplier_invoice_id,e.id]));
  const comparisons=await loadCrewInvoiceComparisons(rawInvoices.filter(i=>i.crew_member_id!==null).map(i=>({
@@ -191,7 +195,7 @@ export default async function CrewInvoiceOfficePage({searchParams}:{searchParams
     <div className="invoiceSectionHeader"><h2>Nog te verwerken e-mails</h2>
      <span>{inboxResult?.count||0} openstaand</span></div>
     <InvoiceInboxReview emails={emailRows.map(m=>({...m,attachments:Array.isArray(m.attachments)?m.attachments as {filename:string;path:string;size:number}[]:[]}))}
-     extractions={extractRows} members={members} suppliers={suppliers} canManage={canManage}/>
+     extractions={extractRows} reviews={(attachmentReviews.data||[]) as import('@/components/InvoiceAttachmentDecision').AttachmentReview[]} members={members} suppliers={suppliers} canManage={canManage}/>
     {inboxPage>1||((inboxResult?.count||0)>PAGE_SIZE)?<div className="invoicePageNav">
      <span>Pagina {inboxPage} van {Math.ceil((inboxResult?.count||0)/PAGE_SIZE)||1}</span>
      {inboxPage>1&&<Link className="button secondary" href={'?view=open&inboxPage='+(inboxPage-1)}>Vorige e-mails</Link>}

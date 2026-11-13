@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {FileText,RefreshCw,AlertCircle,Link2} from 'lucide-react';
+import InvoiceAttachmentDecision,{type AttachmentReview} from './InvoiceAttachmentDecision';
 import {INVOICE_SUPPLIER_CATEGORIES,INVOICE_COST_CATEGORY_LABELS,type InvoiceCostCategory,type InvoiceSupplier} from '@/lib/invoice-suppliers';
 
 type Attachment={filename:string;path:string;size:number};
@@ -18,7 +19,12 @@ function displayDate(date:string|null){return date?new Date(date).toLocaleString
 function statusLabel(status:string){
  return status==='linked'?'Gekoppeld':status==='extracted'?'Uitgelezen':status==='needs_review'?'Controle nodig':status==='failed'?'Uitlezen mislukt':status==='no_pdf'?'Geen PDF':status==='too_large'?'Te groot':'Ontvangen';
 }
-function ExtractedInvoice({item,members,suppliers,canManage,run,busy,openPdf}:{item:Extraction;members:Member[];suppliers:InvoiceSupplier[];canManage:boolean;run:(id:string,payload:Record<string,unknown>)=>Promise<void>;busy:boolean;openPdf:(messageId:string,index:number,filename:string)=>void}){
+function ExtractedInvoice({item,review,linkedOptions,members,suppliers,canManage,run,busy,openPdf}:{
+ item:Extraction;review:AttachmentReview|null;linkedOptions:{id:string;filename:string}[];
+ members:Member[];suppliers:InvoiceSupplier[];canManage:boolean;
+ run:(id:string,payload:Record<string,unknown>)=>Promise<void>;busy:boolean;
+ openPdf:(messageId:string,index:number,filename:string)=>void;
+}){
  const supplierSuggestion=suppliers.find(s=>s.company_name.toLowerCase()===String(item.supplier_name||'').trim().toLowerCase());
  const [partyType,setPartyType]=useState<'crew'|'supplier'>(supplierSuggestion&&!item.suggested_crew_member_id?'supplier':'crew');
  const [memberId,setMemberId]=useState(item.suggested_crew_member_id||'');
@@ -40,6 +46,12 @@ function ExtractedInvoice({item,members,suppliers,canManage,run,busy,openPdf}:{i
  const changeProjectLine=(number:string,key:'work_hours'|'travel_hours'|'expenses_amount',value:string)=>
   setProjectLines(previous=>({...previous,[number]:{...(previous[number]||{work_hours:'',travel_hours:'',expenses_amount:''}),[key]:value}}));
  const linked=item.status==='linked';
+ if(review)return <div className="invoiceReviewPdf">
+  <div className="invoiceReviewPdfTop"><div><FileText size={18}/><strong>{item.filename}</strong></div>
+   <button type="button" className="button secondary" onClick={()=>openPdf(item.message_id,item.attachment_index,item.filename)}>PDF bekijken</button>
+  </div>
+  <InvoiceAttachmentDecision item={item} review={review} linkedOptions={linkedOptions} canManage={canManage} run={run} busy={busy}/>
+ </div>;
  return <div className="invoiceReviewPdf">
   <div className="invoiceReviewPdfTop">
    <div><FileText size={18}/><strong>{item.filename}</strong><span className={'invoiceReviewStatus '+(linked?'linked':item.status==='failed'?'warning':'')}>{statusLabel(item.status)}</span>
@@ -124,9 +136,13 @@ function ExtractedInvoice({item,members,suppliers,canManage,run,busy,openPdf}:{i
       <Link2 size={15}/> {partyType==='crew'?'Koppelen aan bartender':'Koppelen aan leverancier'}</button>}
    </div>
   </>}
+  {!linked&&<InvoiceAttachmentDecision item={item} review={null} linkedOptions={linkedOptions} canManage={canManage} run={run} busy={busy}/>}
  </div>;
 }
-export default function InvoiceInboxReview({emails,extractions,members,suppliers,canManage}:{emails:Email[];extractions:Extraction[];members:Member[];suppliers:InvoiceSupplier[];canManage:boolean}){
+export default function InvoiceInboxReview({emails,extractions,reviews,members,suppliers,canManage}:{
+ emails:Email[];extractions:Extraction[];reviews:AttachmentReview[];
+ members:Member[];suppliers:InvoiceSupplier[];canManage:boolean;
+}){
  const [busy,setBusy]=useState<string|null>(null);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
@@ -143,7 +159,9 @@ export default function InvoiceInboxReview({emails,extractions,members,suppliers
   if(busy)return;
   setBusy(id);setError('');setNotice('');
   try{
-   const response=await fetch('/api/crew/admin/invoice-extraction/'+encodeURIComponent(id),{
+   const endpoint=payload.action==='classify'||payload.action==='reopen'?
+    '/api/crew/admin/invoice-attachments/':'/api/crew/admin/invoice-extraction/';
+   const response=await fetch(endpoint+encodeURIComponent(id),{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
    });
    const contentType=response.headers.get('content-type')||'';
@@ -155,13 +173,15 @@ export default function InvoiceInboxReview({emails,extractions,members,suppliers
  }
  return <section className="card invoiceReviewSection">
   <div className="invoiceReviewHeading">
-   <div><h2>Binnengekomen facturen</h2><p>E-mails en PDF-bijlagen uit de factuurmailbox. Koppel de factuur aan een bartender of leverancier na controle van de originele PDF.</p></div>
+   <div><h2>Binnengekomen facturen & bonnetjes</h2><p>Controleer elke PDF afzonderlijk: koppel een factuur, bewaar een bonnetje als mogelijke projectkosten of archiveer een bewijsstuk/duplicaat.</p></div>
    <span className="invoiceReviewCounter">{emails.length} e-mails</span>
   </div>
   {(error||notice)&&<p className={'invoiceReviewMessage '+(error?'error':'success')} role={error?'alert':'status'}>{error||notice}</p>}
   {!emails.length?<p className="invoiceReviewEmpty">Geen openstaande facturen</p>:
    <div className="invoiceReviewList">{emails.map(mail=>{
     const documents=extractions.filter(x=>x.message_id===mail.id);
+    const handled=documents.filter(x=>x.linked_invoice_id||reviews.some(r=>r.extraction_id===x.id)).length;
+    const options=documents.filter(x=>x.linked_invoice_id).map(x=>({id:x.linked_invoice_id!,filename:x.filename}));
     const hasPdf=Array.isArray(mail.attachments)&&mail.attachments.length>0;
     const isExpanded=expanded===mail.id;
     return <article className="invoiceReviewItem" key={mail.id}>
@@ -169,7 +189,7 @@ export default function InvoiceInboxReview({emails,extractions,members,suppliers
        <span className="invoiceReviewItemSubject"><strong>{mail.subject||'Zonder onderwerp'}</strong><small>{mail.sender||'Afzender onbekend'}</small></span>
        <span className="invoiceReviewItemMeta">{displayDate(mail.received_at)}</span>
        <span className="invoiceReviewItemMeta">{mail.attachments?.length||0} PDF</span>
-       <span className={'invoiceReviewStatus '+(documents.some(x=>x.status==='linked')?'linked':'')}>{documents.length?documents.some(x=>x.status==='linked')?'Gekoppeld':documents.every(x=>x.status==='failed')?'Controle nodig':'Uitgelezen':statusLabel(mail.status)}</span>
+       <span className={'invoiceReviewStatus '+(handled===mail.attachments?.length?'linked':'')}>{handled===mail.attachments?.length?'Alle bijlagen verwerkt':handled?'Deels verwerkt ('+handled+'/'+mail.attachments?.length+')':documents.every(x=>x.status==='failed')?'Controle nodig':'Uitgelezen'}</span>
        <span className="invoiceReviewChevron">{isExpanded?'−':'+'}</span>
       </button>
       {isExpanded&&<div className="invoiceReviewExpanded">
@@ -181,7 +201,9 @@ export default function InvoiceInboxReview({emails,extractions,members,suppliers
          {canManage&&mail.attachments.map((file,i)=><button key={i} className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'prepare',attachmentIndex:i})}>Handmatig {mail.attachments.length>1?String(i+1):'invullen'}</button>)}
          {canManage&&<button className="button orange" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> {busy===mail.id?'Verwerken…':'Automatisch herkennen'}</button>}</div>
         </div>}
-        {documents.map(item=><ExtractedInvoice key={item.id+':'+(item.processed_at||'')} item={item} members={members} suppliers={suppliers} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
+        {documents.map(item=><ExtractedInvoice key={item.id+':'+(item.processed_at||'')} item={item}
+         review={reviews.find(r=>r.extraction_id===item.id)||null} linkedOptions={options}
+         members={members} suppliers={suppliers} canManage={canManage} run={run} busy={Boolean(busy)} openPdf={openPdf}/>)}
         {canManage&&documents.length>0&&documents.every(x=>x.status==='failed')&&<button className="button secondary" disabled={Boolean(busy)} type="button" onClick={()=>run(mail.id,{action:'extract'})}><RefreshCw size={15}/> Opnieuw automatisch herkennen</button>}
        </>}
        {canManage&&<div className="invoiceEmailArchiveAction"><button type="button" className="button secondary"
