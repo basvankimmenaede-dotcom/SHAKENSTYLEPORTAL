@@ -349,3 +349,28 @@ test('Outgoing customer hours do not read crew invoices',()=>{
  assert.match(outbound,/sheet.status==='submitted'/);
  assert.ok(!outbound.includes('crew_invoices'));
 });
+
+
+const {allInvoiceAttachmentsReviewed}=loadTypeScriptModule('src/lib/invoice-attachment-status.ts');
+test('Mail with an invoice and a Lidl receipt closes only after receipt classification',()=>{
+ const links=[{attachment_index:0,linked_invoice_id:'already-linked'}];
+ assert.equal(allInvoiceAttachmentsReviewed(2,links,[]),false);
+ assert.equal(allInvoiceAttachmentsReviewed(2,links,[{attachment_index:1}]),true);
+});
+test('Missing or duplicate attachment decisions never close a multi-PDF email',()=>{
+ const links=[{attachment_index:0,linked_invoice_id:'already-linked'}];
+ assert.equal(allInvoiceAttachmentsReviewed(3,links,[{attachment_index:1},{attachment_index:1}]),false);
+ assert.equal(allInvoiceAttachmentsReviewed(0,links,[{attachment_index:1}]),false);
+});
+test('Unlinked extracted invoice and one receipt cannot prematurely close an email',()=>{
+ assert.equal(allInvoiceAttachmentsReviewed(2,[{attachment_index:0,linked_invoice_id:null}],[{attachment_index:1}]),false);
+});
+test('Customer receipt costs are opt-in and distinct from incoming crew invoices',()=>{
+ const src=fs.readFileSync(path.join(__dirname,'../src/app/api/planning/billing/receipt-costs/[id]/route.ts'),'utf8');
+ const sidebar=fs.readFileSync(path.join(__dirname,'../src/components/UnifiedSidebar.tsx'),'utf8');
+ assert.match(src,/action==='include'/);
+ assert.match(src,/billing_status:action==='include'\?'included'/);
+ assert.ok(!src.includes("from('crew_invoices')"));
+ assert.match(sidebar,/label:'Inkomende facturen'/);
+ assert.match(sidebar,/label:'Uitgaande facturen'/);
+});
