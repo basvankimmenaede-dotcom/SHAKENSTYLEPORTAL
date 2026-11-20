@@ -15,6 +15,14 @@ export type TvAgendaProject = {
   periods: TvAgendaPeriod[];
 };
 
+export type TvAgendaEntryKind = 'start' | 'end' | 'ongoing';
+
+export type TvAgendaEntry = {
+  projectId: number;
+  periodIndex: number;
+  kind: TvAgendaEntryKind;
+};
+
 export type TvAgendaIssue = {
   projectId: number | null;
   number: string | null;
@@ -163,7 +171,8 @@ export function normalizeTvAgendaData(
     const parent = parentId === null ? undefined : parents.get(parentId);
     const usage = validUsage(subproject.usageperiod_start, subproject.usageperiod_end);
     const parentUsage = validUsage(parent?.usageperiod_start, parent?.usageperiod_end);
-    if (usage && usage.to <= notBefore) continue;
+    // An actual end at today's midnight still needs its calendar end marker.
+    if (usage && usage.to < notBefore) continue;
     if (!usage && parentUsage && parentUsage.to <= notBefore) continue;
 
     const issuePeriods = usage ?? parentUsage;
@@ -245,22 +254,70 @@ export function normalizeTvAgendaData(
   };
 }
 
-export function buildTvAgendaWindow(snapshot: TvAgendaSnapshot, today: string) {
-  const boundaries = Array.from({ length: TV_AGENDA_DAYS + 1 }, (_, index) => amsterdamDayStart(addCalendarDays(today, index)));
-  const days = Array.from({ length: TV_AGENDA_DAYS }, (_, index) => ({ date: addCalendarDays(today, index), projectIds: [] as number[] }));
-  const projects = snapshot.projects.filter((project) => project.periods.some((period) =>
-    Date.parse(period.start) < boundaries[TV_AGENDA_DAYS] && Date.parse(period.end) > boundaries[0],
-  ));
-  projects.sort((a, b) => {
-    const first = (project: TvAgendaProject) => Math.min(...project.periods
-      .filter((period) => Date.parse(period.end) > boundaries[0])
-      .map((period) => Date.parse(period.start)));
-    return first(a) - first(b) || (a.number ?? '').localeCompare(b.number ?? '', 'nl', { numeric: true }) || a.id - b.id;
-  });
-  for (let index = 0; index < TV_AGENDA_DAYS; index += 1) {
-    days[index].projectIds = Array.from(new Set(projects.filter((project) => project.periods.some((period) =>
-      Date.parse(period.start) < boundaries[index + 1] && Date.parse(period.end) > boundaries[index],
-    )).map((project) => project.id)));
+/**
+ * Calendar counts describe starts, not occupied days. A period ending at least
+ * two local dates after its start also gets a separate marker on its actual end
+ * date. Earlier starts get an ongoing marker only while still in progress;
+ * calendar start/end markers remain visible throughout their respective day.
+ */
+export function buildTvAgendaWindow(snapshot: TvAgendaSnapshot, today: string, now: number = amsterdamDayStart(today)) {
+  const days = Array.from({ length: TV_AGENDA_DAYS }, (_, index) => ({
+    date: addCalendarDays(today, index),
+    projectIds: [] as number[],
+    startingProjectIds: [] as number[],
+    endingProjectIds: [] as number[],
+    ongoingProjectIds: [] as number[],
+    entries: [] as TvAgendaEntry[],
+  }));
+  const daysByDate = new Map(days.map(day => [day.date, day]));
+  const displayedProjects = new Map<number, TvAgendaProject>();
+  const firstDisplayedStart = new Map<number, number>();
+
+  for (const project of snapshot.projects) {
+    project.periods.forEach((period, periodIndex) => {
+      const start = Date.parse(period.start);
+      const end = Date.parse(period.end);
+      const startDate = amsterdamDateKey(new Date(start));
+      const endDate = amsterdamDateKey(new Date(end));
+
+      const addEntry = (date: string, kind: TvAgendaEntryKind) => {
+        const day = daysByDate.get(date);
+        if (!day) return;
+        day.entries.push({ projectId: project.id, periodIndex, kind });
+        displayedProjects.set(project.id, project);
+        firstDisplayedStart.set(project.id, Math.min(firstDisplayedStart.get(project.id) ?? start, start));
+      };
+
+      if (startDate < today && end > now) addEntry(today, 'ongoing');
+      if (startDate >= today) addEntry(startDate, 'start');
+
+      // This uses calendar dates, so 00:00 -> next-day 01:00 stays start-only
+      // even though its elapsed duration is 25 hours.
+      if (endDate >= addCalendarDays(startDate, 2)) addEntry(endDate, 'end');
+    });
   }
-  return { days, projects, total: new Set(projects.map((project) => project.id)).size };
+
+  const compareProjects = (a: TvAgendaProject, b: TvAgendaProject) =>
+    (a.number ?? '').localeCompare(b.number ?? '', 'nl', { numeric: true }) || a.id - b.id;
+  const kindOrder: Record<TvAgendaEntryKind, number> = { ongoing: 0, start: 1, end: 2 };
+  for (const day of days) {
+    day.entries.sort((a, b) => {
+      const projectA = displayedProjects.get(a.projectId)!;
+      const projectB = displayedProjects.get(b.projectId)!;
+      return kindOrder[a.kind] - kindOrder[b.kind]
+        || Date.parse(projectA.periods[a.periodIndex].start) - Date.parse(projectB.periods[b.periodIndex].start)
+        || compareProjects(projectA, projectB)
+        || a.periodIndex - b.periodIndex;
+    });
+    const idsFor = (kind: TvAgendaEntryKind) => Array.from(new Set(day.entries.filter(entry => entry.kind === kind).map(entry => entry.projectId)));
+    day.startingProjectIds = idsFor('start');
+    day.endingProjectIds = idsFor('end');
+    day.ongoingProjectIds = idsFor('ongoing');
+    day.projectIds = Array.from(new Set(day.entries.map(entry => entry.projectId)));
+  }
+
+  const projects = Array.from(displayedProjects.values()).sort((a, b) =>
+    firstDisplayedStart.get(a.id)! - firstDisplayedStart.get(b.id)! || compareProjects(a, b),
+  );
+  return { days, projects, total: projects.length };
 }

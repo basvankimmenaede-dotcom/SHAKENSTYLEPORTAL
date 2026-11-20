@@ -27,6 +27,7 @@ function makeItems(count, firstId = 1) {
       key: `${projectId}:0:0`,
       projectId,
       periodIndex: 0,
+      kind: 'start',
       namePart: `Project ${projectId}`,
       namePartIndex: 0,
       namePartCount: 1,
@@ -141,6 +142,22 @@ test('continuation cards and multiple periods never increase the unique project 
 
   assert.deepEqual(keys(pages), items.map(item => item.key));
   assert.ok(pages.every(page => page.projectCount === 1));
+});
+
+test('ongoing projects rotate on separate pages from new starts and endings', () => {
+  const items = makeItems(5).map((item, index) => ({
+    ...item,
+    kind: index < 2 ? 'ongoing' : index === 4 ? 'end' : 'start',
+  }));
+  const pages = oneDayPages(items);
+
+  assert.deepEqual(pages.map(page => page.items.map(item => item.kind)), [
+    ['ongoing', 'ongoing'], ['start', 'start', 'end'],
+  ]);
+  assert.deepEqual(keys(pages), items.map(item => item.key));
+  assert.ok(pages.every(page => page.projectCount === 5));
+  const cursor = cursorForPage(pages[1]);
+  assert.equal(reconcileTvCursor(oneDayPages(items, {}, 250), cursor), 2);
 });
 
 test('inserting earlier cards preserves the current anchor after page boundaries move', () => {

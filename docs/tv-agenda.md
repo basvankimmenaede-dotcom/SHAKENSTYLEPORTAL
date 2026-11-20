@@ -20,7 +20,7 @@ De server leest uitsluitend de benodigde velden:
 - `/projects`: `id`, `number`, `name`, `usageperiod_start`, `usageperiod_end`.
 - `/subprojects`: `id`, `name`, `project`, `status`, `in_planning`, `is_template`, `usageperiod_start`, `usageperiod_end`.
 
-De **subproject-gebruiksperiode** bepaalt de agendadagen. Hoofdprojectdatums kunnen alleen helpen om een datacontrole in de tijd te begrenzen; ze vullen nooit ontbrekende subprojectdatums aan. Plannings-, transport-, opbouw- en afbouwtijden zijn geen vervangende bronnen.
+De **subproject-gebruiksperiode** bepaalt de start- en eindmarkeringen in de agenda. Hoofdprojectdatums kunnen alleen helpen om een datacontrole in de tijd te begrenzen; ze vullen nooit ontbrekende subprojectdatums aan. Plannings-, transport-, opbouw- en afbouwtijden zijn geen vervangende bronnen.
 
 De goedgekeurde TV-selectie sluit status-ID's **1 (Optie), 2 (Geannuleerd) en 7 (Aanvraag)** uit. **8 (Concept) is zichtbaar en telt mee** in de dagtotalen en het unieke totaal, mits de gebruiksperiode geldig is. Deze keuze geldt voor de TV-weergave; de bestaande taakselectie heeft haar eigen statusfilter. De selectie gebeurt per subproject: een geannuleerd onderdeel mag een ander, toegestaan onderdeel van hetzelfde project niet verbergen.
 
@@ -30,9 +30,13 @@ Statusreferenties `/statuses/<id>` en `/projectstatuses/<id>`, numerieke referen
 
 Alle kalendergrenzen gebruiken **Europe/Amsterdam**, ook bij zomer-/wintertijd. Het venster loopt van vandaag 00:00 tot 00:00 na de dertigste dag: `[vandaag, vandaag + 30 kalenderdagen)`.
 
-Gebruiksperiodes zijn eveneens halfopen: `[begin, einde)`. Een periode die exact om 00:00 eindigt telt niet op de nieuwe dag; een periode die tot 00:30 doorloopt wel. Een interval telt op een dag wanneer `begin < volgende_middernacht && einde > dagbegin`. Reeds begonnen en nog doorlopende klussen blijven zo zichtbaar.
+De kalender gebruikt een **startdatumweergave**. Het grote aantal per dag is het aantal unieke hoofdprojecten met een gebruiksperiode die op die lokale datum begint. Een klus van 20:00 tot de volgende dag 01:00 krijgt dus alleen een start op de eerste dag. Dat geldt ook voor 00:00 tot de volgende dag 01:00: 25 verstreken uren maken hiervan geen extra startdag.
 
-Identieke subprojectperiodes worden samengevoegd. Verschillende periodes blijven apart bewaard; de dagselectie gebruikt hun vereniging en vult geen gaten tussen periodes op. De telling gebruikt het **hoofdproject-ID**, niet de projectnaam, het zichtbare nummer, het aantal subprojecten of het aantal detailkaarten. Eén project telt maximaal eenmaal per dag en eenmaal in het venstertotaal.
+Een langere gebruiksperiode krijgt daarnaast een afzonderlijke **eindmarkering**, wanneer de echte lokale einddatum minstens twee kalenderdatums na de startdatum ligt: `einddatum >= startdatum + 2 kalenderdagen`. Die markering staat op de daadwerkelijke einddatum, ook als de eindtijd 00:00 is. Zij wordt apart als einde getoond en verhoogt het aantal starts niet. Tussen start en einde worden geen dagelijkse kopieën getoond. Deze grens gebruikt kalenderdatums, geen vaste duur van 24 of 48 uur, zodat zomer-/wintertijd de indeling niet verandert. Een einddatum buiten het venster blijft zichtbaar op de detailkaart.
+
+Een periode die vóór vandaag begon en **op het huidige tijdstip nog loopt**, krijgt vandaag een afzonderlijke markering **Loopt al**. Zij telt niet als nieuwe start van vandaag en krijgt, indien van toepassing, ook haar eindmarkering. Zodra zo'n periode eindigt (`einde <= nu`), vervalt alleen **Loopt al**. Een eindmarkering van een langer project blijft de volledige einddag zichtbaar, ook als de eindtijd al voorbij is of precies 00:00 was. Een korte nachtelijke doorloop krijgt geen eindmarkering en verdwijnt na haar eindtijd, tenzij hetzelfde hoofdproject nog een andere zichtbare periode heeft. Periodes die vandaag begonnen blijven gedurende die kalenderdag als start zichtbaar, ook na hun eindtijd. De pure rekenfunctie accepteert `now` als tijdstempel; zonder expliciete waarde gebruikt zij vandaag 00:00.
+
+Identieke subprojectperiodes worden samengevoegd. Verschillende periodes behouden hun eigen start- en eventuele eindmarkering; er worden geen gaten tussen periodes opgevuld. De oorspronkelijke periodes, tijdstippen en indices blijven bewaard voor de detailkaarten. De telling gebruikt het **hoofdproject-ID**, niet de projectnaam, het zichtbare nummer, het aantal subprojecten of het aantal detailkaarten. Eén project telt maximaal eenmaal per dagcategorie (start, einde of loopt al), eenmaal in de gezamenlijke dagselectie en eenmaal in het venstertotaal. Alleen projecten met minstens één zichtbare markering behoren tot dat totaal.
 
 ## Datakwaliteit en meerdere subprojecten
 
@@ -46,11 +50,13 @@ Beide collecties worden volledig opgehaald met `sort=+id`, pagina's van maximaal
 
 De bron heeft een totale timeout van 25 seconden. `fetchedAt` wordt pas na het succesvol ophalen van alle pagina's vastgesteld. Een complete snapshot wordt via `unstable_cache` met `revalidate: 30` gedeeld; authenticatie wordt niet gecachet. De browser controleert iedere 30 seconden terwijl het tabblad zichtbaar is, en direct bij openen, terugkeren naar het tabblad en dagwisseling. Een poll kan nog een gecachete snapshot krijgen: het getoonde tijdstip is de laatste geslaagde bronophaalactie, niet het tijdstip van de poll.
 
+Bij normalisatie worden echte gebruiksperiodes die vóór vandaag 00:00 eindigden weggelaten. Een periode die exact op die grens eindigt blijft beschikbaar, zodat een lang project zijn echte eindmarkering op vandaag behoudt. Die markering betekent geen bezetting of nieuwe start op die dag.
+
 Bij fouten blijft de laatste complete client-snapshot met zijn oorspronkelijke tijdstempel zichtbaar. Oudere antwoorden vervangen geen nieuwere snapshot. Na twee minuten zonder nieuwe brontijd verschijnt een waarschuwing. Bij verlopen toegang stopt de automatische rotatie en vraagt de pagina om opnieuw in te loggen. Zonder eerste geslaagde snapshot staan er streepjes, geen misleidende nulstanden.
 
 ## Scherm en bediening
 
-Het kalenderoverzicht blijft staan. Details wisselen automatisch iedere **20 seconden**, over vandaag en de overige dagen met klussen. Drukke dagen krijgen meerdere delen, met maximaal drie kaarten per deel en minder wanneer de gemeten hoogte dat vraagt. Lange namen krijgen vervolgkaarten; dit verandert nooit de telling. Vernieuwen of aanpassen van de schermgrootte behoudt waar mogelijk de zichtbare leespositie en start de leestimer niet opnieuw.
+Het kalenderoverzicht blijft staan. Details wisselen automatisch iedere **20 seconden**, over vandaag en de overige dagen met start- of eindmarkeringen. Reeds lopende klussen zijn vandaag apart herkenbaar; zij verhogen het aantal starts niet. Drukke dagen krijgen meerdere delen, met maximaal drie kaarten per deel en minder wanneer de gemeten hoogte dat vraagt. Lange namen krijgen vervolgkaarten; dit verandert nooit de telling. Vernieuwen of aanpassen van de schermgrootte behoudt waar mogelijk de zichtbare leespositie en start de leestimer niet opnieuw.
 
 De bediening bevat **Pauze/Hervatten**, **Volgende**, **Schermvullend/Verkleinen** en terugkeer naar de planning. Bediening verschijnt bij interactie en verdwijnt na vijf seconden. Een kalenderdag kan handmatig worden geselecteerd. De rotatie pauzeert bij een verborgen tabblad of geopende datacontrole. Na middernacht schuift het venster automatisch mee en begint de detailweergave opnieuw bij vandaag.
 
@@ -62,7 +68,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-De TV-tests dekken onder meer tijdzones en zomer-/wintertijd, middernachtgrenzen, lopende klussen, ontdubbeling, gaten tussen periodes, statusselectie, ongeldige gegevens, bron- en detailpaginering en autorisatie. `npm run build` voert via `prebuild` ook de factuur- en TV-tests uit. Gebruik synthetische testgegevens; voeg geen persoonlijke Rentman-dumps toe aan deze repository.
+De TV-tests dekken onder meer tijdzones en zomer-/wintertijd, nachtelijke doorloop zonder dubbele startdag, echte eindmarkeringen (ook om 00:00), lopende en reeds geëindigde klussen, ontdubbeling per dagcategorie, behoud van periode-indices en gaten, statusselectie, ongeldige gegevens, bron- en detailpaginering en autorisatie. `npm run build` voert via `prebuild` ook de factuur- en TV-tests uit. Gebruik synthetische testgegevens; voeg geen persoonlijke Rentman-dumps toe aan deze repository.
 
 Deze functie gebruikt de bestaande `RENTMAN_API_TOKEN` en bestaande authenticatie. Zij schrijft niets naar Rentman en vereist **geen databasewijziging of migratie**.
 

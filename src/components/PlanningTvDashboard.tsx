@@ -17,9 +17,6 @@ const monthFormat = new Intl.DateTimeFormat('nl-NL', { month: 'short', timeZone:
 const weekdays = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
 
 function dateAtNoon(key: string) { return new Date(`${key}T12:00:00Z`); }
-function overlaps(start: string, end: string, day: string) {
-  return Date.parse(start) < amsterdamDayStart(addCalendarDays(day, 1)) && Date.parse(end) > amsterdamDayStart(day);
-}
 function splitName(name: string, limit: number) {
   const pieces: string[] = [];
   let rest = name.trim() || 'Projectnaam ontbreekt';
@@ -33,12 +30,10 @@ function splitName(name: string, limit: number) {
   return pieces;
 }
 
-function ProjectCard({ item, project, today, active = false }: { item: TvDetailItem; project: TvAgendaProject; today: string; active?: boolean }) {
+function ProjectCard({ item, project, active = false }: { item: TvDetailItem; project: TvAgendaProject; active?: boolean }) {
   const period = project.periods[item.periodIndex];
-  const started = Date.parse(period.start) < amsterdamDayStart(today);
-  const multiDay = amsterdamDateKey(new Date(period.start)) !== amsterdamDateKey(new Date(Date.parse(period.end) - 1));
-  return <article className={`${styles.projectCard} ${active ? styles.activeCard : ''}`} data-project-id={project.id}>
-    <div className={styles.cardMeta}><strong>{project.number ? `#${project.number}` : 'Projectnummer ontbreekt'}</strong><span>{started ? 'Loopt al' : multiDay ? 'Meerdaags' : 'Eén dag'}</span></div>
+  return <article className={`${styles.projectCard} ${active ? styles.activeCard : ''}`} data-project-id={project.id} data-entry-kind={item.kind}>
+    <div className={styles.cardMeta}><strong>{project.number ? `#${project.number}` : 'Projectnummer ontbreekt'}</strong><span>{item.kind === 'ongoing' ? 'Loopt al' : item.kind === 'end' ? 'Eindigt' : 'Start'}</span></div>
     <h3>{item.namePart}</h3>
     {item.namePartCount > 1 && <div className={styles.continuation}>Projectnaam · deel {item.namePartIndex + 1} van {item.namePartCount}</div>}
     <div className={styles.period}>
@@ -71,7 +66,9 @@ export default function PlanningTvDashboard({ initialSnapshot, initialError = nu
   const today = amsterdamDateKey(new Date(now));
   const endDay = addCalendarDays(today, 29);
   const emptySnapshot = useMemo<TvAgendaSnapshot>(() => ({ fetchedAt: '', projects: [], issues: [] }), []);
-  const agenda = useMemo(() => buildTvAgendaWindow(snapshot ?? emptySnapshot, today), [snapshot, emptySnapshot, today]);
+  // Re-evaluate ongoing projects once per minute, independently of data refresh.
+  const currentMinute = Math.floor(now / 60_000) * 60_000;
+  const agenda = useMemo(() => buildTvAgendaWindow(snapshot ?? emptySnapshot, today, currentMinute), [snapshot, emptySnapshot, today, currentMinute]);
   const projectsById = useMemo(() => new Map(agenda.projects.map(project => [project.id, project])), [agenda.projects]);
 
   // Fragments retain the main project ID; presentation pagination never changes counts.
@@ -80,16 +77,13 @@ export default function PlanningTvDashboard({ initialSnapshot, initialError = nu
     const unique = new Map<string, TvDetailItem>();
     for (const day of agenda.days) {
       byDay[day.date] = [];
-      for (const id of day.projectIds) {
+      for (const { projectId: id, periodIndex, kind } of day.entries) {
         const project = projectsById.get(id)!;
         const nameParts = splitName(project.name, nameLimit);
-        project.periods.forEach((period, periodIndex) => {
-          if (!overlaps(period.start, period.end, day.date)) return;
-          nameParts.forEach((namePart, namePartIndex) => {
-            const item = { key: `${id}:${periodIndex}:${namePartIndex}`, projectId: id, periodIndex, namePart, namePartIndex, namePartCount: nameParts.length };
-            byDay[day.date].push(item);
-            unique.set(item.key, item);
-          });
+        nameParts.forEach((namePart, namePartIndex) => {
+          const item = { key: `${id}:${periodIndex}:${kind}:${namePartIndex}`, projectId: id, periodIndex, kind, namePart, namePartIndex, namePartCount: nameParts.length };
+          byDay[day.date].push(item);
+          unique.set(item.key, item);
         });
       }
     }
@@ -192,8 +186,12 @@ export default function PlanningTvDashboard({ initialSnapshot, initialError = nu
   const stale = age > 120_000;
   const firstWeekday = (dateAtNoon(today).getUTCDay() + 6) % 7;
   const rowCount = Math.ceil((firstWeekday + 30) / 7);
-  const activeDayIds = agenda.days.find(day => day.date === activeDay)?.projectIds ?? [];
-  const shownOrdinals = [...new Set((currentPage?.items ?? []).map(item => activeDayIds.indexOf(item.projectId) + 1))];
+  const activeAgendaDay = agenda.days.find(day => day.date === activeDay)!;
+  const ongoingPage = Boolean(currentPage?.items.length) && currentPage.items.every(item => item.kind === 'ongoing');
+  const activeDayIds = ongoingPage ? activeAgendaDay.ongoingProjectIds : [...new Set([...activeAgendaDay.startingProjectIds, ...activeAgendaDay.endingProjectIds])];
+  const activeCount = ongoingPage ? activeDayIds.length : activeAgendaDay.startingProjectIds.length;
+  const shownProjectCount = new Set((currentPage?.items ?? []).map(item => item.projectId)).size;
+  const startDayCount = agenda.days.filter(day => day.startingProjectIds.length).length;
   const relevantIssues = (snapshot?.issues ?? []).filter(issue => !issue.periods?.length || issue.periods.some(period => Date.parse(period.start) < amsterdamDayStart(addCalendarDays(today, 30)) && Date.parse(period.end) > amsterdamDayStart(today)));
   const undatedCount = relevantIssues.filter(issue => issue.kind === 'missing_usage').length;
   const footerStatus = accessError ? 'Opnieuw inloggen nodig' : error ? 'Verbinding onderbroken' : stale ? 'Gegevens niet actueel' : 'Automatisch bijgewerkt';
@@ -208,32 +206,32 @@ export default function PlanningTvDashboard({ initialSnapshot, initialError = nu
 
     <div className={styles.layout}>
       <section className={styles.calendar} aria-label="Dertig kalenderdagen">
-        <div className={styles.calendarHeading}><h2>De komende 30 dagen</h2><span><i /> Vandaag</span></div>
+        <div className={styles.calendarHeading}><h2>Starts komende 30 dagen</h2><span><i /> Vandaag</span></div>
         <div className={styles.weekdays}>{weekdays.map((day, index) => <span key={day} className={index > 4 ? styles.weekendHeading : ''}>{day}</span>)}</div>
         <div className={`${styles.calendarGrid} ${rowCount === 6 ? styles.sixRows : ''}`} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
           {Array.from({ length: firstWeekday }, (_, i) => <div key={`before-${i}`} className={styles.blankDay} />)}
           {agenda.days.map(day => {
             const isToday = day.date === today;
             const weekend = [0, 6].includes(dateAtNoon(day.date).getUTCDay());
-            const highlight = highlightedProject?.periods.some(period => overlaps(period.start, period.end, day.date));
-            return <button key={day.date} data-calendar-date={day.date} className={`${styles.day} ${weekend ? styles.weekend : ''} ${isToday ? styles.today : ''} ${activeDay === day.date ? styles.selectedDay : ''} ${highlight ? styles.highlightedDay : ''}`} aria-label={`${dayFormat.format(dateAtNoon(day.date))}: ${snapshot ? day.projectIds.length : 'onbekend'} klussen${isToday ? ', vandaag' : ''}`} aria-pressed={activeDay === day.date} onClick={() => { const page = pages.find(value => value.day === day.date); if (page) { setCursor(cursorForPage(page)); setCycleStartedAt(Date.now()); } }}>
+            const highlight = day.entries.some(entry => entry.projectId === highlightedProject?.id);
+            return <button key={day.date} data-calendar-date={day.date} className={`${styles.day} ${weekend ? styles.weekend : ''} ${isToday ? styles.today : ''} ${activeDay === day.date ? styles.selectedDay : ''} ${highlight ? styles.highlightedDay : ''}`} aria-label={`${dayFormat.format(dateAtNoon(day.date))}: ${snapshot ? `${day.startingProjectIds.length} starts, ${day.endingProjectIds.length} eindigen, ${day.ongoingProjectIds.length} lopen al` : 'aantal onbekend'}${isToday ? ', vandaag' : ''}`} aria-pressed={activeDay === day.date} onClick={() => { const page = pages.find(value => value.day === day.date); if (page) { setCursor(cursorForPage(page)); setCycleStartedAt(Date.now()); } }}>
               <span className={styles.dayDate}>{dateAtNoon(day.date).getUTCDate()}<small>{monthFormat.format(dateAtNoon(day.date)).replace('.', '')}</small></span>
-              <strong>{snapshot ? day.projectIds.length : '—'}</strong><span className={styles.dayLabel}>{isToday ? 'VANDAAG' : day.projectIds.length === 1 ? 'klus' : 'klussen'}</span><span className={styles.periodIndicator} />
+              <span className={`${styles.dayCounts} ${day.startingProjectIds.length >= 10 && (day.endingProjectIds.length || day.ongoingProjectIds.length) ? styles.denseDayCounts : ''}`}><strong data-start-count={day.startingProjectIds.length}>{snapshot ? day.startingProjectIds.length : '—'}</strong><span className={styles.dayMarkers}>{day.endingProjectIds.length > 0 && <span title="Einddatum van langere klussen">{day.endingProjectIds.length} eind</span>}{day.ongoingProjectIds.length > 0 && <span title="Eerder begonnen klussen die nog lopen">{day.ongoingProjectIds.length} {day.ongoingProjectIds.length === 1 ? 'loopt' : 'lopen'}</span>}</span></span><span className={styles.dayLabel}>{day.startingProjectIds.length === 1 ? 'start' : 'starts'}</span><span className={styles.periodIndicator} />
             </button>;
           })}
           {Array.from({ length: rowCount * 7 - 30 - firstWeekday }, (_, i) => <div key={`after-${i}`} className={styles.blankDay} />)}
         </div>
-        <div className={styles.calendarLegend}><span><i /> Oranje lijn: gebruiksperiode van de uitgelichte klus</span><span>{agenda.days.filter(day => day.projectIds.length).length} dagen met klussen</span></div>
+        <div className={styles.calendarLegend}><span><i /> Uitgelichte klus · eind = einde langere klus</span><span>{startDayCount} {startDayCount === 1 ? 'dag' : 'dagen'} met starts</span></div>
       </section>
 
       <section className={styles.details} aria-label="Automatisch wisselende projectdetails">
-        <div className={styles.detailHeading}><div><span>{activeDay === today ? 'VANDAAG' : 'DAGDETAILS'}</span><h2>{dayFormat.format(dateAtNoon(activeDay))}</h2></div><strong>{snapshot ? activeDayIds.length : '—'}<small>{activeDayIds.length === 1 ? 'klus' : 'klussen'}</small></strong></div>
+        <div className={styles.detailHeading}><div><span>{ongoingPage ? 'LOOPT AL' : activeDay === today ? 'VANDAAG' : 'DAGDETAILS'}</span><h2>{ongoingPage ? 'Eerder gestart' : dayFormat.format(dateAtNoon(activeDay))}</h2>{!ongoingPage && activeAgendaDay.endingProjectIds.length > 0 && <p className={styles.endingSummary}>{activeAgendaDay.endingProjectIds.length} {activeAgendaDay.endingProjectIds.length === 1 ? 'langere klus eindigt' : 'langere klussen eindigen'}</p>}</div><strong>{snapshot ? activeCount : '—'}<small>{ongoingPage ? activeCount === 1 ? 'lopende klus' : 'lopende klussen' : activeCount === 1 ? 'start' : 'starts'}</small></strong></div>
         <div className={styles.detailBody} ref={detailBody}>
-          {currentPage?.items.map((item, index) => <ProjectCard key={item.key} item={item} project={projectsById.get(item.projectId)!} today={today} active={index === highlightedIndex} />)}
-          {!currentPage?.items.length && <div className={styles.emptyState}><span>{!snapshot ? 'Even geduld' : 'Ruimte in de agenda'}</span><h3>{!snapshot ? 'Agenda wordt geladen' : `Geen klussen ${activeDay === today ? 'vandaag' : 'op deze dag'}`}</h3><p>{!snapshot ? 'We halen de gebruiksperioden op uit Rentman.' : agenda.total ? 'De volgende geplande dag verschijnt automatisch.' : 'Er zijn geen klussen met een geselecteerde status en een geldige gebruiksperiode in deze 30 dagen.'}</p></div>}
-          <div ref={measurement} className={styles.measurement} aria-hidden="true">{uniqueItems.map(item => <div key={item.key} data-measure-key={item.key}><ProjectCard item={item} project={projectsById.get(item.projectId)!} today={today} /></div>)}</div>
+          {currentPage?.items.map((item, index) => <ProjectCard key={item.key} item={item} project={projectsById.get(item.projectId)!} active={index === highlightedIndex} />)}
+          {!currentPage?.items.length && <div className={styles.emptyState}><span>{!snapshot ? 'Even geduld' : 'Startdatumoverzicht'}</span><h3>{!snapshot ? 'Agenda wordt geladen' : `Geen starts of einddatums ${activeDay === today ? 'vandaag' : 'op deze dag'}`}</h3><p>{!snapshot ? 'We halen de gebruiksperioden op uit Rentman.' : agenda.total ? 'De volgende dag met starts of einddatums verschijnt automatisch.' : 'Er zijn geen klussen met een geselecteerde status en een geldige gebruiksperiode in deze 30 dagen.'}</p></div>}
+          <div ref={measurement} className={styles.measurement} aria-hidden="true">{uniqueItems.map(item => <div key={item.key} data-measure-key={item.key}><ProjectCard item={item} project={projectsById.get(item.projectId)!} /></div>)}</div>
         </div>
-        <div className={styles.detailFooter}><div><strong>{shownOrdinals.length ? `Klus${shownOrdinals.length > 1 ? 'sen' : ''} ${Math.min(...shownOrdinals)}${shownOrdinals.length > 1 ? `–${Math.max(...shownOrdinals)}` : ''} van ${activeDayIds.length}` : 'Dagoverzicht'}{currentPage && currentPage.pageCount > 1 ? ` · Deel ${currentPage.pageIndex + 1} van ${currentPage.pageCount}` : ''}</strong><span>{paused ? 'Rotatie gepauzeerd' : `Wisselt automatisch · ${pages.length * ROTATE_MS / 1000 >= 60 ? `${Math.ceil(pages.length * ROTATE_MS / 60_000)} min` : '20 sec'} per ronde`}</span></div><div className={styles.progressTrack}><div style={{ transform: `scaleX(${paused || showIssues ? 0 : Math.min(1, Math.max(0, now - cycleStartedAt) / ROTATE_MS)})` }} /></div></div>
+        <div className={styles.detailFooter}><div><strong>{shownProjectCount ? `${shownProjectCount} van ${activeDayIds.length} ${activeDayIds.length === 1 ? 'klus' : 'klussen'} in beeld` : 'Dagoverzicht'}{currentPage && currentPage.pageCount > 1 ? ` · Deel ${currentPage.pageIndex + 1} van ${currentPage.pageCount}` : ''}</strong><span>{paused ? 'Rotatie gepauzeerd' : `Wisselt automatisch · ${pages.length * ROTATE_MS / 1000 >= 60 ? `${Math.ceil(pages.length * ROTATE_MS / 60_000)} min` : '20 sec'} per ronde`}</span></div><div className={styles.progressTrack}><div style={{ transform: `scaleX(${paused || showIssues ? 0 : Math.min(1, Math.max(0, now - cycleStartedAt) / ROTATE_MS)})` }} /></div></div>
       </section>
     </div>
 

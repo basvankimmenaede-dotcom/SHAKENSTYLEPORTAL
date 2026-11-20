@@ -59,7 +59,7 @@ test('midnight end is exclusive; midnight start belongs to the new local day', (
   assert.equal(window.total, 1);
 });
 
-test('old ongoing job survives; identical subproject periods count one parent', () => {
+test('old ongoing job appears today and on its end date; identical subperiods count one parent', () => {
   const longUsage = { usageperiod_start: '2026-05-26T14:00:00+02:00', usageperiod_end: '2026-11-28T23:30:00+01:00' };
   const data = snapshot([parent(1)], [sub(1, longUsage), sub(2, longUsage), sub(2, longUsage)]);
   assert.equal(data.projects[0].periods.length, 1);
@@ -67,7 +67,11 @@ test('old ongoing job survives; identical subproject periods count one parent', 
   assert.equal(data.issues.length, 0);
   const window = buildTvAgendaWindow(data, '2026-11-20');
   assert.equal(window.total, 1);
-  assert.equal(window.days.filter((day) => day.projectIds.length).length, 9);
+  assert.deepEqual(plain(window.days.filter((day) => day.projectIds.length).map(day => day.date)), ['2026-11-20', '2026-11-28']);
+  assert.deepEqual(plain(window.days[0].ongoingProjectIds), [1]);
+  assert.deepEqual(plain(window.days[0].startingProjectIds), []);
+  assert.deepEqual(plain(window.days[8].endingProjectIds), [1]);
+  assert.deepEqual(plain(window.days[8].entries), [{ projectId: 1, periodIndex: 0, kind: 'end' }]);
 });
 
 test('window overlap includes both edge crossings and advances after local midnight', () => {
@@ -82,7 +86,8 @@ test('window overlap includes both edge crossings and advances after local midni
   assert.equal(current.projects.find((project) => project.id === 2).periods[0].end, '2026-12-21T02:00:00+01:00');
   const next = buildTvAgendaWindow(data, '2026-11-21');
   assert.equal(next.total, 2);
-  assert.deepEqual(plain(next.days[29].projectIds), [2, 3]);
+  assert.deepEqual(plain(next.days[29].projectIds), [3]);
+  assert.deepEqual(plain(next.days[28].startingProjectIds), [2]);
 });
 
 test('overlapping distinct subperiods still count only one job per day', () => {
@@ -93,8 +98,93 @@ test('overlapping distinct subperiods still count only one job per day', () => {
   const window = buildTvAgendaWindow(data, '2026-11-20');
   assert.equal(window.total, 1);
   assert.deepEqual(plain(window.days.slice(0, 4).map((day) => day.projectIds.length)), [1, 1, 1, 1]);
+  assert.deepEqual(plain(window.days.slice(0, 4).map((day) => day.startingProjectIds.length)), [1, 1, 0, 0]);
+  assert.deepEqual(plain(window.days.slice(0, 4).map((day) => day.endingProjectIds.length)), [0, 0, 1, 1]);
   assert.equal(data.projects[0].periods.length, 2);
   assert.equal(data.issues[0].kind, 'ambiguous_usage');
+});
+
+test('overnight jobs appear only on their start date, including a 25-hour midnight-to-01:00 job', () => {
+  const data = snapshot([parent(1), parent(2)], [
+    sub(1, { usageperiod_start: '2026-11-20T20:00:00+01:00', usageperiod_end: '2026-11-21T01:00:00+01:00' }),
+    sub(2, { project: '/projects/2', usageperiod_start: '2026-11-20T00:00:00+01:00', usageperiod_end: '2026-11-21T01:00:00+01:00' }),
+  ]);
+  const window = buildTvAgendaWindow(data, '2026-11-20');
+  assert.equal(window.total, 2);
+  assert.deepEqual(plain(window.days[0].startingProjectIds), [2, 1]);
+  assert.deepEqual(plain(window.days[1].projectIds), []);
+  assert.ok(window.days.every(day => day.endingProjectIds.length === 0));
+  assert.equal(window.projects[1].periods[0].end, '2026-11-21T01:00:00+01:00');
+});
+
+test('long projects have only start and actual end markers, including an end exactly at midnight', () => {
+  const data = snapshot([parent(1), parent(2)], [
+    sub(1, { usageperiod_start: '2026-11-21T12:00:00+01:00', usageperiod_end: '2026-11-25T10:00:00+01:00' }),
+    sub(2, { project: '/projects/2', usageperiod_start: '2026-11-21T12:00:00+01:00', usageperiod_end: '2026-11-23T00:00:00+01:00' }),
+  ]);
+  const window = buildTvAgendaWindow(data, '2026-11-20');
+  assert.equal(window.total, 2);
+  assert.deepEqual(plain(window.days[1].startingProjectIds), [1, 2]);
+  assert.deepEqual(plain(window.days[2].projectIds), []);
+  assert.deepEqual(plain(window.days[3].endingProjectIds), [2]);
+  assert.deepEqual(plain(window.days[4].projectIds), []);
+  assert.deepEqual(plain(window.days[5].endingProjectIds), [1]);
+  assert.equal(window.days.reduce((sum, day) => sum + day.startingProjectIds.length, 0), 2);
+});
+
+test('long-project classification uses local calendar dates through both DST changes', () => {
+  for (const [today, start, end] of [
+    ['2026-03-28', '2026-03-28T12:00:00+01:00', '2026-03-30T00:00:00+02:00'],
+    ['2026-10-24', '2026-10-24T12:00:00+02:00', '2026-10-26T00:00:00+01:00'],
+  ]) {
+    const window = buildTvAgendaWindow(snapshot([parent()], [sub(1, { usageperiod_start: start, usageperiod_end: end })]), today);
+    assert.deepEqual(plain(window.days[0].startingProjectIds), [1]);
+    assert.deepEqual(plain(window.days[1].projectIds), []);
+    assert.deepEqual(plain(window.days[2].endingProjectIds), [1]);
+    assert.equal(window.total, 1);
+  }
+});
+
+test('ongoing markers expire at the actual end while starts and long-project endings remain all day', () => {
+  const data = snapshot([parent(1), parent(2), parent(3)], [
+    sub(1, { usageperiod_start: '2026-11-19T20:00:00+01:00', usageperiod_end: '2026-11-20T01:00:00+01:00' }),
+    sub(2, { project: '/projects/2', usageperiod_start: '2026-11-17T12:00:00+01:00', usageperiod_end: '2026-11-20T10:00:00+01:00' }),
+    sub(3, { project: '/projects/3', usageperiod_start: '2026-11-20T00:00:00+01:00', usageperiod_end: '2026-11-20T01:00:00+01:00' }),
+  ]);
+  const early = buildTvAgendaWindow(data, '2026-11-20', Date.parse('2026-11-20T00:30:00+01:00'));
+  assert.equal(early.total, 3);
+  assert.deepEqual(plain(early.days[0].ongoingProjectIds), [2, 1]);
+  assert.deepEqual(plain(early.days[0].startingProjectIds), [3]);
+  assert.deepEqual(plain(early.days[0].endingProjectIds), [2]);
+  assert.equal(early.days[0].projectIds.length, 3);
+  const atEnd = buildTvAgendaWindow(data, '2026-11-20', Date.parse('2026-11-20T10:00:00+01:00'));
+  assert.equal(atEnd.total, 2);
+  assert.deepEqual(plain(atEnd.projects.map(project => project.id)), [2, 3]);
+  assert.deepEqual(plain(atEnd.days[0].entries), [
+    { projectId: 3, periodIndex: 0, kind: 'start' },
+    { projectId: 2, periodIndex: 0, kind: 'end' },
+  ]);
+  assert.deepEqual(plain(atEnd.days[0].ongoingProjectIds), []);
+  assert.deepEqual(plain(atEnd.days[0].endingProjectIds), [2]);
+  assert.equal(buildTvAgendaWindow(data, '2026-11-21').total, 0);
+});
+
+test('multiple subperiods dedupe category and day counts while preserving original period indices', () => {
+  const data = snapshot([parent()], [
+    sub(1, { usageperiod_start: '2026-11-18T12:00:00+01:00', usageperiod_end: '2026-11-20T01:00:00+01:00' }),
+    sub(2, { usageperiod_start: '2026-11-20T12:00:00+01:00', usageperiod_end: '2026-11-23T10:00:00+01:00' }),
+    sub(3, { usageperiod_start: '2026-11-20T13:00:00+01:00', usageperiod_end: '2026-11-23T11:00:00+01:00' }),
+  ]);
+  const window = buildTvAgendaWindow(data, '2026-11-20', Date.parse('2026-11-20T11:00:00+01:00'));
+  assert.equal(window.total, 1);
+  assert.deepEqual(plain(window.days[0].startingProjectIds), [1]);
+  assert.deepEqual(plain(window.days[0].projectIds), [1]);
+  assert.deepEqual(plain(window.days[0].entries.map(entry => entry.periodIndex)), [1, 2, 0]);
+  assert.deepEqual(plain(window.days[0].endingProjectIds), [1]);
+  assert.deepEqual(plain(window.days[0].ongoingProjectIds), []);
+  assert.deepEqual(plain(window.days[3].endingProjectIds), [1]);
+  assert.deepEqual(plain(window.days[3].entries.map(entry => entry.periodIndex)), [1, 2]);
+  assert.deepEqual(plain(window.projects[0].periods), plain(data.projects[0].periods));
 });
 
 test('distinct subproject periods preserve gaps and real times, with explicit ambiguity', () => {
@@ -188,17 +278,40 @@ const realRows = [
   [31, '9031', 10031, 8, '2026-12-18T10:00:00+01:00', '2026-12-19T12:00:00+01:00'],
   [32, '9032', 10032, 8, '2026-11-27T12:00:00+01:00', '2026-11-28T00:00:00+01:00'],
 ];
-test('anonymized audit snapshot includes 19 concepts in 27 unique jobs and verified daily counts', () => {
+test('anonymized audit snapshot retains 27 jobs with start, end and ongoing counts', () => {
   const data = snapshot(realRows.map(([id, number]) => parent(id, { number })), realRows.map(([id, , subId, status, start, end]) => sub(subId, {
     project: `/projects/${id}`, status: `/statuses/${status}`, usageperiod_start: start, usageperiod_end: end,
   })));
   const window = buildTvAgendaWindow(data, '2026-11-20');
   assert.equal(window.total, 27);
-  assert.deepEqual(plain(window.days.map((day) => day.projectIds.length)), [4, 5, 5, 4, 2, 2, 2, 4, 2, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 6, 3, 1, 0, 1, 2, 3, 4, 2]);
+  assert.deepEqual(plain(window.days.map((day) => day.startingProjectIds.length)), [2, 1, 0, 0, 1, 0, 1, 3, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 1, 0, 0, 1, 1, 3, 2, 0]);
+  assert.deepEqual(plain(window.days.map((day) => day.endingProjectIds.length)), [0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(plain(window.days[0].ongoingProjectIds), [1, 14]);
+  assert.equal(window.days.slice(1).some(day => day.ongoingProjectIds.length > 0), false);
+  assert.deepEqual(plain(window.days.map((day) => day.projectIds.length)), [4, 1, 0, 3, 1, 0, 1, 3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 1, 0, 0, 1, 1, 3, 2, 0]);
   assert.equal(data.issues.length, 0);
 });
 
 const jsonResponse = (payload, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => payload });
+test('source normalization retains a long end at today midnight for its actual end-date marker', async () => {
+  const sourceSubs = [
+    sub(1, { usageperiod_start: '2026-11-17T12:00:00+01:00', usageperiod_end: '2026-11-20T00:00:00+01:00' }),
+    sub(2, { project: '/projects/2', usageperiod_start: '2026-11-17T12:00:00+01:00', usageperiod_end: '2026-11-19T23:59:59+01:00' }),
+    sub(3, { project: '/projects/3', usageperiod_start: '2026-11-19T20:00:00+01:00', usageperiod_end: '2026-11-20T00:00:00+01:00' }),
+  ];
+  const result = await source.loadRentmanTvSnapshot({
+    apiToken: 'test-token', now: () => new Date('2026-11-20T10:00:00Z'),
+    fetcher: async input => jsonResponse({ data: new URL(input).pathname === '/projects' ? [parent(1), parent(2), parent(3)] : sourceSubs }),
+  });
+  assert.deepEqual(plain(result.projects.map(project => project.id)), [1, 3]);
+  const window = buildTvAgendaWindow(result, '2026-11-20', Date.parse(result.fetchedAt));
+  assert.equal(window.total, 1);
+  assert.deepEqual(plain(window.days[0].entries), [{ projectId: 1, periodIndex: 0, kind: 'end' }]);
+  assert.deepEqual(plain(window.days[0].startingProjectIds), []);
+  assert.deepEqual(plain(window.days[0].ongoingProjectIds), []);
+  assert.deepEqual(plain(window.days[0].endingProjectIds), [1]);
+});
+
 test('full pagination publishes one snapshot only after both resource lists complete', async () => {
   const calls = [];
   let clockCalls = 0;

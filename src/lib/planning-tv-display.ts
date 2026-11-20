@@ -2,6 +2,7 @@ export type TvDetailItem = {
   key: string;
   projectId: number;
   periodIndex: number;
+  kind: 'start' | 'end' | 'ongoing';
   namePart: string;
   namePartIndex: number;
   namePartCount: number;
@@ -72,6 +73,7 @@ export function paginateTvDays(
 
       if (chunk.length > 0 && (
         chunk.length >= MAX_ITEMS_PER_PAGE || nextHeight > heightLimit
+        || (chunk[0].kind === 'ongoing') !== (item.kind === 'ongoing')
       )) {
         chunks.push(chunk);
         chunk = [];

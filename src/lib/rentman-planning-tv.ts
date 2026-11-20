@@ -113,6 +113,6 @@ export async function loadRentmanTvSnapshot(options: SourceOptions = {}): Promis
 // An unsuccessful refresh cannot replace the last successful timestamp/data.
 export const getTvAgendaSnapshot = unstable_cache(
   () => loadRentmanTvSnapshot(),
-  ['planning-tv-usage-snapshot-v2-including-concepts'],
+  ['planning-tv-usage-snapshot-v3-calendar-markers'],
   { revalidate: 30 },
 );
