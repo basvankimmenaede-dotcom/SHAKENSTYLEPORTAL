@@ -49,9 +49,9 @@ export type TvSourceSubproject = {
   usageperiod_end?: unknown;
 };
 
-// Same exclusions already used for task project selection, plus cancelled.
+// TV includes Concept (8); exclude only Optie, Geannuleerd and Aanvraag.
 // Evaluate per subproject: a cancelled sibling must not hide a confirmed job.
-const EXCLUDED_STATUS_IDS = new Set([1, 2, 7, 8]);
+const EXCLUDED_STATUS_IDS = new Set([1, 2, 7]);
 
 const dateFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: TV_AGENDA_TIME_ZONE,

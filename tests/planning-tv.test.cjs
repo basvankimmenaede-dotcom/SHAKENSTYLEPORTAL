@@ -110,13 +110,14 @@ test('distinct subproject periods preserve gaps and real times, with explicit am
   assert.match(data.issues[0].reason, /Eerste moment; Tweede moment/);
 });
 
-test('status exclusions are per subproject; a cancelled sibling does not cancel its parent', () => {
+test('concepts are included; excluded siblings do not cancel an eligible parent', () => {
   const data = snapshot([parent()], [
     sub(1, { status: '/statuses/2' }), sub(2, { status: '/projectstatuses/3' }),
-    ...[1, 7, 8].map((status) => sub(status + 10, { status: { id: status }, usageperiod_start: '2026-11-22T12:00:00+01:00', usageperiod_end: '2026-11-22T23:00:00+01:00' })),
+    sub(3, { status: { id: 8 } }),
+    ...[1, 7].map((status) => sub(status + 10, { status: { id: status }, usageperiod_start: '2026-11-22T12:00:00+01:00', usageperiod_end: '2026-11-22T23:00:00+01:00' })),
   ]);
   assert.equal(data.projects.length, 1);
-  assert.deepEqual(plain(data.projects[0].periods[0].subprojectIds), [2]);
+  assert.deepEqual(plain(data.projects[0].periods[0].subprojectIds), [2, 3]);
   assert.equal(data.issues.length, 0);
   assert.equal(rentmanReferenceId('/projectstatuses/1002', ['statuses', 'projectstatuses']), 1002);
   assert.equal(rentmanReferenceId('/contacts/3', ['statuses', 'projectstatuses']), null);
@@ -187,13 +188,13 @@ const realRows = [
   [31, '9031', 10031, 8, '2026-12-18T10:00:00+01:00', '2026-12-19T12:00:00+01:00'],
   [32, '9032', 10032, 8, '2026-11-27T12:00:00+01:00', '2026-11-28T00:00:00+01:00'],
 ];
-test('anonymized audit snapshot gives 8 unique planned jobs and verified daily counts', () => {
+test('anonymized audit snapshot includes 19 concepts in 27 unique jobs and verified daily counts', () => {
   const data = snapshot(realRows.map(([id, number]) => parent(id, { number })), realRows.map(([id, , subId, status, start, end]) => sub(subId, {
     project: `/projects/${id}`, status: `/statuses/${status}`, usageperiod_start: start, usageperiod_end: end,
   })));
   const window = buildTvAgendaWindow(data, '2026-11-20');
-  assert.equal(window.total, 8);
-  assert.deepEqual(plain(window.days.map((day) => day.projectIds.length)), [3, 4, 4, 3, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
+  assert.equal(window.total, 27);
+  assert.deepEqual(plain(window.days.map((day) => day.projectIds.length)), [4, 5, 5, 4, 2, 2, 2, 4, 2, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 6, 3, 1, 0, 1, 2, 3, 4, 2]);
   assert.equal(data.issues.length, 0);
 });
 

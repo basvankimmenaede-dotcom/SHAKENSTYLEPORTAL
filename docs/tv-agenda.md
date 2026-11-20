@@ -22,7 +22,7 @@ De server leest uitsluitend de benodigde velden:
 
 De **subproject-gebruiksperiode** bepaalt de agendadagen. Hoofdprojectdatums kunnen alleen helpen om een datacontrole in de tijd te begrenzen; ze vullen nooit ontbrekende subprojectdatums aan. Plannings-, transport-, opbouw- en afbouwtijden zijn geen vervangende bronnen.
 
-De goedgekeurde TV-selectie sluit status-ID's **1 (Optie), 2 (Geannuleerd), 7 (Aanvraag) en 8 (Concept)** uit. Dit sluit aan op de bestaande taakselectie, met geannuleerde onderdelen uitgesloten; de oudere agenda had een bredere statusselectie. De selectie gebeurt per subproject: een geannuleerd onderdeel mag een ander, toegestaan onderdeel van hetzelfde project niet verbergen.
+De goedgekeurde TV-selectie sluit status-ID's **1 (Optie), 2 (Geannuleerd) en 7 (Aanvraag)** uit. **8 (Concept) is zichtbaar en telt mee** in de dagtotalen en het unieke totaal, mits de gebruiksperiode geldig is. Deze keuze geldt voor de TV-weergave; de bestaande taakselectie heeft haar eigen statusfilter. De selectie gebeurt per subproject: een geannuleerd onderdeel mag een ander, toegestaan onderdeel van hetzelfde project niet verbergen.
 
 Statusreferenties `/statuses/<id>` en `/projectstatuses/<id>`, numerieke referenties en uitgebreide objecten met `id` worden genormaliseerd. Alleen uitgesloten status-ID's worden weggefilterd; er is geen aanvullende status-allowlist. Een onleesbare status wordt gemeld. Een meetellend subproject vereist expliciet `in_planning === true` en `is_template === false`; ontbrekende flags worden ook gemeld. Expliciete templates en onderdelen buiten de planning worden overgeslagen.
 
